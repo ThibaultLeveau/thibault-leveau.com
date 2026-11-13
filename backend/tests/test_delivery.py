@@ -23,9 +23,10 @@ def test_built_home_and_its_assets(client):
 
 
 def test_documentation_and_search_index(client):
-    redirect = client.get("/documentation", follow_redirects=False)
-    assert redirect.status_code == 308
-    assert redirect.headers["location"] == "/documentation/"
+    for method in ("GET", "HEAD"):
+        redirect = client.request(method, "/documentation", follow_redirects=False)
+        assert redirect.status_code == 308
+        assert redirect.headers["location"] == "/documentation/"
     for path in ("/documentation/", "/documentation/architecture/"):
         response = client.get(path)
         assert response.status_code == 200

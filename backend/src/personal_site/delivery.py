@@ -39,7 +39,7 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
         if missing:
             raise RuntimeError("Artefacts manquants ; exécuter make build : " + ", ".join(missing))
 
-    @app.get("/documentation", include_in_schema=False)
+    @app.api_route("/documentation", methods=["GET", "HEAD"], include_in_schema=False)
     async def documentation_redirect() -> RedirectResponse:
         return RedirectResponse("/documentation/", status_code=308)
 
