@@ -1,0 +1,4 @@
+new.thibault-leveau.com {
+    import common
+    reverse_proxy thibault-personal-site:8000
+}

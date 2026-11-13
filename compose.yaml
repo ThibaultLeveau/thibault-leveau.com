@@ -1,0 +1,35 @@
+name: thibault-personal-site
+
+services:
+  site:
+    image: local/thibault-personal-site:${IMAGE_TAG:-local}
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      SITE_ENVIRONMENT: production
+      SITE_STATIC_DIR: /app/build
+      SITE_INDEXABLE: ${SITE_INDEXABLE:-false}
+      SITE_LOG_LEVEL: ${SITE_LOG_LEVEL:-info}
+      FORWARDED_ALLOW_IPS: 172.19.0.0/16
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      proxy:
+        aliases:
+          - thibault-personal-site
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  proxy:
+    external: true
+    name: multisite_proxy

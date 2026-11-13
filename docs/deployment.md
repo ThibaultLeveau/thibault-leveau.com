@@ -1,0 +1,142 @@
+# Déploiement
+
+## Cible et prérequis
+
+Le site est déployé depuis le serveur actuel, dans `/home/deploy/projects/new.thibault-leveau.com`. Le service Docker rejoint le réseau existant `multisite_proxy` ; Caddy est géré par la plateforme sous le nom `multisite-platform-caddy-1`.
+
+| Élément | Cible |
+| --- | --- |
+| Domaine | `new.thibault-leveau.com` |
+| IPv4 publique | `168.231.82.6` |
+| Projet Compose | `thibault-personal-site` |
+| Service Compose | `site` |
+| Image | `local/thibault-personal-site:<commit>` |
+| Alias réseau | `thibault-personal-site` |
+| Port applicatif interne | `8000` |
+| Configuration Caddy hôte | `/srv/apps/platform/caddy/` |
+| Même répertoire dans Caddy | `/etc/caddy/` |
+
+Le sous-domaine est une nouvelle entrée de la plateforme. Ne pas arrêter le proxy partagé, remplacer sa configuration globale ou modifier les enregistrements des autres sites pour déployer cette application.
+
+## 1. Préparer une version identifiée
+
+Depuis la racine du dépôt :
+
+```bash
+git status --short
+git log -1 --oneline
+make install
+make check
+make test-e2e
+```
+
+Déployer un commit validé avec un arbre de travail propre. Des sources non commitées produiraient une image différente du commit affiché par son tag. Après validation, les sources et fichiers de verrouillage sont publiés sur `main` dans le dépôt GitHub prévu.
+
+Définir un identifiant d'image depuis le commit courant :
+
+```bash
+export IMAGE_TAG="$(git rev-parse --short=12 HEAD)"
+docker compose config
+docker network inspect multisite_proxy
+```
+
+Le réseau doit déjà exister et contenir Caddy. Vérifier son sous-réseau contre `FORWARDED_ALLOW_IPS` dans Compose. Ne pas recréer un réseau partagé pour résoudre une erreur de nom.
+
+## 2. Construire et démarrer l'application
+
+```bash
+docker compose build --pull site
+docker compose up -d --no-build --wait --wait-timeout 120
+docker compose ps
+```
+
+Le Dockerfile compile le frontend, construit MkDocs en mode strict, installe le backend et copie les sorties dans l'image finale. Le processus s'exécute sous un utilisateur non privilégié ; Compose impose un système de fichiers racine en lecture seule et fournit un `/tmp` temporaire.
+
+Le contrôle de santé appelle `/api/health` depuis le conteneur. Si `up --wait` échoue, inspecter les journaux avant de poursuivre :
+
+```bash
+docker compose logs --tail=100 site
+```
+
+Aucun port hôte ne doit être publié par ce service. Vérifier la communication depuis Caddy :
+
+```bash
+docker exec multisite-platform-caddy-1 wget -qO- http://thibault-personal-site:8000/api/health
+```
+
+Résultat attendu : `{"status":"ok"}`. Cette vérification précède la modification du DNS et permet de distinguer les problèmes applicatifs des problèmes de domaine.
+
+## 3. Installer le bloc Caddy
+
+Cette étape s'effectue au premier déploiement, puis lors d'une modification explicite du bloc proxy. Le fichier versionné est `deploy/new.thibault-leveau.com.caddy`. Il réutilise le snippet `common` déjà défini par la plateforme ; sa validation doit donc se faire à travers le Caddyfile principal, et non comme fichier autonome.
+
+Sauvegarder le fichier principal et inspecter ses imports :
+
+```bash
+proxy_backup="/srv/apps/platform/caddy/Caddyfile.backup.$(date -u +%Y%m%dT%H%M%SZ)"
+cp /srv/apps/platform/caddy/Caddyfile "$proxy_backup"
+rg -n 'import|new\.thibault-leveau\.com' /srv/apps/platform/caddy/Caddyfile
+install -m 0644 deploy/new.thibault-leveau.com.caddy /srv/apps/platform/caddy/new.thibault-leveau.com.caddy
+```
+
+Ajouter une seule fois la ligne suivante au fichier `/srv/apps/platform/caddy/Caddyfile`, en conservant les autres blocs et imports :
+
+```caddyfile
+import new.thibault-leveau.com.caddy
+```
+
+Valider avant de recharger :
+
+```bash
+docker exec multisite-platform-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker exec multisite-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+```
+
+Une validation en erreur interdit de poursuivre le rechargement. Corriger le bloc ou restaurer la sauvegarde du fichier principal. Le rechargement valide met à jour les routes sans arrêter les autres sites.
+
+Caddy gère le certificat et la redirection HTTP vers HTTPS. La délivrance d'un certificat peut rester en attente tant que le DNS public ne désigne pas le serveur.
+
+## 4. Déclarer le DNS Hostinger
+
+Lire la zone DNS de `thibault-leveau.com` avant toute écriture. L'enregistrement souhaité est :
+
+| Type | Nom | Valeur | TTL |
+| --- | --- | --- | --- |
+| A | `new` | `168.231.82.6` | 300 secondes |
+
+Créer uniquement cette entrée si elle n'existe pas. Si elle est déjà identique, ne rien modifier. Si `new` possède une autre cible, un CNAME ou un AAAA, examiner l'usage existant avant toute modification : une entrée contradictoire peut détourner certains visiteurs vers un autre serveur. Conserver les enregistrements MX, TXT et ceux des autres hôtes.
+
+L'opération se réalise avec un accès Hostinger authentifié. L'installation du code et le démarrage du conteneur ne créent pas automatiquement le DNS. Une connexion Hostinger indisponible empêche cette étape, sans invalider la construction locale.
+
+Vérifier la résolution publique :
+
+```bash
+dig +short A new.thibault-leveau.com
+dig +short AAAA new.thibault-leveau.com
+```
+
+L'adresse A attendue est `168.231.82.6`. Le TTL de 300 secondes régit la mise en cache de la nouvelle réponse ; les caches d'une ancienne réponse ou d'une absence peuvent demander davantage de temps.
+
+## 5. Vérifier depuis l'extérieur
+
+```bash
+curl --silent --show-error --output /dev/null --dump-header - http://new.thibault-leveau.com/
+curl --fail --silent --show-error --output /dev/null --dump-header - https://new.thibault-leveau.com/
+bash scripts/smoke-test.sh
+```
+
+La première réponse doit rediriger vers HTTPS. La seconde doit réussir sans désactiver la vérification du certificat, avec l'en-tête `X-Robots-Tag: noindex, nofollow`. Le smoke test contrôle l'accueil, la santé, la documentation, l'index de recherche et des erreurs 404.
+
+Ouvrir enfin l'accueil sur mobile et bureau, tester le thème et lancer une recherche dans la documentation. Un contrôle JSON de santé seul ne suffit pas à valider l'expérience complète.
+
+Pour consulter le certificat présenté :
+
+```bash
+openssl s_client -connect new.thibault-leveau.com:443 -servername new.thibault-leveau.com </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates
+```
+
+## Déploiements suivants
+
+Un changement purement applicatif ne nécessite aucune modification du DNS ou de Caddy. Conserver l'image précédente, construire un nouveau tag depuis le commit validé, puis recréer uniquement le service `site` avec ce tag. Refaire les contrôles publics.
+
+Le tag `local` convient aux essais. Pour une version publiée, utiliser un tag de commit et conserver son identifiant avec le résultat des vérifications. La procédure de retour à l'image précédente figure dans [Exploitation et retour arrière](operations.md).

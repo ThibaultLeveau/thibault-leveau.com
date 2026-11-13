@@ -1,0 +1,95 @@
+site_name: Thibault Leveau · Documentation
+site_description: Architecture, développement et exploitation du site personnel de Thibault Leveau.
+site_author: Thibault Leveau
+site_url: https://new.thibault-leveau.com/documentation/
+repo_url: https://github.com/ThibaultLeveau/thibault-leveau.com
+repo_name: ThibaultLeveau/thibault-leveau.com
+edit_uri: blob/main/docs/
+docs_dir: docs
+site_dir: build/documentation
+strict: true
+use_directory_urls: true
+
+theme:
+  name: material
+  language: fr
+  font: false
+  icon:
+    logo: material/code-braces
+    repo: fontawesome/brands/github
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Passer au thème sombre
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Passer au thème clair
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search:
+      lang: fr
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
+extra:
+  generator: false
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Présentation: index.md
+  - Prise en main:
+      - Installation et développement: getting-started.md
+      - Configuration: configuration.md
+  - Architecture et code:
+      - Vue d'ensemble: architecture.md
+      - Backend et contrat HTTP: backend.md
+      - Frontend: frontend.md
+      - Design et accessibilité: design-system.md
+      - Décisions techniques: decisions.md
+  - Qualité:
+      - Tests et intégration continue: testing.md
+      - Maintenir la documentation: documentation.md
+  - Production:
+      - Déploiement: deployment.md
+      - Exploitation et retour arrière: operations.md
+      - Dépannage: troubleshooting.md
