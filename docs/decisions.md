@@ -2,6 +2,16 @@
 
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
+## Langues des interfaces — issue #18
+
+**Accord.** Thibault a répondu « Je valide cette conception », [accord consigné avant extension de la persistance et des contrats](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/18#issuecomment-6883886744).
+
+**Décision.** Conserver deux codes `fr`/`en` indépendants dans SQLite et versionner leur modification pour refuser les sauvegardes concurrentes périmées. Réutiliser les protections administratives. Fournir aux pages et à la connexion uniquement leur code de langue, avec HTML initial localisé et réponses dynamiques sans cache. Utiliser i18next/react-i18next côté React, des catalogues fermés et un contexte par requête côté FastAPI.
+
+**Raison.** Une langue choisie par l’administrateur doit être durable et identique pour tous les visiteurs de la zone. Les clés explicites, pluriels, interpolations et formats locaux évitent de disperser des conditions français/anglais dans les composants. Aucun contenu éditorial ne passe par les catalogues.
+
+**Conséquence.** Migration 2 → 3, dépendances frontend et contrôles de couverture supplémentaires. L’ancienne image refuse le schéma 3 ; son retour demande la sauvegarde préalable de schéma 2. URL, slugs, authentification, stockage et services restent dans leurs frontières actuelles. Les navigateurs déjà ouverts reçoivent les choix au prochain rechargement, hormis l’onglet qui enregistre la langue administrative, mis à jour immédiatement. MkDocs reste en français.
+
 ## Présentation publique — issue #14
 
 **Accord.** Thibault a répondu « Je valide cette architecture et cette règle de publication », [accord consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/14#issuecomment-6881977535).

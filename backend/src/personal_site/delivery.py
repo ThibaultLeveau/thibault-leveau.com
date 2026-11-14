@@ -5,12 +5,13 @@ from html import escape
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from starlette.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from personal_site.config import Settings
 from personal_site.content.public import PAGES, PATHS, PublicContent, address
+from personal_site.i18n import current_language, tr
 
 HASHED_ASSET = re.compile(r"^assets/.+-[A-Za-z0-9_-]{8,}\.[a-zA-Z0-9]+$")
 
@@ -51,6 +52,11 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
 
         def document(title, description, *, status=200):
             html = (web / "index.html").read_text()
+            language = current_language.get()
+            html = html.replace(
+                '<html lang="fr">',
+                f'<html lang="{language}" data-interface-language="{language}">',
+            )
             html = re.sub(
                 r"<title>.*?</title>",
                 lambda _: f"<title>{escape(title)} · Thibault Leveau</title>",
@@ -66,8 +72,19 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
             return HTMLResponse(html, status_code=status, headers={"Cache-Control": "no-store"})
 
         def public_page(request: Request):
-            name = PAGES[request.url.path.rstrip("/") or "/"]
-            return document(name, f"{name} — projets, parcours et publications de Thibault Leveau.")
+            path = request.url.path.rstrip("/") or "/"
+            key = {
+                "/": "home",
+                "/projets": "projects",
+                "/parcours": "career",
+                "/expertise": "expertise",
+                "/services": "services",
+                "/journal": "journal",
+                "/a-propos": "about",
+                "/explorer": "explore",
+            }[path]
+            name = tr(f"pages.{key}")
+            return document(name, tr("pages.description", title=name))
 
         for path in PAGES:
             app.add_api_route(path, public_page, methods=["GET", "HEAD"], include_in_schema=False)
@@ -93,9 +110,7 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
                 except ContentError as exc:
                     if exc.status != 404:
                         raise
-                    return document(
-                        "Contenu introuvable", "Ce contenu n'est pas disponible.", status=404
-                    )
+                    return document(tr("pages.missing"), tr("pages.unavailable"), status=404)
                 if request.url.path != address(item):
                     return RedirectResponse(
                         address(item), status_code=308, headers={"Cache-Control": "no-store"}
@@ -122,6 +137,6 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
 
         @app.api_route("/admin", methods=["GET", "HEAD"], include_in_schema=False)
         async def admin_page():
-            return FileResponse(web / "index.html", headers={"Cache-Control": "no-store"})
+            return document(tr("pages.admin"), tr("pages.adminDescription"))
 
         app.mount("/", BuildFiles(web, hashed_assets=True), name="website")

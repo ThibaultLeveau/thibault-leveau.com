@@ -1,3 +1,4 @@
+import { number, t } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import { Dialog } from './Dialog'
@@ -6,8 +7,8 @@ import { Preview } from './Preview'
 import { SimilarEntries } from './SimilarEntries'
 import {
   defaults,
-  sections,
-  statusLabels,
+  getSections,
+  getStatusLabels,
   type Collection,
   type CollectionDefinition,
   type ContentRecord,
@@ -58,12 +59,14 @@ export function Editor({
   const [references, setReferences] = useState<Record<number, Item>>(initial?.references ?? {})
   const [preview, setPreview] = useState(false)
   const [pending, setPending] = useState<(() => void) | null>(null)
-  const [confirm, setConfirm] = useState<'archive' | 'delete' | 'duplicate' | 'reload' | null>(null)
+  const [confirm, setConfirm] = useState<'archive' | 'delete' | 'duplicate' | 'reload' | null>(
+    null,
+  )
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(record?.entry ?? defaults(definition.schema))
   const summaryRef = useRef<HTMLDivElement>(null)
   const schema = definition.schema
-  const available = sections.filter(
+  const available = getSections().filter(
     ([name]) => name === 'review' || sectionFields(schema, name, kind, draft).length,
   )
 
@@ -114,10 +117,7 @@ export function Editor({
       setErrors(e.errors)
       setConflict(e.status === 409)
       if (e.errors.length) focusError(e.errors[0])
-      if (e.status === 401)
-        onSessionEnd(
-          'Votre session a expiré. Reconnectez-vous : la saisie sera restaurée dans cet onglet.',
-        )
+      if (e.status === 401) onSessionEnd(t('editor.sessionExpired'))
     }
   }
   function accepted(next: ContentRecord) {
@@ -144,7 +144,7 @@ export function Editor({
         },
       )
       accepted(next)
-      setNotice('Fiche enregistrée.')
+      setNotice(t('editor.saved'))
       return next
     } catch (e) {
       failed(e)
@@ -165,12 +165,9 @@ export function Editor({
       })
       setErrors(result.errors)
       if (result.errors.length) {
-        setMessage('Quelques informations restent à compléter. Le brouillon peut être enregistré.')
+        setMessage(t('editor.incomplete'))
         focusError(result.errors[0])
-      } else
-        setNotice(
-          'La fiche est complète pour la relecture. Vous pouvez la marquer prête après enregistrement.',
-        )
+      } else setNotice(t('editor.complete'))
     } catch (e) {
       failed(e)
     } finally {
@@ -185,18 +182,22 @@ export function Editor({
     try {
       const result = await adminRequest<ContentRecord>(
         `/content/${kind}/${current.id}/transition`,
-        { method: 'POST', csrf: session.csrf_token, body: { version: current.version, status } },
+        {
+          method: 'POST',
+          csrf: session.csrf_token,
+          body: { version: current.version, status },
+        },
       )
       accepted(result)
       setConfirm(null)
       setNotice(
         status === 'ready'
           ? result.entry.visibility === 'public'
-            ? 'Fiche prête et publique. Les contenus autorisés sont visibles sur le site.'
-            : 'Fiche prête. Sa visibilité confidentielle la conserve privée.'
+            ? t('editor.published')
+            : t('editor.privateReady')
           : status === 'archived'
-            ? 'Fiche archivée, associations conservées.'
-            : 'Fiche restaurée en brouillon.',
+            ? t('editor.archived')
+            : t('editor.restored'),
       )
     } catch (e) {
       setConfirm(null)
@@ -223,13 +224,16 @@ export function Editor({
       } else if (confirm === 'reload') {
         accepted(await adminRequest<ContentRecord>(`/content/${kind}/${record.id}`))
       } else if (confirm === 'duplicate') {
-        const next = await adminRequest<ContentRecord>(`/content/${kind}/${record.id}/duplicate`, {
-          method: 'POST',
-          csrf: session.csrf_token,
-          body: { version: record.version },
-        })
+        const next = await adminRequest<ContentRecord>(
+          `/content/${kind}/${record.id}/duplicate`,
+          {
+            method: 'POST',
+            csrf: session.csrf_token,
+            body: { version: record.version },
+          },
+        )
         accepted(next)
-        setNotice('Copie créée en brouillon. Les références ont été réutilisées.')
+        setNotice(t('editor.duplicated'))
       }
       setConfirm(null)
     } catch (e) {
@@ -247,32 +251,36 @@ export function Editor({
   const activeSection = available.find((s) => s[0] === section) ?? available[0]
   return (
     <div className="content-studio content-editor">
-      {!record && <SimilarEntries kind={kind} title={String(draft.title ?? '')} onOpen={onOpen} />}
+      {!record && (
+        <SimilarEntries kind={kind} title={String(draft.title ?? '')} onOpen={onOpen} />
+      )}
       <button className="text-button back-to-list" type="button" onClick={goBack}>
         ← {definition.label}
       </button>
       <header className="content-heading editor-heading">
         <div>
-          <span className="eyebrow">{record ? 'VOTRE FICHE' : 'NOUVELLE FICHE'}</span>
-          <h1>{String(draft.title || 'Une nouvelle histoire')}</h1>
+          <span className="eyebrow">
+            {record ? t('editor.entryEyebrow') : t('editor.newEntryEyebrow')}
+          </span>
+          <h1>{String(draft.title || t('editor.newStory'))}</h1>
           <div className="editor-state">
             {record?.derived?.expired && (
-              <span className="content-status">Certification expirée</span>
+              <span className="content-status">{t('editor.expiredCertification')}</span>
             )}
             <span className={`content-status status-${record?.status ?? 'draft'}`}>
-              {record ? statusLabels[record.status] : 'Brouillon'}
+              {record ? getStatusLabels()[record.status] : t('status.draft')}
             </span>
             <span>
               {dirty
-                ? 'Modifications non enregistrées'
+                ? t('editor.unsaved')
                 : record
-                  ? 'Enregistré'
-                  : 'Aucune sauvegarde pour le moment'}
+                  ? t('editor.savedStatus')
+                  : t('editor.neverSaved')}
             </span>
           </div>
         </div>
         <button type="button" className="secondary-button" onClick={() => setPreview(true)}>
-          Aperçu
+          {t('editor.preview')}
         </button>
       </header>
       <div className="editor-toolbar">
@@ -285,10 +293,10 @@ export function Editor({
               onClick={() => void save()}
             >
               {busy
-                ? 'Traitement…'
+                ? t('common.processing')
                 : record?.status === 'ready'
-                  ? 'Enregistrer'
-                  : 'Enregistrer le brouillon'}
+                  ? t('common.save')
+                  : t('editor.saveDraft')}
             </button>
           )}
           {!archived && (
@@ -298,7 +306,7 @@ export function Editor({
               disabled={busy}
               onClick={() => void check()}
             >
-              Vérifier la fiche
+              {t('editor.validate')}
             </button>
           )}
           {record?.status === 'ready' && (
@@ -308,7 +316,7 @@ export function Editor({
               disabled={busy}
               onClick={() => void save(true)}
             >
-              Enregistrer en brouillon
+              {t('editor.saveAsDraft')}
             </button>
           )}
           {archived && (
@@ -318,11 +326,11 @@ export function Editor({
               disabled={busy}
               onClick={() => void transition('draft')}
             >
-              Restaurer en brouillon
+              {t('editor.restore')}
             </button>
           )}
         </div>
-        <p className="muted">Sauvegarde explicite · fermer l’onglet peut perdre la saisie.</p>
+        <p className="muted">{t('editor.explicitSave')}</p>
       </div>
       {message && (
         <div className="error-summary" ref={summaryRef} tabIndex={-1} role="alert">
@@ -339,8 +347,12 @@ export function Editor({
             </ul>
           )}
           {conflict && record && (
-            <button type="button" className="secondary-button" onClick={() => setConfirm('reload')}>
-              Recharger la version enregistrée
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setConfirm('reload')}
+            >
+              {t('editor.reload')}
             </button>
           )}
         </div>
@@ -350,7 +362,7 @@ export function Editor({
           ✓ {notice}
         </p>
       )}
-      <nav className="editor-sections" aria-label="Sections de la fiche">
+      <nav className="editor-sections" aria-label={t('editor.sections')}>
         {available.map(([name, label], index) => (
           <button
             key={name}
@@ -377,19 +389,15 @@ export function Editor({
         </div>
         {activeSection[0] === 'review' && (
           <div className="review-panel">
-            <h3>Prêt et public : visible sur le site</h3>
-            <p>
-              La relecture vérifie les informations nécessaires. Marquer cette fiche prête la
-              publie si sa visibilité est « Public ». Une fiche confidentielle reste privée.
-              Les médias nécessitent aussi un usage public et les témoignages un consentement.
-            </p>
+            <h3>{t('editor.publicReviewTitle')}</h3>
+            <p>{t('editor.publicReviewHint')}</p>
             <button
               className="secondary-button"
               type="button"
               disabled={busy || archived}
               onClick={() => void transition('ready')}
             >
-              Enregistrer et marquer prêt
+              {t('editor.saveReady')}
             </button>
           </div>
         )}
@@ -398,14 +406,19 @@ export function Editor({
             {record.file.mime.startsWith('image/') && (
               <img
                 src={`/api/admin/content/media/${record.id}/file`}
-                alt="Aperçu du fichier sélectionné"
+                alt={t('editor.filePreview')}
               />
             )}
             <p>
-              {record.file.original_name} · {(record.file.size / 1024).toFixed(1)} Kio
+              {record.file.original_name} · {number(record.file.size / 1024, 1)}{' '}
+              {t('upload.kib')}
             </p>
-            <a href={`/api/admin/content/media/${record.id}/file`} target="_blank" rel="noreferrer">
-              Ouvrir le fichier privé
+            <a
+              href={`/api/admin/content/media/${record.id}/file`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('editor.privateFile')}
             </a>
           </div>
         )}
@@ -442,7 +455,7 @@ export function Editor({
               type="button"
               onClick={() => setSection(available[available.indexOf(activeSection) - 1][0])}
             >
-              ← Section précédente
+              {t('editor.previousSection')}
             </button>
           )}
           {available.indexOf(activeSection) < available.length - 1 && (
@@ -451,7 +464,7 @@ export function Editor({
               type="button"
               onClick={() => setSection(available[available.indexOf(activeSection) + 1][0])}
             >
-              Section suivante →
+              {t('editor.nextSection')}
             </button>
           )}
         </div>
@@ -460,10 +473,12 @@ export function Editor({
         <footer className="entry-footer">
           <details>
             <summary>
-              Usages et gestion de la fiche
-              {record.usages.length ? ` · ${record.usages.length} association(s)` : ''}
+              {t('editor.management')}
+              {record.usages.length
+                ? ` · ${t('editor.usageCount', { count: record.usages.length })}`
+                : ''}
             </summary>
-            <p>Les références partagées sont conservées lors d’un archivage.</p>
+            <p>{t('editor.archiveHint')}</p>
             {record.usages.length > 0 ? (
               <ul>
                 {record.usages.map((item) => (
@@ -473,13 +488,13 @@ export function Editor({
                       className="text-button"
                       onClick={() => onOpen(item.kind, item.id)}
                     >
-                      {item.title} · {statusLabels[item.status]}
+                      {item.title} · {getStatusLabels()[item.status]}
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p>Aucune autre fiche ne référence celle-ci.</p>
+              <p>{t('editor.noUsages')}</p>
             )}
             <div className="editor-actions">
               {kind !== 'media' && kind !== 'profiles' && (
@@ -489,7 +504,7 @@ export function Editor({
                   disabled={busy || dirty}
                   onClick={() => setConfirm('duplicate')}
                 >
-                  Dupliquer
+                  {t('editor.duplicate')}
                 </button>
               )}
               {!archived && (
@@ -499,7 +514,7 @@ export function Editor({
                   disabled={busy || dirty}
                   onClick={() => setConfirm('archive')}
                 >
-                  Archiver
+                  {t('editor.archive')}
                 </button>
               )}
               {archived && (
@@ -509,15 +524,11 @@ export function Editor({
                   disabled={busy || record.usages.length > 0}
                   onClick={() => setConfirm('delete')}
                 >
-                  Supprimer définitivement
+                  {t('editor.delete')}
                 </button>
               )}
             </div>
-            {dirty && (
-              <p className="muted">
-                Enregistrez vos modifications pour dupliquer ou archiver la fiche.
-              </p>
-            )}
+            {dirty && <p className="muted">{t('editor.saveBeforeAction')}</p>}
           </details>
         </footer>
       )}
@@ -531,12 +542,12 @@ export function Editor({
       )}
       {pending && (
         <Dialog
-          title="Conserver vos modifications ?"
+          title={t('editor.unsavedTitle')}
           onClose={() => {
             if (!busy) setPending(null)
           }}
         >
-          <p>Cette fiche contient des modifications non enregistrées.</p>
+          <p>{t('editor.unsavedDescription')}</p>
           <div className="dialog-actions">
             <button
               className="primary-button"
@@ -553,7 +564,7 @@ export function Editor({
                 })
               }
             >
-              Enregistrer et continuer
+              {t('editor.saveContinue')}
             </button>
             <button
               className="secondary-button"
@@ -561,7 +572,7 @@ export function Editor({
               disabled={busy}
               onClick={() => setPending(null)}
             >
-              Rester sur la fiche
+              {t('editor.stay')}
             </button>
             <button
               className="text-button"
@@ -574,7 +585,7 @@ export function Editor({
                 next()
               }}
             >
-              Abandonner les modifications
+              {t('editor.discard')}
             </button>
           </div>
         </Dialog>
@@ -583,12 +594,12 @@ export function Editor({
         <Dialog
           title={
             confirm === 'delete'
-              ? 'Supprimer définitivement cette fiche ?'
+              ? t('editor.deleteTitle')
               : confirm === 'archive'
-                ? 'Archiver cette fiche ?'
+                ? t('editor.archiveTitle')
                 : confirm === 'reload'
-                  ? 'Recharger la fiche ?'
-                  : 'Dupliquer cette fiche ?'
+                  ? t('editor.reloadTitle')
+                  : t('editor.duplicateTitle')
           }
           onClose={() => {
             if (!busy) setConfirm(null)
@@ -596,12 +607,12 @@ export function Editor({
         >
           <p>
             {confirm === 'delete'
-              ? 'Cette action retire la fiche et ses sous-listes. Les médias et référentiels partagés sont conservés.'
+              ? t('editor.deleteDescription')
               : confirm === 'archive'
-                ? `La fiche et ses ${record?.usages.length ?? 0} usages seront conservés. Vous pourrez la restaurer en brouillon.`
+                ? t('editor.archiveDescription', { count: record?.usages.length ?? 0 })
                 : confirm === 'reload'
-                  ? 'La saisie locale sera abandonnée au profit de la version enregistrée. Vous pouvez fermer cette fenêtre pour copier votre texte auparavant.'
-                  : 'Un nouveau brouillon sera créé avec un nouvel identifiant. Les médias et les fiches associées seront réutilisés.'}
+                  ? t('editor.reloadDescription')
+                  : t('editor.duplicateDescription')}
           </p>
           <div className="dialog-actions">
             <button
@@ -610,7 +621,7 @@ export function Editor({
               disabled={busy}
               onClick={() => void confirmed()}
             >
-              Confirmer
+              {t('common.confirm')}
             </button>
             <button
               type="button"
@@ -618,7 +629,7 @@ export function Editor({
               disabled={busy}
               onClick={() => setConfirm(null)}
             >
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </Dialog>

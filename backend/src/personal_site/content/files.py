@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 
 from personal_site.content.store import insert
 from personal_site.content.validation import ContentError, validate
+from personal_site.i18n import tr
 
 MIB = 1024 * 1024
 FORMATS = {
@@ -48,10 +49,7 @@ def inspect_file(path, mime):
                 if not valid:
                     raise ValueError("signature")
     except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
-        raise ContentError(
-            "Le contenu du fichier ne correspond pas au format annoncé, ou l'image "
-            "dépasse 20 millions de pixels. Les images animées ne sont pas acceptées."
-        ) from None
+        raise ContentError(tr("errors.fileContent")) from None
     return width, height
 
 
@@ -64,15 +62,15 @@ class MediaFiles:
     async def upload(self, request, filename):
         mime = request.headers.get("content-type", "").split(";", 1)[0].lower()
         if mime not in FORMATS:
-            raise ContentError("Formats acceptés : JPEG, PNG, WebP, PDF, MP4 et WebM.", status=415)
+            raise ContentError(tr("errors.fileFormat"), status=415)
         nature, extension, limit, _ = FORMATS[mime]
         limit = min(limit, self.quota)
         declared = request.headers.get("content-length")
         if declared and (not declared.isdigit() or int(declared) > limit):
-            raise ContentError("Le fichier dépasse la taille autorisée.", status=413)
+            raise ContentError(tr("errors.fileSize"), status=413)
         original = Path(filename.replace("\\", "/")).name
         if not original or any(ord(c) < 32 or ord(c) == 127 for c in original):
-            raise ContentError("Nom de fichier invalide.")
+            raise ContentError(tr("errors.fileName"))
         fd, path = tempfile.mkstemp(prefix=".upload-", dir=self.directory)
         temporary = Path(path)
         size, digest = 0, hashlib.sha256()
@@ -81,13 +79,13 @@ class MediaFiles:
                 async for chunk in request.stream():
                     size += len(chunk)
                     if size > limit:
-                        raise ContentError("Le fichier dépasse la taille autorisée.", status=413)
+                        raise ContentError(tr("errors.fileSize"), status=413)
                     digest.update(chunk)
                     await run_in_threadpool(stream.write, chunk)
                 await run_in_threadpool(stream.flush)
                 await run_in_threadpool(os.fsync, stream.fileno())
             if not size:
-                raise ContentError("Le fichier est vide.")
+                raise ContentError(tr("errors.emptyFile"))
             return await run_in_threadpool(
                 self.finish, temporary, original, mime, nature, extension, size, digest.hexdigest()
             )
@@ -104,8 +102,7 @@ class MediaFiles:
                 used = db.execute("SELECT coalesce(sum(size), 0) FROM media_files").fetchone()[0]
                 if used + size > self.quota:
                     raise ContentError(
-                        "Le quota de la médiathèque est atteint. Supprimez des fichiers "
-                        "inutilisés ou adaptez le quota.",
+                        tr("errors.mediaQuota"),
                         status=413,
                     )
                 data = validate(
@@ -148,7 +145,7 @@ class MediaFiles:
         with self.content.admin.connect() as db:
             row = db.execute("SELECT * FROM media_files WHERE entry_id = ?", (ident,)).fetchone()
             if not row:
-                raise ContentError("Fichier introuvable.", status=404)
+                raise ContentError(tr("errors.fileMissing"), status=404)
             return dict(row)
 
     def usage(self):

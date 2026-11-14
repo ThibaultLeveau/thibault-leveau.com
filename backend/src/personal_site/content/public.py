@@ -3,6 +3,7 @@
 from personal_site.content.catalog import target
 from personal_site.content.schemas import LABELS
 from personal_site.content.validation import ContentError, normalize, slugify
+from personal_site.i18n import schema_text, tr
 
 PAGES = {
     "/": "Accueil",
@@ -86,7 +87,7 @@ FIELDS = {
 BASE = """
 WITH visible AS (
  SELECT c.id, c.kind, c.language, c.featured, c.sort_order,
- CASE WHEN t.anonymous = 1 THEN 'Témoignage anonyme'
+ CASE WHEN t.anonymous = 1 THEN ?
       WHEN o.alias != '' THEN o.alias ELSE c.title END AS title,
  CASE WHEN t.anonymous = 1 THEN 'temoignage-anonyme'
       WHEN o.alias != '' THEN 'organisation' ELSE c.slug END AS slug,
@@ -114,7 +115,7 @@ def address(item):
 
 
 def missing():
-    raise ContentError("Contenu introuvable.", status=404)
+    raise ContentError(tr("errors.contentMissing"), status=404)
 
 
 class PublicContent:
@@ -124,7 +125,9 @@ class PublicContent:
     def visible(self, db, ident, kind=None):
         if not isinstance(ident, int) or ident < 1 or ident > 9223372036854775807:
             return None
-        row = db.execute(BASE + "SELECT * FROM visible WHERE id = ?", (ident,)).fetchone()
+        row = db.execute(
+            BASE + "SELECT * FROM visible WHERE id = ?", (tr("public.anonymous"), ident)
+        ).fetchone()
         if not row or (kind and row["kind"] != kind):
             return None
         return dict(row)
@@ -175,7 +178,7 @@ class PublicContent:
                 "JOIN visible v ON v.id = em.ref_id JOIN media_assets m ON m.id = v.id "
                 "WHERE em.entry_id = ? AND em.role = 'cover' AND m.nature = 'image' "
                 "AND m.source = 'file' ORDER BY em.position_a LIMIT 1",
-                (item["id"],),
+                (tr("public.anonymous"), item["id"]),
             ).fetchone()
             if media and not self.masked(db, row):
                 file = db.execute(
@@ -266,7 +269,8 @@ class PublicContent:
                 args.extend(ids)
             condition = " AND ".join(where)
             total = db.execute(
-                BASE + f"SELECT count(*) FROM visible v WHERE {condition}", args
+                BASE + f"SELECT count(*) FROM visible v WHERE {condition}",
+                [tr("public.anonymous"), *args],
             ).fetchone()[0]
             order = {
                 "selection": "v.featured DESC, v.sort_order, v.id DESC",
@@ -291,7 +295,7 @@ class PublicContent:
             rows = db.execute(
                 BASE + f"SELECT v.* FROM visible v {joins} WHERE {condition} "
                 f"ORDER BY {order} LIMIT ? OFFSET ?",
-                [*args, limit, (page - 1) * limit],
+                [tr("public.anonymous"), *args, limit, (page - 1) * limit],
             ).fetchall()
             return {**empty, "total": total, "items": [self.summary(db, r) for r in rows]}
 
@@ -380,7 +384,9 @@ class PublicContent:
             "posts": self.listing(kind="posts", limit=3, sort="recent")["items"],
             "services": self.listing(kind="services", limit=3)["items"],
             "skills": self.listing(kind="skills", limit=6)["items"],
-            "collections": [{"kind": kind, "label": LABELS[kind][0]} for kind in PATHS],
+            "collections": [
+                {"kind": kind, "label": schema_text(LABELS[kind][0])} for kind in PATHS
+            ],
         }
 
     def public_filename(self, kind, ident):

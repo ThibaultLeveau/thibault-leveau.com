@@ -115,7 +115,7 @@ L'accueil doit porter `Cache-Control: no-cache`. Une image reconstruite avec le 
 | Jeton de formulaire refusé, 403 | Recharger la page puis se reconnecter si nécessaire ; ne pas désactiver CSRF |
 | Trop de tentatives, 429 | Attendre le délai `Retry-After` : jusqu'à 15 minutes pour les identifiants, une minute pour le chat ; redémarrer ne remet pas les compteurs à zéro |
 | Impossible de joindre le fournisseur, 502 | Vérifier le réseau sortant avec les commandes ci-dessous avant de remplacer la clé |
-| Clé absente, 409 | Enregistrer une clé dans Réglages du site → AI provider |
+| Clé absente, 409 | Enregistrer une clé dans Réglages du site → Fournisseur IA |
 | Clé refusée, modèle refusé ou quota atteint, 502 | Vérifier fournisseur, modèle, droits, crédit et validité de la clé dans le compte fournisseur ; utiliser une clé de workspace pour Anthropic |
 | Fournisseur trop lent, 504 | Réessayer plus tard ou choisir un modèle plus rapide ; le délai serveur est limité à 65 secondes |
 | Réglages perdus après recréation | Vérifier le montage `admin_data:/app/data`, le projet Compose et le chemin de base ; ne pas créer une nouvelle base pour masquer le problème |
@@ -156,7 +156,7 @@ Vérifier que le port 8765 est libre. Si une cible externe est volontairement ut
 | Symptôme | Contrôle et résolution |
 | --- | --- |
 | Questions au lieu d'une fiche | Préciser la cible, les faits manquants ou demander de conserver un brouillon incomplet. Aucun contenu n'est enregistré pendant la génération. |
-| Modèle incompatible avec les outils | Vérifier l'accès au modèle et ses capacités d'outils structurés dans AI provider. OpenAI utilise Responses pour conserver les outils avec raisonnement ; ne pas forcer Chat Completions sur GPT-6. |
+| Modèle incompatible avec les outils | Vérifier l'accès au modèle et ses capacités d'outils structurés dans Fournisseur IA. OpenAI utilise Responses pour conserver les outils avec raisonnement ; ne pas forcer Chat Completions sur GPT-6. |
 | Limite de budget ou délai | Réduire le nombre de fiches/champs ou ouvrir une nouvelle conversation. Le tour est borné à 24 appels et 240 secondes. |
 | Une génération est déjà en cours | Attendre ou utiliser Annuler la génération dans l'onglet concerné. L'annulation attend l'arrêt serveur ; un redémarrage n'est pas le premier recours. |
 | Proposition périmée, abandonnée ou expirée | Demander une nouvelle proposition. Le serveur refuse les écritures sur une version obsolète et ne permet aucun écrasement forcé. |

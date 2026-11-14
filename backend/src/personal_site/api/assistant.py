@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from personal_site.admin.llm import ProviderError
 from personal_site.api.admin import Session, limit, require_session
 from personal_site.assistant.contracts import PreferencesUpdate, ProposalRequest, Turn
+from personal_site.i18n import tr
 
 router = APIRouter(prefix="/api/admin/assistant", dependencies=[Depends(require_session)])
 
@@ -57,10 +58,10 @@ async def turn(payload: Turn, request: Request, session: Session):
     await run_in_threadpool(limit, assistant.store.admin, "assistant:global", 10, 60)
     config = await run_in_threadpool(assistant.store.admin.provider, decrypt=True)
     if not config["has_api_key"]:
-        raise HTTPException(409, "Configurez une clé API dans les réglages AI provider.")
+        raise HTTPException(409, tr("errors.configureProvider"))
     lock = request.app.state.chat_lock
     if lock.locked():
-        raise HTTPException(429, "Une génération est déjà en cours. Patientez ou annulez-la.")
+        raise HTTPException(429, tr("errors.generationPending"))
     async with lock:
         task = asyncio.create_task(assistant.reply(payload, session["token_hash"], config))
         request.app.state.assistant_runs[str(payload.request_id)] = (session["token_hash"], task)
@@ -70,12 +71,10 @@ async def turn(payload: Turn, request: Request, session: Session):
                 if await request.is_disconnected():
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
-                    raise HTTPException(499, "La connexion a été interrompue.")
+                    raise HTTPException(499, tr("errors.connectionInterrupted"))
             return task.result()
         except asyncio.CancelledError:
-            raise HTTPException(
-                409, "La génération a été annulée. Aucun contenu n'a été enregistré."
-            ) from None
+            raise HTTPException(409, tr("errors.generationCancelled")) from None
         except ProviderError as exc:
             raise HTTPException(exc.status, exc.message) from None
         finally:

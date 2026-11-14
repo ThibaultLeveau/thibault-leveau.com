@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import { safeLink } from './content'
@@ -53,18 +54,7 @@ export function ReadingContents({ value }: { value: string }) {
       <Markdown
         skipHtml
         remarkPlugins={[headingIds('texte')]}
-        allowedElements={[
-          'h1',
-          'h2',
-          'h3',
-          'h4',
-          'h5',
-          'h6',
-          'em',
-          'strong',
-          'code',
-          'a',
-        ]}
+        allowedElements={['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'em', 'strong', 'code', 'a']}
         components={{
           h1: heading,
           h2: heading,
@@ -81,25 +71,17 @@ export function ReadingContents({ value }: { value: string }) {
   )
 }
 
-export function Reading({
-  value,
-  prefix = 'texte',
-}: {
-  value: string
-  prefix?: string
-}) {
+export function Reading({ value, prefix = 'texte' }: { value: string; prefix?: string }) {
   return (
     <div className="public-prose">
       <Markdown
         skipHtml
         remarkPlugins={[headingIds(prefix)]}
-        urlTransform={(url) =>
-          url.startsWith('#') ? url : safeLink(url) || ''
-        }
+        urlTransform={(url) => (url.startsWith('#') ? url : safeLink(url) || '')}
         components={{
           h1: ({ id, children }) => <h2 id={id}>{children}</h2>,
           img: ({ alt }) => (
-            <span className="markdown-image-note">{alt || 'Illustration'}</span>
+            <span className="markdown-image-note">{alt || t('reading.illustration')}</span>
           ),
           a: ({ href, children }) =>
             href ? (
@@ -110,12 +92,12 @@ export function Reading({
               <span>{children}</span>
             ),
           pre: ({ children }) => (
-            <pre tabIndex={0} aria-label="Extrait de code">
+            <pre tabIndex={0} aria-label={t('reading.code')}>
               {children}
             </pre>
           ),
           table: ({ children }) => (
-            <div className="reading-table" tabIndex={0} aria-label="Tableau">
+            <div className="reading-table" tabIndex={0} aria-label={t('reading.table')}>
               <table>{children}</table>
             </div>
           ),

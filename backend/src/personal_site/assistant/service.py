@@ -16,6 +16,7 @@ from personal_site.assistant.registry import PRIVATE_FIELDS
 from personal_site.assistant.store import AssistantStore
 from personal_site.assistant.tools import Context
 from personal_site.content.validation import ContentError
+from personal_site.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,7 @@ class AssistantService:
                         "calls": budget.calls,
                     }
         except TimeoutError:
-            raise ProviderError(
-                "La génération dépasse le délai. Réduisez le périmètre ou réessayez.", 504
-            ) from None
+            raise ProviderError(tr("errors.generationTimeout"), 504) from None
         except (ContentError, ProviderError):
             raise
         except Exception as exc:
@@ -85,16 +84,11 @@ class AssistantService:
                 if isinstance(cause, ProviderError):
                     raise ProviderError(cause.message, cause.status) from None
                 if isinstance(cause, (httpx.TimeoutException, httpx2.TimeoutException)):
-                    raise ProviderError(
-                        "Le fournisseur met trop de temps à répondre. Réessayez.", 504
-                    ) from None
+                    raise ProviderError(tr("errors.providerTimeout"), 504) from None
                 cause = cause.__cause__ or cause.__context__
             # SDK/graph exceptions can embed credentials, prompts or provider payloads.
             logger.warning("assistant_failure category=%s", type(exc).__name__)
-            raise ProviderError(
-                "La génération n'a pas abouti. Vérifiez le modèle, "
-                "sa compatibilité avec les outils et réessayez."
-            ) from None
+            raise ProviderError(tr("errors.generationFailed")) from None
         finally:
             logger.info(
                 "assistant_turn id=%s calls=%d tools=%d duration=%.2f",

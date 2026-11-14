@@ -1,3 +1,4 @@
+import { t, language } from '../i18n'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   adminRequest,
@@ -44,6 +45,7 @@ export function ChatPanel({
   const [media, setMedia] = useState<Item[]>([])
   const [uploading, setUploading] = useState(false)
   const provider = settings.providers.find((item) => item.id === settings.provider)!
+  const activeLanguage = language()
 
   useEffect(() => () => controller.current?.abort(), [])
   useEffect(() => {
@@ -52,7 +54,7 @@ export function ChatPanel({
       .then(setCatalog)
       .catch(() => {})
     return () => abort.abort()
-  }, [])
+  }, [activeLanguage])
   useEffect(() => {
     if (visible) bottom.current?.scrollIntoView({ block: 'end', behavior: 'instant' })
   }, [messages, pending, visible])
@@ -66,9 +68,7 @@ export function ChatPanel({
       next.length > 40 ||
       next.reduce((total, message) => total + message.content.length, 0) > 80000
     ) {
-      setError(
-        'Cette conversation a atteint sa limite. Démarrez une nouvelle conversation pour continuer.',
-      )
+      setError(t('chat.limit'))
       return
     }
     setError('')
@@ -96,8 +96,7 @@ export function ChatPanel({
         { role: 'assistant', content, reply, source: `${reply.provider} · ${reply.model}` },
       ])
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (error instanceof ApiError && error.status === 401) onSessionEnd(t('session.expired'))
       else {
         setMessages(messages)
         setDraft(text)
@@ -119,9 +118,13 @@ export function ChatPanel({
     }
   }
 
-  const suggestions = ['Créer un projet', 'Compléter mon profil', 'Rédiger un article']
+  const suggestions = [
+    t('chat.createProject'),
+    t('chat.completeProfile'),
+    t('chat.writeArticle'),
+  ]
   return (
-    <section className="chat-panel" aria-label="Chat avec le LLM" hidden={!visible}>
+    <section className="chat-panel" aria-label={t('chat.label')} hidden={!visible}>
       <div className="chat-toolbar">
         <span className="model-label">
           <span className={settings.has_api_key ? 'status-dot' : 'status-dot inactive'} />
@@ -142,7 +145,7 @@ export function ChatPanel({
           }}
         >
           <Icon name="plus" size={16} />
-          <span>Nouvelle conversation</span>
+          <span>{t('chat.newConversation')}</span>
         </button>
       </div>
       <div className="chat-scroll">
@@ -151,16 +154,16 @@ export function ChatPanel({
             <span className="chat-emblem">
               <Icon name="sparkles" size={32} />
             </span>
-            <span className="eyebrow">VOS IDÉES PRENNENT FORME</span>
+            <span className="eyebrow">{t('chat.eyebrow')}</span>
             <h1>
-              Que voulez-vous
+              {t('chat.headingStart')}
               <br />
-              créer aujourd’hui<span className="accent-dot"> ?</span>
+              {t('chat.headingEnd')}
+              <span className="accent-dot">{t('chat.questionMark')}</span>
             </h1>
             <p>
-              Décrivez votre parcours, une réalisation ou une offre.
-              <br className="desktop-break" /> Je prépare vos fiches et vous demande les précisions
-              utiles.
+              {t('chat.intro')}
+              <br className="desktop-break" /> {t('chat.help')}
             </p>
             <div className="prompt-suggestions">
               {suggestions.map((suggestion) => (
@@ -180,13 +183,18 @@ export function ChatPanel({
             {!settings.has_api_key && (
               <button type="button" className="setup-prompt" onClick={onSettings}>
                 <Icon name="settings" size={16} />
-                Connecter un AI provider pour commencer
+                {t('chat.connectProvider')}
                 <Icon name="chevron" size={14} />
               </button>
             )}
           </div>
         ) : (
-          <div className="messages" role="log" aria-label="Conversation" aria-live="polite">
+          <div
+            className="messages"
+            role="log"
+            aria-label={t('chat.conversation')}
+            aria-live="polite"
+          >
             {messages.map((message, index) => (
               <article key={index} className={`message message-${message.role}`}>
                 <span className="message-avatar" aria-hidden="true">
@@ -198,13 +206,13 @@ export function ChatPanel({
                 </span>
                 <div className="message-body">
                   <span className="message-author">
-                    {message.role === 'user' ? 'Vous' : 'Assistant'}
+                    {message.role === 'user' ? t('chat.you') : t('chat.assistant')}
                     {message.source && <span>{message.source}</span>}
                   </span>
                   <p>{message.reply?.message ?? message.content}</p>
                   {message.reply && message.reply.questions.length > 0 && (
                     <div className="assistant-questions">
-                      <strong>Quelques précisions</strong>
+                      <strong>{t('chat.clarifications')}</strong>
                       <ol>
                         {message.reply.questions.map((q, i) => (
                           <li key={i}>
@@ -231,7 +239,7 @@ export function ChatPanel({
                                   ...m,
                                   content:
                                     proposal.state === 'applied'
-                                      ? `${m.content}\nFiches enregistrées : ${proposal.result?.map((r) => `${r.kind} #${r.id} : ${r.title}`).join(', ')}`
+                                      ? `${m.content}\n${t('chat.savedEntries', { entries: proposal.result?.map((r) => `${r.kind} #${r.id} : ${r.title}`).join(', ') ?? '' })}`
                                       : m.content,
                                   reply: { ...m.reply, proposal },
                                 }
@@ -248,10 +256,10 @@ export function ChatPanel({
               <div className="assistant-pending">
                 <div className="thinking" role="status">
                   <span className="thinking-dot" />
-                  L’assistant prépare votre contenu…
+                  {t('chat.preparing')}
                 </div>
                 <button type="button" className="text-button" onClick={() => void cancel()}>
-                  Annuler la génération
+                  {t('chat.cancel')}
                 </button>
               </div>
             )}
@@ -267,14 +275,14 @@ export function ChatPanel({
         )}
         <form className="composer" onSubmit={submit}>
           <label className="sr-only" htmlFor="chat-message">
-            Votre message
+            {t('chat.message')}
           </label>
           <textarea
             id="chat-message"
             ref={input}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Écrivez votre message…"
+            placeholder={t('chat.placeholder')}
             maxLength={16000}
             rows={3}
             disabled={pending}
@@ -289,13 +297,13 @@ export function ChatPanel({
             <span>
               <Icon name="sparkles" size={14} />
               {provider.name}
-              <span className="composer-hint"> · Entrée pour envoyer</span>
+              <span className="composer-hint"> {t('chat.sendHint')}</span>
             </span>
             <button
               type="submit"
               className="send-button"
               disabled={pending || uploading || !draft.trim() || !settings.has_api_key}
-              aria-label={pending ? 'Réponse en cours' : 'Envoyer le message'}
+              aria-label={pending ? t('chat.responding') : t('chat.send')}
             >
               <Icon name="arrow" size={20} />
             </button>
@@ -312,7 +320,8 @@ export function ChatPanel({
         />
         <details className="assistant-options">
           <summary>
-            Options de la demande{includePrivate ? ' · Notes privées incluses' : ''}
+            {t('chat.requestOptions')}
+            {includePrivate ? t('chat.privateNotesIncluded') : ''}
           </summary>
           <label className="assistant-private">
             <input
@@ -322,12 +331,10 @@ export function ChatPanel({
               aria-describedby="private-notes-help"
               onChange={(e) => setIncludePrivate(e.target.checked)}
             />
-            Autoriser l’IA à utiliser les notes privées des fiches
+            {t('chat.allowPrivateNotes')}
           </label>
           <p id="private-notes-help">
-            Désactivé par défaut. Si vous cochez cette option, les annotations internes des
-            fiches utiles à votre demande peuvent être envoyées à {provider.name} pour être
-            consultées ou modifiées.
+            {t('chat.privateNotesHelp', { provider: provider.name })}
           </p>
         </details>
       </div>

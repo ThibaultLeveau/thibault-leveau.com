@@ -17,7 +17,7 @@ from personal_site.main import create_app
 
 def main():
     public = os.environ.get("PUBLIC_FIXTURES") == "1"
-    port = 8766 if public else 8765
+    port = int(os.environ.get("E2E_PORT", 8766 if public else 8765))
     with TemporaryDirectory(prefix="personal-site-e2e-") as directory:
         app = create_app(
             Settings(

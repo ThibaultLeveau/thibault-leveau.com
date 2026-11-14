@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 from pydantic import ValidationError
 
 from personal_site.content.schemas import MODELS
+from personal_site.i18n import CATALOGS, SCHEMA_KEYS, schema_text, tr
 
 
 class ContentError(Exception):
@@ -19,6 +20,36 @@ class ContentError(Exception):
 
 def issue(path, message, code="invalid"):
     return {"path": path, "message": message, "code": code}
+
+
+def localized_errors(kind, errors):
+    """Re-render only known machine errors in persisted proposal snapshots, including old ones.
+
+    Never pass editorial text or model-generated explanations through this compatibility map.
+    """
+    fixed = {
+        value: key
+        for messages in CATALOGS.values()
+        for key, value in messages.items()
+        if key.startswith("errors.") and "{" not in value
+    }
+    result = []
+    for error in errors:
+        message = error["message"]
+        if message in fixed:
+            message = tr(fixed[message])
+        else:
+            field = MODELS[kind].model_fields.get(error["path"])
+            if field and error["code"] == "required_for_ready":
+                title_key = SCHEMA_KEYS[field.title]
+                known = {
+                    tr("errors.requiredField", language=lang, title=tr(title_key, language=lang))
+                    for lang in CATALOGS
+                }
+                if message in known:
+                    message = tr("errors.requiredField", title=tr(title_key))
+        result.append({**error, "message": message})
+    return result
 
 
 def normalize(value):
@@ -70,19 +101,19 @@ def validate(kind, payload):
         model = MODELS[kind].model_validate(payload)
     except ValidationError as exc:
         messages = {
-            "string_too_long": "Ce texte dépasse la longueur autorisée.",
-            "string_too_short": "Renseignez ce champ.",
-            "extra_forbidden": "Ce champ n'appartient pas à cette fiche.",
-            "literal_error": "Sélectionnez une valeur proposée.",
-            "too_long": "Cette liste dépasse 100 lignes.",
-            "string_pattern_mismatch": "Vérifiez le format de ce champ.",
+            "string_too_long": tr("errors.textLength"),
+            "string_too_short": tr("errors.required"),
+            "extra_forbidden": tr("errors.unknownField"),
+            "literal_error": tr("errors.chooseOption"),
+            "too_long": tr("errors.listLength"),
+            "string_pattern_mismatch": tr("errors.fieldFormat"),
         }
         raise ContentError(
-            "Vérifiez les champs indiqués.",
+            tr("errors.checkFields"),
             errors=[
                 issue(
                     ".".join(map(str, e["loc"])),
-                    messages.get(e["type"], "Valeur invalide."),
+                    messages.get(e["type"], tr("errors.invalidValue")),
                     e["type"],
                 )
                 for e in exc.errors(include_input=False, include_context=False)
@@ -106,18 +137,14 @@ def validate(kind, payload):
                 try:
                     date_bounds(item)
                 except ValueError:
-                    errors.append(
-                        issue(
-                            path, "Utilisez une date réelle : AAAA, AAAA-MM ou AAAA-MM-JJ.", "date"
-                        )
-                    )
+                    errors.append(issue(path, tr("errors.date"), "date"))
             elif extra.get("widget") == "url" and not safe_url(
                 item, contact=key in {"contact_url", "public_contact"}
             ):
                 errors.append(
                     issue(
                         path,
-                        "Utilisez une URL autorisée, sans identifiants ni caractères de contrôle.",
+                        tr("errors.url"),
                         "url",
                     )
                 )
@@ -132,47 +159,44 @@ def validate(kind, payload):
         if data.get(start) and data.get(end):
             try:
                 if date_bounds(data[end])[1] < date_bounds(data[start])[0]:
-                    errors.append(issue(end, "La fin ne peut pas précéder le début.", "date_order"))
+                    errors.append(issue(end, tr("errors.dateOrder"), "date_order"))
             except ValueError:
                 pass  # Reported at the field above.
     if data.get("ongoing") and data.get("end_date"):
-        errors.append(issue("end_date", "Retirez la fin ou désactivez « En cours ».", "ongoing"))
+        errors.append(issue("end_date", tr("errors.ongoing"), "ongoing"))
     if kind == "certifications":
         if data["issue_unknown"] and data["issue_date"]:
-            errors.append(issue("issue_date", "Choisissez une date connue ou inconnue."))
+            errors.append(issue("issue_date", tr("errors.knownOrUnknownDate")))
         if data["expiry_date"] and data["validity"] != "dated":
-            errors.append(issue("expiry_date", "Choisissez une validité avec date d'expiration."))
+            errors.append(issue("expiry_date", tr("errors.expiryRequired")))
         if data["state"] == "preparing" and data["issue_date"]:
-            errors.append(
-                issue("issue_date", "Une certification en préparation n'est pas encore obtenue.")
-            )
+            errors.append(issue("issue_date", tr("errors.certificationPreparing")))
     for flag, dated in (("date_unknown", "event_date"), ("date_unknown", "award_date")):
         if data.get(flag) and data.get(dated):
-            errors.append(issue(dated, "Choisissez une date connue ou inconnue."))
+            errors.append(issue(dated, tr("errors.knownOrUnknownDate")))
     for name, value in data.items():
         if isinstance(value, list):
             ids = [r["id"] for r in value if "id" in r]
             if len(ids) != len(set(ids)):
-                errors.append(issue(name, "Cet objet est déjà associé.", "duplicate"))
+                errors.append(issue(name, tr("errors.duplicateRelationship"), "duplicate"))
     for index, package in enumerate(data.get("packages", [])):
         if (package["pricing"] == "quote") == bool(package["amount"]):
             errors.append(
                 issue(
                     f"packages.{index}.amount",
-                    "Sur devis : laissez le montant vide. Sinon, indiquez un montant "
-                    "positif ou nul.",
+                    tr("errors.amount"),
                     "amount",
                 )
             )
     if kind == "media":
         if data["source"] == "external" and not data["external_url"]:
-            errors.append(issue("external_url", "Renseignez le lien du média."))
+            errors.append(issue("external_url", tr("errors.mediaUrl")))
         if data["source"] == "file" and data["external_url"]:
-            errors.append(issue("external_url", "Un fichier téléversé n'a pas d'URL externe."))
+            errors.append(issue("external_url", tr("errors.uploadedUrl")))
         if data["media"]:
-            errors.append(issue("media", "Un média ne peut pas contenir d'autres médias."))
+            errors.append(issue("media", tr("errors.nestedMedia")))
     if errors:
-        raise ContentError("Vérifiez les champs indiqués.", errors=errors)
+        raise ContentError(tr("errors.checkFields"), errors=errors)
     return data
 
 
@@ -184,21 +208,23 @@ def completeness(kind, d, media_natures=None):
         if isinstance(value, list):
             value = any(row.get("text", row.get("name", row.get("role", ""))) for row in value)
         if not value:
-            title = MODELS[kind].model_fields[key].title
-            errors.append(issue(key, message or f"Renseignez « {title} ».", "required_for_ready"))
+            title = schema_text(MODELS[kind].model_fields[key].title)
+            errors.append(
+                issue(key, message or tr("errors.requiredField", title=title), "required_for_ready")
+            )
 
     if kind == "projects":
         for key in ("nature", "summary", "body", "phase", "role", "responsibilities"):
             need(key)
         need(
             "start_date",
-            "Précisez le début ou expliquez pourquoi il est inconnu.",
+            tr("errors.startRequired"),
             d["start_date"] or d["date_note"],
         )
         if d["phase"] == "completed":
             need(
                 "outcomes",
-                "Décrivez un résultat ou expliquez son absence.",
+                tr("errors.outcomeRequired"),
                 any(r["text"] for r in d["outcomes"])
                 or any(m["label"] and m["result"] for m in d["metrics"])
                 or d["outcome_note"],
@@ -208,12 +234,12 @@ def completeness(kind, d, media_natures=None):
             need(key)
         need(
             "organization_id",
-            "Choisissez une organisation ou son nom anonymisé.",
+            tr("errors.organizationRequired"),
             d["organization_id"] or d["organization_alias"],
         )
         need(
             "start_date",
-            "Renseignez une période ou son absence motivée.",
+            tr("errors.periodRequired"),
             (d["start_date"] and (d["end_date"] or d["ongoing"])) or d["date_note"],
         )
     elif kind in {"skills", "technologies"}:
@@ -224,12 +250,12 @@ def completeness(kind, d, media_natures=None):
             need(key)
         need(
             "institution_id",
-            "Choisissez un établissement ou l'apprentissage personnel.",
+            tr("errors.institutionRequired"),
             d["institution_id"] or d["nature"] == "self_taught",
         )
         need(
             "start_date",
-            "Renseignez la période ou une explication.",
+            tr("errors.periodExplanation"),
             (d["start_date"] and (d["end_date"] or d["ongoing"])) or d["date_note"],
         )
     elif kind == "certifications":
@@ -238,7 +264,7 @@ def completeness(kind, d, media_natures=None):
         if d["state"] == "earned":
             need(
                 "issue_date",
-                "Renseignez l'obtention ou indiquez qu'elle est inconnue.",
+                tr("errors.issueDateRequired"),
                 d["issue_date"] or d["issue_unknown"],
             )
             need("validity")
@@ -264,12 +290,12 @@ def completeness(kind, d, media_natures=None):
             need(key)
         need(
             "event_date",
-            "Renseignez la date ou indiquez qu'elle est inconnue.",
+            tr("errors.dateRequired"),
             d["event_date"] or d["date_unknown"],
         )
         need(
             "publication_url",
-            "Ajoutez un lien ou une référence bibliographique.",
+            tr("errors.publicationReference"),
             d["publication_url"] or d["identifier"],
         )
     elif kind == "testimonials":
@@ -277,14 +303,14 @@ def completeness(kind, d, media_natures=None):
         need("relationship")
         need(
             "author_name",
-            "Renseignez l'auteur ou choisissez l'anonymat.",
+            tr("errors.authorRequired"),
             d["author_name"] or d["anonymous"],
         )
         if d["visibility"] == "public" and d["consent"] != "granted":
             errors.append(
                 issue(
                     "consent",
-                    "Une autorisation est nécessaire pour une diffusion publique envisagée.",
+                    tr("errors.consentRequired"),
                     "consent",
                 )
             )
@@ -293,7 +319,7 @@ def completeness(kind, d, media_natures=None):
         need("body")
         need(
             "award_date",
-            "Renseignez la date ou indiquez qu'elle est inconnue.",
+            tr("errors.dateRequired"),
             d["award_date"] or d["date_unknown"],
         )
     elif kind == "profiles":
@@ -312,7 +338,7 @@ def completeness(kind, d, media_natures=None):
             errors.append(
                 issue(
                     f"media.{index}.alt",
-                    "Décrivez l'image ou indiquez qu'elle est décorative.",
+                    tr("errors.imageAlternative"),
                     "alternative",
                 )
             )

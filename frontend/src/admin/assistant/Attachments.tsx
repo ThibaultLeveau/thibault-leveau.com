@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, errorMessage, type Session } from '../api'
 import { ReferencePicker } from '../content/ReferencePicker'
@@ -48,8 +49,7 @@ export function Attachments({
         },
       ])
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
       else setError(errorMessage(e))
     } finally {
       setProgress(null)
@@ -58,17 +58,16 @@ export function Attachments({
   }
   return (
     <details className="assistant-attachments">
-      <summary>Médias de la demande {items.length ? `· ${items.length}` : ''}</summary>
-      <p className="field-help">
-        Ajoutez les fichiers à la médiathèque, puis décrivez leur contenu dans le message. Seules
-        leurs métadonnées sont transmises au modèle.
-      </p>
+      <summary>
+        {t('attachments.title')} {items.length ? `· ${items.length}` : ''}
+      </summary>
+      <p className="field-help">{t('attachments.help')}</p>
       <fieldset disabled={disabled || progress !== null || items.length >= 10}>
-        <legend className="sr-only">Ajouter un média</legend>
+        <legend className="sr-only">{t('attachments.add')}</legend>
         <ReferencePicker
           target="media"
           value={null}
-          label="Choisir dans la médiathèque"
+          label={t('attachments.choose')}
           id="assistant-media"
           session={session}
           onOpen={onOpen}
@@ -78,10 +77,10 @@ export function Attachments({
           }}
         />
         <label className="secondary-button upload-label">
-          Téléverser un fichier
+          {t('upload.file')}
           <input
             type="file"
-            aria-label="Téléverser un fichier pour la demande"
+            aria-label={t('attachments.upload')}
             accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.webm"
             onChange={(e) => {
               const file = e.target.files?.[0]
@@ -93,9 +92,13 @@ export function Attachments({
       </fieldset>
       {progress !== null && (
         <div role="status">
-          Téléversement : {progress} %{' '}
-          <button type="button" className="text-button" onClick={() => controller.current?.abort()}>
-            Annuler le téléversement
+          {t('upload.label')} {progress} %{' '}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => controller.current?.abort()}
+          >
+            {t('upload.cancel')}
           </button>
         </div>
       )}
@@ -109,9 +112,9 @@ export function Attachments({
                 className="text-button"
                 disabled={disabled || progress !== null}
                 onClick={() => onChange(items.filter((m) => m.id !== item.id))}
-                aria-label={`Retirer ${item.title} de la demande`}
+                aria-label={t('attachments.remove', { title: item.title })}
               >
-                Retirer
+                {t('common.remove')}
               </button>
             </li>
           ))}

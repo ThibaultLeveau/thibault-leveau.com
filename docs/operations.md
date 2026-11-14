@@ -55,6 +55,8 @@ bash scripts/smoke-test.sh
 
 Conserver la valeur de `previous_image` dans le compte rendu de déploiement. La variable shell n'est pas persistante entre deux sessions. Ne pas supprimer l'image précédente avant la fin de la période de vérification.
 
+Après validation de la version exécutée, reporter son tag dans `IMAGE_TAG` du `.env` privé, sans modifier les autres valeurs ni ses permissions `0600`. Une ancienne valeur persistante ferait repartir un futur `docker compose up` sans surcharge vers une autre image. En cas de retour arrière, synchroniser également ce réglage avec l’image saine réellement relancée.
+
 Le service utilise une seule instance : sa recréation peut provoquer une courte interruption. Cette première version ne fournit pas de mécanisme de bascule sans interruption.
 
 ## Retour arrière
@@ -181,7 +183,17 @@ Les journaux `assistant_turn` indiquent identifiant, appels, lectures/outils et 
 
 Le stockage est borné à 50 propositions/reçus de 2 Mio maximum chacun. Une proposition expirée est toujours refusée ; le nettoyage physique intervient à la prochaine création, ou à la suppression de sa session. Les propositions et reçus sont inclus dans les exports privés. Les préférences globales et familiales sont durables. Aucun processus de maintenance supplémentaire n'est requis.
 
-Après déploiement, vérifier le schéma 2, les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+Après déploiement, vérifier le schéma courant (3 depuis l’issue #18), les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+
+## Migration des langues : schéma 2 vers 3
+
+L’issue #18 ajoute uniquement `site_languages`, initialisée en français pour les deux interfaces. La migration transactionnelle préserve compte, sessions, fournisseur, contenus, préférences et médias. Les langues et leur version font ensuite partie des exports cohérents de la base.
+
+Avant remplacement, conserver l’image de schéma 2 et exporter/vérifier la base et les médias avec cette image. La commande de sauvegarde de la nouvelle version exige le schéma 3 : elle ne remplace pas la vérification préalable avec l’ancienne image. Construire la nouvelle image avant la courte interruption ; arrêter seulement `site`, effectuer la sauvegarde privée, puis démarrer le nouveau tag.
+
+Vérifier la migration en lisant `content_migrations` (versions 1, 2, 3), `site_languages` (`fr`, `fr`, version 1 au premier lancement) et les nombres d’entrées/médias sans journaliser les contenus. Contrôler HTTPS, santé, connexion, les deux sélecteurs et leurs valeurs. Les écritures bilingues complètes sont testées sur une base isolée ; conserver le choix de production de l’administrateur et ne pas ajouter de contenu fictif.
+
+**Retour à une image de schéma 2 : restaurer la sauvegarde préalable.** Cette image refuse un schéma futur, même si la nouvelle table est additive. Arrêter `site`, exporter les données de schéma 3 avec la nouvelle image si nécessaire, restaurer le couple base/médias de schéma 2 avec l’image précédente dans une destination neuve, puis suivre le remplacement contrôlé du volume décrit plus haut. Préserver la clé de chiffrement et les autres sites. Une restauration révoque les sessions et perd les écritures effectuées depuis la sauvegarde ; ne pas supprimer simplement une ligne de version pour forcer un démarrage.
 
 ## Récupérer le compte administrateur
 

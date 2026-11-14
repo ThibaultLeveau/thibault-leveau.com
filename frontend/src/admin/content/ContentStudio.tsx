@@ -1,13 +1,14 @@
+import { t, locale, number } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import { Editor } from './Editor'
 import { uploadFile } from './upload'
 import { ReferencePicker } from './ReferencePicker'
 import {
-  collectionLabels,
-  optionLabels,
+  getCollectionLabels,
+  getOptionLabels,
   resolve,
-  statusLabels,
+  getStatusLabels,
   type Catalog,
   type Collection,
   type ContentRecord,
@@ -66,8 +67,7 @@ export function ContentStudio({
       .catch((e) => {
         if (!controller.signal.aborted) {
           setError(errorMessage(e))
-          if (e instanceof ApiError && e.status === 401)
-            onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+          if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
         }
       })
     return () => controller.abort()
@@ -87,8 +87,7 @@ export function ContentStudio({
         .catch((e) => {
           if (!controller.signal.aborted) {
             setError(errorMessage(e))
-            if (e instanceof ApiError && e.status === 401)
-              onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+            if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
           }
         })
         .finally(() => {
@@ -117,8 +116,7 @@ export function ContentStudio({
       .catch((e) => {
         if (!controller.signal.aborted) {
           setError(errorMessage(e))
-          if (e instanceof ApiError && e.status === 401)
-            onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+          if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
         }
       })
     return () => controller.abort()
@@ -127,7 +125,7 @@ export function ContentStudio({
   useEffect(() => {
     if (!uploading) return
     guardRef.current = () => {
-      setError('Terminez ou annulez le téléversement avant de changer de rubrique.')
+      setError(t('upload.navigationBlocked'))
     }
     return () => {
       guardRef.current = null
@@ -153,8 +151,7 @@ export function ContentStudio({
       setSelection(saved.id)
     } catch (e) {
       setError(errorMessage(e))
-      if (e instanceof ApiError && e.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous avant de téléverser.')
+      if (e instanceof ApiError && e.status === 401) onSessionEnd(t('upload.sessionExpired'))
     } finally {
       setUploading(false)
       upload.current = null
@@ -189,12 +186,12 @@ export function ContentStudio({
     <div className="content-studio">
       <header className="content-heading">
         <div>
-          <span className="eyebrow">VOTRE BIBLIOTHÈQUE</span>
+          <span className="eyebrow">{t('content.libraryEyebrow')}</span>
           <h1>
-            {collectionLabels[kind]}
+            {getCollectionLabels()[kind]}
             <span className="accent-dot">.</span>
           </h1>
-          <p>{definition?.description ?? 'Chargement de votre espace de contenus…'}</p>
+          <p>{definition?.description ?? t('content.loading')}</p>
         </div>
         <button
           type="button"
@@ -208,25 +205,28 @@ export function ContentStudio({
         >
           +{' '}
           {kind === 'media'
-            ? 'Ajouter un lien'
+            ? t('content.addLink')
             : kind === 'profiles'
-              ? 'Créer mon profil'
-              : 'Nouvelle fiche'}
+              ? t('content.createProfile')
+              : t('content.newEntry')}
         </button>
       </header>
       <p className="collection-privacy">
-        <span aria-hidden="true">◌</span> Publication · Une fiche « Prêt » avec la visibilité « Public » apparaît sur le site.
-        Les brouillons et les fiches confidentielles restent privés.
+        <span aria-hidden="true">◌</span> {t('content.publicationHint')}
       </p>
       {error && (
         <div className="error-summary" role="alert">
           <p>{error}</p>
-          <button className="text-button" type="button" onClick={() => setRefresh((r) => r + 1)}>
-            Réessayer
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => setRefresh((r) => r + 1)}
+          >
+            {t('common.retry')}
           </button>
           {selection !== null && (
             <button className="text-button" type="button" onClick={back}>
-              Revenir à la liste
+              {t('content.backToList')}
             </button>
           )}
         </div>
@@ -234,20 +234,22 @@ export function ContentStudio({
       {kind === 'media' && selection === null && (
         <div className="media-upload">
           <div>
-            <h2>Vos fichiers, au même endroit</h2>
-            <p>JPEG, PNG, WebP : 10 Mio · PDF : 20 Mio · MP4, WebM : 100 Mio.</p>
+            <h2>{t('upload.title')}</h2>
+            <p>{t('upload.limits')}</p>
             {quota && (
               <p>
-                {(quota.used / 1024 / 1024).toFixed(1)} Mio utilisés sur{' '}
-                {(quota.quota / 1024 / 1024).toFixed(0)} Mio.
+                {t('upload.usage', {
+                  used: number(quota.used / 1024 / 1024, 1),
+                  quota: number(quota.quota / 1024 / 1024, 0),
+                })}
               </p>
             )}
           </div>
           <label className={`secondary-button upload-label ${uploading ? 'disabled' : ''}`}>
-            Téléverser un fichier
+            {t('upload.file')}
             <input
               type="file"
-              aria-label="Téléverser un fichier"
+              aria-label={t('upload.file')}
               accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/webm"
               disabled={uploading}
               onChange={(e) => {
@@ -259,10 +261,16 @@ export function ContentStudio({
           </label>
           {uploading && (
             <div className="upload-progress" role="status">
-              <progress value={progress} max={100} aria-label="Progression du téléversement" />
-              <span>{progress < 100 ? `Envoi : ${progress} %` : 'Vérification du fichier…'}</span>
-              <button type="button" className="text-button" onClick={() => upload.current?.abort()}>
-                Annuler
+              <progress value={progress} max={100} aria-label={t('upload.progress')} />
+              <span>
+                {progress < 100 ? t('upload.sending', { progress }) : t('upload.checking')}
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => upload.current?.abort()}
+              >
+                {t('common.cancel')}
               </button>
             </div>
           )}
@@ -272,11 +280,11 @@ export function ContentStudio({
         <>
           <div className="collection-filters">
             <label className="content-field search-field">
-              Rechercher
+              {t('common.search')}
               <input
                 type="search"
                 value={query}
-                placeholder="Titre ou résumé…"
+                placeholder={t('content.searchPlaceholder')}
                 onChange={(e) => {
                   setQuery(e.target.value)
                   setPage(1)
@@ -284,7 +292,7 @@ export function ContentStudio({
               />
             </label>
             <label className="content-field">
-              État
+              {t('content.status')}
               <select
                 value={status}
                 onChange={(e) => {
@@ -292,15 +300,15 @@ export function ContentStudio({
                   setPage(1)
                 }}
               >
-                <option value="">Actifs</option>
-                <option value="draft">Brouillons</option>
-                <option value="ready">Prêts</option>
-                <option value="archived">Archivés</option>
+                <option value="">{t('status.active')}</option>
+                <option value="draft">{t('status.drafts')}</option>
+                <option value="ready">{t('status.readyPlural')}</option>
+                <option value="archived">{t('status.archivedPlural')}</option>
               </select>
             </label>
             {natures && (
               <label className="content-field">
-                Nature
+                {t('content.nature')}
                 <select
                   value={nature}
                   onChange={(e) => {
@@ -308,17 +316,17 @@ export function ContentStudio({
                     setPage(1)
                   }}
                 >
-                  <option value="">Toutes</option>
+                  <option value="">{t('common.all')}</option>
                   {natures.filter(Boolean).map((n) => (
                     <option key={n} value={n}>
-                      {optionLabels[n] ?? n}
+                      {getOptionLabels()[n] ?? n}
                     </option>
                   ))}
                 </select>
               </label>
             )}
             <label className="content-field">
-              Trier par
+              {t('content.sortBy')}
               <select
                 value={sort}
                 onChange={(e) => {
@@ -326,18 +334,18 @@ export function ContentStudio({
                   setPage(1)
                 }}
               >
-                <option value="updated">Modification récente</option>
-                <option value="title">Titre</option>
-                <option value="order">Ordre de présentation</option>
-                <option value="chronology">Chronologie récente</option>
+                <option value="updated">{t('content.sortModified')}</option>
+                <option value="title">{t('content.title')}</option>
+                <option value="order">{t('content.sortOrder')}</option>
+                <option value="chronology">{t('content.sortChronological')}</option>
               </select>
             </label>
           </div>
           <details className="collection-related">
-            <summary>Filtrer par une référence associée</summary>
+            <summary>{t('content.filterReference')}</summary>
             <div className="content-fields">
               <label className="content-field">
-                Type de référence
+                {t('content.referenceType')}
                 <select
                   value={filterTarget}
                   onChange={(e) => {
@@ -346,8 +354,8 @@ export function ContentStudio({
                     setPage(1)
                   }}
                 >
-                  <option value="skills">Compétence</option>
-                  <option value="organizations">Organisation</option>
+                  <option value="skills">{t('collections.skill')}</option>
+                  <option value="organizations">{t('collections.organization')}</option>
                 </select>
               </label>
               <ReferencePicker
@@ -355,7 +363,7 @@ export function ContentStudio({
                 target={filterTarget}
                 value={related?.id ?? null}
                 selected={related}
-                label="le filtre de référence"
+                label={t('content.referenceFilter')}
                 id="content-related-filter"
                 session={session}
                 onChange={(_id, item) => {
@@ -369,7 +377,7 @@ export function ContentStudio({
           </details>
           {list && (
             <div className="collection-count" role="status">
-              {searching ? 'Recherche…' : `${list.total} fiche${list.total === 1 ? '' : 's'}`}
+              {searching ? t('content.searching') : t('content.count', { count: list.total })}
             </div>
           )}
           {list && list.items.length > 0 && (
@@ -387,14 +395,14 @@ export function ContentStudio({
                 >
                   <div>
                     <strong>{item.title}</strong>
-                    <p>{item.summary || 'Un brouillon à compléter.'}</p>
+                    <p>{item.summary || t('content.draftSummary')}</p>
                   </div>
                   <span className={`content-status status-${item.status}`}>
-                    {statusLabels[item.status]}
+                    {getStatusLabels()[item.status]}
                   </span>
                   <time dateTime={item.updated_at}>
                     {item.updated_at
-                      ? new Intl.DateTimeFormat('fr-FR', {
+                      ? new Intl.DateTimeFormat(locale(), {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
@@ -413,13 +421,13 @@ export function ContentStudio({
               </span>
               <h2>
                 {query || status || nature || related
-                  ? 'Aucune fiche correspondante'
-                  : 'Tout commence par une première fiche'}
+                  ? t('content.noMatches')
+                  : t('content.emptyTitle')}
               </h2>
               <p>
                 {query || status || nature || related
-                  ? 'Essayez un autre terme ou modifiez les filtres.'
-                  : 'Un titre suffit pour enregistrer un brouillon. Vous pourrez enrichir les détails au fil du temps.'}
+                  ? t('content.filterHint')
+                  : t('content.emptyHint')}
               </p>
               <button
                 className="secondary-button"
@@ -438,8 +446,8 @@ export function ContentStudio({
                 }}
               >
                 {query || status || nature || related
-                  ? 'Réinitialiser les filtres'
-                  : 'Créer une fiche'}
+                  ? t('content.resetFilters')
+                  : t('content.createEntry')}
               </button>
             </div>
           )}
@@ -451,10 +459,10 @@ export function ContentStudio({
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
               >
-                Précédent
+                {t('common.previous')}
               </button>
               <span>
-                Page {page} / {Math.ceil(list.total / list.limit)}
+                {t('public.pageOf', { page, total: Math.ceil(list.total / list.limit) })}
               </span>
               <button
                 className="secondary-button"
@@ -462,7 +470,7 @@ export function ContentStudio({
                 disabled={page * list.limit >= list.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Suivant
+                {t('common.next')}
               </button>
             </div>
           )}
@@ -470,7 +478,7 @@ export function ContentStudio({
       )}
       {(!definition || !list || selection !== null) && !error && (
         <p className="loading-state" role="status">
-          Chargement des contenus…
+          {t('public.loadingContent')}
         </p>
       )}
     </div>

@@ -12,6 +12,7 @@ from personal_site.assistant.registry import PRIVATE_FIELDS, describe, redact
 from personal_site.content.schemas import MODELS
 from personal_site.content.store import ContentStore
 from personal_site.content.validation import ContentError
+from personal_site.i18n import tr
 
 
 @dataclass
@@ -26,12 +27,12 @@ class Context:
         record = self.content.get(kind, ident)
         version = self.versions.setdefault(str(ident), record["version"])
         if record["version"] != version:
-            raise ContentError("Une fiche a changé pendant la génération. Réessayez.", status=409)
+            raise ContentError(tr("errors.generationConflict"), status=409)
         self.snapshots[ident] = record
         data = redact(kind, record["entry"], self.include_private)
         if fields is not None:
             if not set(fields) <= MODELS[kind].model_fields.keys():
-                raise ContentError("Champs inconnus.")
+                raise ContentError(tr("errors.unknownFields"))
             data = {k: v for k, v in data.items() if k in fields}
         result = {
             "id": ident,
@@ -49,7 +50,7 @@ class Context:
             """Chercher des fiches existantes par nom ; page de 15 résultats, accents ignorés."""
             self.budget.use_tool()
             if len(query) > 160 or not 1 <= page <= 100:
-                return {"error": "Recherche invalide : 160 caractères, page 1 à 100."}
+                return {"error": tr("errors.searchBounds")}
             result = await run_in_threadpool(
                 self.content.listing, kind, query=query, page=page, limit=15
             )

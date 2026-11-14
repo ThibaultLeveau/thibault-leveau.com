@@ -1,5 +1,6 @@
+import { t } from '../i18n'
 import type { ReactNode } from 'react'
-import { collections, date, labels, type Item } from './content'
+import { getCollections, date, getLabels, type Item } from './content'
 
 export function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   return (
@@ -52,27 +53,27 @@ export function Feedback({
   if (missing)
     return (
       <section className="public-empty">
-        <h2>Ce contenu n’est pas disponible.</h2>
-        <p>Il a peut-être été retiré ou son adresse a changé.</p>
+        <h2>{t('public.unavailable')}</h2>
+        <p>{t('public.unavailableHint')}</p>
         <a className="text-link" href="/explorer">
-          Explorer les contenus <Arrow />
+          {t('public.exploreContent')} <Arrow />
         </a>
       </section>
     )
   if (error)
     return (
       <section className="public-empty" role="alert">
-        <h2>Une petite interruption.</h2>
+        <h2>{t('public.interruption')}</h2>
         <p>{error}</p>
         <button className="public-button" onClick={retry}>
-          Réessayer
+          {t('common.retry')}
         </button>
       </section>
     )
   return (
     <div className="public-loading" role="status">
       <span className="loading-line" />
-      Chargement des contenus…
+      {t('public.loadingContent')}
     </div>
   )
 }
@@ -88,18 +89,10 @@ export function Empty({
       <span className="empty-mark" aria-hidden="true">
         ↗
       </span>
-      <h2>
-        {filtered
-          ? 'Aucun résultat pour cette recherche.'
-          : 'La suite s’écrit ici.'}
-      </h2>
-      <p>
-        {filtered
-          ? 'Essayez un autre mot ou élargissez les filtres.'
-          : 'Aucun contenu n’est publié dans cette collection pour le moment. Poursuivez la découverte.'}
-      </p>
+      <h2>{filtered ? t('public.noResults') : t('public.emptyTitle')}</h2>
+      <p>{filtered ? t('public.noResultsHint') : t('public.emptyDescription')}</p>
       <a className="text-link" href={filtered ? reset : '/explorer'}>
-        {filtered ? 'Effacer les filtres' : 'Explorer les autres collections'}
+        {filtered ? t('public.clearFilters') : t('public.exploreOtherCollections')}
         <Arrow />
       </a>
     </div>
@@ -142,7 +135,7 @@ export function Card({
             />
           ) : (
             <>
-              <span className="visual-label">{collections[item.kind][0]}</span>
+              <span className="visual-label">{getCollections()[item.kind][0]}</span>
               <span className="visual-title">{item.title}</span>
               <span className="visual-index">
                 {String(index + 1).padStart(2, '0')}
@@ -155,10 +148,10 @@ export function Card({
       <div className="card-body">
         <p className="card-meta">
           {item.domain ||
-            labels[item.nature || item.family || ''] ||
+            getLabels()[item.nature || item.family || ''] ||
             date(item.date) ||
-            collections[item.kind][0]}
-          {!!item.featured && <span>À la une</span>}
+            getCollections()[item.kind][0]}
+          {!!item.featured && <span>{t('public.featured')}</span>}
         </p>
         <Heading>
           <a href={item.url}>
@@ -168,7 +161,7 @@ export function Card({
         </Heading>
         {item.summary && <p className="card-summary">{item.summary}</p>}
         {!project && layout !== 'timeline' && (
-          <span className="card-category">{collections[item.kind][0]}</span>
+          <span className="card-category">{getCollections()[item.kind][0]}</span>
         )}
       </div>
     </article>
@@ -182,9 +175,7 @@ export function Cards({
   layout?: 'grid' | 'rows' | 'timeline'
 }) {
   if (items.length && items.every((item) => item.kind === 'skills')) {
-    const groups = [
-      ...new Set(items.map((item) => item.domain || 'Autres savoir-faire')),
-    ]
+    const groups = [...new Set(items.map((item) => item.domain || t('public.otherSkills')))]
     return (
       <div className="expertise-groups">
         {groups.map((group) => (
@@ -192,9 +183,7 @@ export function Cards({
             <h2>{group}</h2>
             <div className="public-cards grid">
               {items
-                .filter(
-                  (item) => (item.domain || 'Autres savoir-faire') === group,
-                )
+                .filter((item) => (item.domain || t('public.otherSkills')) === group)
                 .map((item, index) => (
                   <Card key={item.id} item={item} index={index} heading="h3" />
                 ))}
@@ -215,7 +204,7 @@ export function Cards({
 export function SectionHeading({
   title,
   href,
-  link = 'Tout découvrir',
+  link = t('public.discoverAll'),
   number,
 }: {
   title: string
@@ -246,8 +235,8 @@ export function Breadcrumb({
   title?: string
 }) {
   return (
-    <nav className="breadcrumbs" aria-label="Fil d’Ariane">
-      <a href="/">Accueil</a>
+    <nav className="breadcrumbs" aria-label={t('navigation.breadcrumbs')}>
+      <a href="/">{t('navigation.home')}</a>
       <span aria-hidden="true">/</span>
       <a href={href} aria-current={!title ? 'page' : undefined}>
         {parent}

@@ -2,6 +2,8 @@
 
 Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Huit pages publiques pour explorer les quinze collections et un studio privé pour les administrer, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
 
+**Réglages du site → Langue** définit indépendamment le français ou l’anglais du public et de l’administration. Les contenus des collections restent inchangés : voir le [guide des langues](docs/languages.md).
+
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)
 - Administration : [/admin](https://new.thibault-leveau.com/admin), à activer selon le [guide d'administration](docs/administration.md)
@@ -65,7 +67,7 @@ scripts/                   Construction, contrôles et vérification publique
 
 Les paramètres applicatifs sont préfixés par `SITE_`. L'exemple `.env.example` et le [guide de configuration](docs/configuration.md) décrivent leur sens. L'indexation est désactivée par défaut pour toutes les réponses ; cela ne protège pas l'accès au site.
 
-L'administration est désactivée par défaut. Définir son origine exacte, une clé de chiffrement et les identifiants d'initialisation avant de l'activer. Une fois créé, le compte se gère dans **Réglages du site → Admin user** ; changer les variables d'initialisation ne le réinitialise pas. Les clés LLM se renseignent dans **Réglages du site → AI provider** et ne sont jamais intégrées au frontend.
+L'administration est désactivée par défaut. Définir son origine exacte, une clé de chiffrement et les identifiants d'initialisation avant de l'activer. Une fois créé, le compte se gère dans **Réglages du site → Compte administrateur** ; changer les variables d'initialisation ne le réinitialise pas. Les clés LLM se renseignent dans **Réglages du site → Fournisseur IA** et ne sont jamais intégrées au frontend.
 
 Le service Compose rejoint le réseau externe `multisite_proxy` sous l'alias `thibault-personal-site`, sans publier de port hôte. Un bridge dédié `egress` assure les sorties Internet nécessaires aux fournisseurs LLM ; Compose 2.33.1 ou ultérieur est requis. Caddy dessert `new.thibault-leveau.com` et gère HTTPS. Les images de production sont identifiées par le commit Git. La CI effectue les contrôles ; après fusion, l’agent exécute le déploiement et vérifie la production conformément à `AGENTS.md`. La livraison ne s’arrête pas à la fusion.
 

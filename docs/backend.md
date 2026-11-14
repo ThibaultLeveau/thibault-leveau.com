@@ -22,6 +22,7 @@ uv run uvicorn personal_site.main:create_app --factory --host 127.0.0.1 --port 8
 | `GET /favicon.svg` | `200`, SVG | Identité du site |
 | `GET /theme-init.js` | `200`, JavaScript | Initialisation du thème avant React |
 | `GET /api/health` | `200`, `{"status":"ok"}` | Santé du processus |
+| `GET /api/public/language?area=public\|admin` | `200`, un seul code `language` | Amorçage anonyme ; aucun réglage privé |
 | `GET /documentation` | `308` vers `/documentation/` | URL canonique du répertoire |
 | `GET /documentation/` | `200`, HTML MkDocs | Racine de la documentation |
 | `GET /documentation/architecture/` | `200`, HTML MkDocs | Exemple de page imbriquée |
@@ -53,6 +54,8 @@ Toutes les routes sont sous `/api/admin`. Administration désactivée : 503. La 
 | `POST /logout` | Cookie, origine et CSRF | 204 ; révoque la session et supprime le cookie |
 | `PUT /account` | `username`, `current_password`, `new_password` facultatif | 204 ; met à jour le compte et révoque toutes les sessions |
 | `GET /provider` | Cookie | 200 : `provider`, `model`, `has_api_key`, catalogue `providers` |
+| `GET /languages` | Cookie | 200 : `public_language`, `admin_language`, `version` |
+| `PUT /languages` | Deux codes `fr`/`en` et version entière positive | 200 : réglages et version incrémentée ; 409 si version périmée |
 | `PUT /provider` | `provider`, `model`, `api_key` facultative, `clear_api_key` booléen facultatif | 200 : même représentation publique |
 | `POST /chat` | `messages`: liste de `{role, content}` | 200 : `message` assistant, `provider` et `model` utilisés |
 

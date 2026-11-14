@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 export interface Session {
   username: string
   csrf_token: string
@@ -62,23 +63,21 @@ export async function adminRequest<T>(
       signal: options.signal ?? AbortSignal.timeout(70_000),
     })
   } catch {
-    throw new ApiError(0, 'La connexion a été interrompue. Réessayez dans un instant.')
+    throw new ApiError(0, t('errors.connectionInterrupted'))
   }
   if (response.status === 204) return undefined as T
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      typeof data?.detail === 'string'
-        ? data.detail
-        : 'Une erreur est survenue. Réessayez dans un instant.',
+      typeof data?.detail === 'string' ? data.detail : t('errors.retryLater'),
       Array.isArray(data?.errors) ? data.errors : [],
     )
   }
-  if (data === null) throw new ApiError(0, 'Réponse du serveur illisible. Rechargez la page.')
+  if (data === null) throw new ApiError(0, t('errors.unreadableReload'))
   return data as T
 }
 
 export function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Une erreur est survenue.'
+  return error instanceof Error ? error.message : t('errors.generic')
 }

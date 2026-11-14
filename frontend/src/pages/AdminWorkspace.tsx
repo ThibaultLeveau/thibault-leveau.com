@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ThemeToggle } from '../components/ThemeToggle'
 import {
@@ -9,36 +10,47 @@ import {
 } from '../admin/api'
 import { Icon } from '../admin/Icon'
 import { ProviderForm, AccountForm } from '../admin/SettingsForms'
+import { LanguageForm } from '../admin/LanguageForm'
 import { ChatPanel } from '../admin/ChatPanel'
 import { PreferencesForm } from '../admin/assistant/PreferencesForm'
 import { ContentStudio } from '../admin/content/ContentStudio'
-import { collectionLabels, type Collection, type DraftMemory } from '../admin/content/types'
+import { getCollectionLabels, type Collection, type DraftMemory } from '../admin/content/types'
 import '../styles/admin.css'
 import '../styles/content.css'
 import '../styles/assistant.css'
 
-type View = 'chat' | 'provider' | 'account' | 'agents' | Collection
+type View = 'chat' | 'provider' | 'account' | 'agents' | 'language' | Collection
 type Group = 'career' | 'writing' | 'library' | 'settings'
-const groups: Record<Group, { label: string; views: View[] }> = {
-  career: { label: 'Parcours', views: ['experiences', 'educations', 'certifications', 'awards'] },
-  writing: { label: 'Publications', views: ['posts', 'publications'] },
-  library: {
-    label: 'Référentiels',
-    views: ['skills', 'technologies', 'organizations', 'taxonomies'],
-  },
-  settings: { label: 'Réglages du site', views: ['provider', 'agents', 'account'] },
+function getGroups(): Record<Group, { label: string; views: View[] }> {
+  return {
+    career: {
+      label: t('navigation.career'),
+      views: ['experiences', 'educations', 'certifications', 'awards'],
+    },
+    writing: { label: t('navigation.publications'), views: ['posts', 'publications'] },
+    library: {
+      label: t('navigation.references'),
+      views: ['skills', 'technologies', 'organizations', 'taxonomies'],
+    },
+    settings: {
+      label: t('settings.title'),
+      views: ['language', 'provider', 'agents', 'account'],
+    },
+  }
 }
 const viewLabel = (view: View) =>
-  view === 'chat'
-    ? 'Chat'
-    : view === 'provider'
-      ? 'AI provider'
-      : view === 'account'
-        ? 'Admin user'
-        : view === 'agents'
-          ? 'Agents et rédaction'
-          : collectionLabels[view]
-const isContent = (view: View): view is Collection => view in collectionLabels
+  view === 'language'
+    ? t('languages.title')
+    : view === 'chat'
+      ? t('navigation.chat')
+      : view === 'provider'
+        ? t('provider.title')
+        : view === 'account'
+          ? t('account.title')
+          : view === 'agents'
+            ? t('preferences.title')
+            : getCollectionLabels()[view]
+const isContent = (view: View): view is Collection => view in getCollectionLabels()
 
 export default function AdminWorkspace({
   session,
@@ -83,8 +95,7 @@ export default function AdminWorkspace({
         setError('')
       } catch (e) {
         if (signal?.aborted) return
-        if (e instanceof ApiError && e.status === 401)
-          onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+        if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
         else setError(errorMessage(e))
       }
     },
@@ -99,15 +110,15 @@ export default function AdminWorkspace({
       })
       .catch((e) => {
         if (controller.signal.aborted) return
-        if (e instanceof ApiError && e.status === 401)
-          onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+        if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
         else setError(errorMessage(e))
       })
     return () => controller.abort()
   }, [onSessionEnd])
   useEffect(() => {
     if (group) navPanel.current?.querySelector<HTMLButtonElement>('nav button')?.focus()
-    else if (menuOpen) primaryPanel.current?.querySelector<HTMLButtonElement>('nav button')?.focus()
+    else if (menuOpen)
+      primaryPanel.current?.querySelector<HTMLButtonElement>('nav button')?.focus()
   }, [group, menuOpen])
   function guarded(next: () => void) {
     if (guardRef.current) guardRef.current(next)
@@ -148,7 +159,7 @@ export default function AdminWorkspace({
     const open = () => {
       setGroup(next)
       setMenuOpen(false)
-      if (next === 'settings' && !groups.settings.views.includes(view)) setView('provider')
+      if (next === 'settings' && !getGroups().settings.views.includes(view)) setView('provider')
     }
     if (next === 'settings') guarded(open)
     else open()
@@ -161,11 +172,11 @@ export default function AdminWorkspace({
     try {
       await adminRequest('/logout', { method: 'POST', csrf: session.csrf_token })
       memory.write(null)
-      onSessionEnd('Vous êtes déconnecté.')
+      onSessionEnd(t('session.signedOut'))
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         memory.write(null)
-        onSessionEnd('Vous êtes déconnecté.')
+        onSessionEnd(t('session.signedOut'))
       } else setLogoutError(errorMessage(e))
     } finally {
       setLoggingOut(false)
@@ -176,9 +187,9 @@ export default function AdminWorkspace({
     destination: View | Group,
     icon: Parameters<typeof Icon>[0]['name'],
   ) {
-    const isGroup = destination in groups
+    const isGroup = destination in getGroups()
     const active = isGroup
-      ? groups[destination as Group].views.includes(view)
+      ? getGroups()[destination as Group].views.includes(view)
       : view === destination
     return (
       <button
@@ -188,7 +199,9 @@ export default function AdminWorkspace({
         aria-label={label}
         aria-current={active && !isGroup ? 'page' : undefined}
         aria-expanded={isGroup ? group === destination : undefined}
-        onClick={() => (isGroup ? openGroup(destination as Group) : navigate(destination as View))}
+        onClick={() =>
+          isGroup ? openGroup(destination as Group) : navigate(destination as View)
+        }
       >
         <Icon name={icon} />
         <span>{label}</span>
@@ -213,7 +226,9 @@ export default function AdminWorkspace({
         }
         if (event.key === 'Tab' && overlaid) {
           const panel = group ? navPanel.current : primaryPanel.current
-          const elements = panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')
+          const elements = panel?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), a[href]',
+          )
           if (elements?.length) {
             const first = elements[0],
               last = elements[elements.length - 1]
@@ -229,14 +244,14 @@ export default function AdminWorkspace({
       }}
     >
       <a className="skip-link" href="#contenu">
-        Aller au contenu
+        {t('navigation.skip')}
       </a>
       <aside ref={primaryPanel} className="admin-sidebar" inert={mobile && group !== null}>
         <div className="primary-brand-row">
           <a
             className="studio-brand"
             href="/"
-            aria-label="Thibault Leveau — accueil"
+            aria-label={t('navigation.brandHome')}
             onClick={(e) => {
               e.preventDefault()
               guarded(() => {
@@ -248,44 +263,44 @@ export default function AdminWorkspace({
               tl<span>.</span>
             </span>
             <span className="sidebar-brand-text">
-              Thibault Leveau<small>LE STUDIO</small>
+              Thibault Leveau<small>{t('studio.brand')}</small>
             </span>
           </a>
           <button
             type="button"
             className="icon-button close-primary"
-            aria-label="Fermer la navigation"
+            aria-label={t('navigation.closeNavigation')}
             onClick={closeNavigation}
           >
             <Icon name="close" />
           </button>
         </div>
-        <nav aria-label="Navigation administrateur">
-          <div className="sidebar-section-label">ESPACE DE TRAVAIL</div>
-          {link('Chat', 'chat', 'chat')}
-          <div className="sidebar-section-label">CONTENUS</div>
-          {link('Projets', 'projects', 'projects')}
-          {link('Parcours', 'career', 'career')}
-          {link('Services', 'services', 'services')}
-          {link('Publications', 'writing', 'writing')}
-          {link('Témoignages', 'testimonials', 'quote')}
-          <div className="sidebar-section-label">BIBLIOTHÈQUE</div>
-          {link('Référentiels', 'library', 'library')}
-          {link('Médias', 'media', 'image')}
-          {link('Mon profil', 'profiles', 'user')}
+        <nav aria-label={t('navigation.admin')}>
+          <div className="sidebar-section-label">{t('navigation.workspace')}</div>
+          {link(t('navigation.chat'), 'chat', 'chat')}
+          <div className="sidebar-section-label">{t('navigation.content')}</div>
+          {link(t('collections.projects'), 'projects', 'projects')}
+          {link(t('navigation.career'), 'career', 'career')}
+          {link(t('collections.services'), 'services', 'services')}
+          {link(t('navigation.publications'), 'writing', 'writing')}
+          {link(t('collections.testimonials'), 'testimonials', 'quote')}
+          <div className="sidebar-section-label">{t('navigation.libraryEyebrow')}</div>
+          {link(t('navigation.references'), 'library', 'library')}
+          {link(t('collections.media'), 'media', 'image')}
+          {link(t('collections.profiles'), 'profiles', 'user')}
         </nav>
         <div className="sidebar-footer">
           <button
             ref={settingsButton}
             type="button"
-            className={`sidebar-link ${groups.settings.views.includes(view) ? 'active' : ''}`}
+            className={`sidebar-link ${getGroups().settings.views.includes(view) ? 'active' : ''}`}
             aria-expanded={group === 'settings'}
             aria-controls="settings-navigation"
-            aria-label="Réglages du site"
+            aria-label={t('settings.title')}
             onClick={openSettings}
           >
             <Icon name="settings" />
-            <span>Réglages du site</span>
+            <span>{t('settings.title')}</span>
             <span className="settings-chevron">
               <Icon name="chevron" size={14} />
             </span>
@@ -296,12 +311,12 @@ export default function AdminWorkspace({
             </span>
             <div className="account-identity">
               <strong>{session.username}</strong>
-              <span>Administrateur</span>
+              <span>{t('account.administrator')}</span>
             </div>
             <button
               type="button"
               className="icon-button logout-button"
-              aria-label="Se déconnecter"
+              aria-label={t('session.signOut')}
               disabled={loggingOut}
               onClick={() => guarded(() => void logout())}
             >
@@ -313,7 +328,7 @@ export default function AdminWorkspace({
       {overlaid && (
         <button
           className="studio-backdrop"
-          aria-label="Fermer les menus"
+          aria-label={t('navigation.closeMenus')}
           tabIndex={-1}
           onClick={closeNavigation}
         />
@@ -323,7 +338,7 @@ export default function AdminWorkspace({
           ref={navPanel}
           className="settings-sidebar"
           id="settings-navigation"
-          aria-label={groups[group].label}
+          aria-label={getGroups()[group].label}
         >
           <button
             className="text-button back-to-menu"
@@ -333,20 +348,24 @@ export default function AdminWorkspace({
               setMenuOpen(true)
             }}
           >
-            ← Menu principal
+            {t('navigation.mainMenu')}
           </button>
           <div className="settings-sidebar-heading">
             <div>
               <span className="eyebrow">
-                {group === 'settings' ? 'PRÉFÉRENCES' : 'COLLECTIONS'}
+                {group === 'settings'
+                  ? t('settings.preferencesEyebrow')
+                  : t('navigation.collectionEyebrow')}
               </span>
-              <h2>{groups[group].label}</h2>
+              <h2>{getGroups()[group].label}</h2>
             </div>
             <button
               type="button"
               className="icon-button"
               aria-label={
-                group === 'settings' ? 'Fermer le menu des réglages' : 'Fermer le sous-menu'
+                group === 'settings'
+                  ? t('navigation.closeSettings')
+                  : t('navigation.closeSubmenu')
               }
               onClick={closeNavigation}
             >
@@ -355,10 +374,12 @@ export default function AdminWorkspace({
           </div>
           <nav
             aria-label={
-              group === 'settings' ? 'Navigation des réglages' : `Navigation ${groups[group].label}`
+              group === 'settings'
+                ? t('navigation.settings')
+                : t('navigation.group', { label: getGroups()[group].label })
             }
           >
-            {groups[group].views.map((next) => (
+            {getGroups()[group].views.map((next) => (
               <button
                 key={next}
                 type="button"
@@ -367,7 +388,15 @@ export default function AdminWorkspace({
                 onClick={() => navigate(next, undefined, group)}
               >
                 <Icon
-                  name={next === 'provider' ? 'sparkles' : next === 'account' ? 'user' : 'writing'}
+                  name={
+                    next === 'language'
+                      ? 'language'
+                      : next === 'provider'
+                        ? 'sparkles'
+                        : next === 'account'
+                          ? 'user'
+                          : 'writing'
+                  }
                   size={18}
                 />
                 <span>{viewLabel(next)}</span>
@@ -376,9 +405,9 @@ export default function AdminWorkspace({
             ))}
           </nav>
           <p className="settings-sidebar-note">
-            Un espace pour construire
+            {t('studio.noteStart')}
             <br />
-            une présentation qui vous ressemble.
+            {t('studio.noteEnd')}
           </p>
         </aside>
       )}
@@ -390,7 +419,7 @@ export default function AdminWorkspace({
               ref={menuButton}
               className="studio-menu-button secondary-button"
               aria-expanded={menuOpen || Boolean(group)}
-              aria-label="Ouvrir le menu"
+              aria-label={t('navigation.openMenu')}
               onClick={() => {
                 opener.current = menuButton.current
                 setMenuOpen(true)
@@ -398,11 +427,15 @@ export default function AdminWorkspace({
               }}
             >
               <Icon name="menu" size={17} />
-              Menu
+              {t('navigation.menu')}
             </button>
-            <span>Le studio</span>
+            <span>{t('studio.title')}</span>
             <Icon name="chevron" size={12} />
-            <strong>{groups.settings.views.includes(view) ? 'Réglages' : viewLabel(view)}</strong>
+            <strong>
+              {getGroups().settings.views.includes(view)
+                ? t('settings.shortTitle')
+                : viewLabel(view)}
+            </strong>
           </div>
           <div className="topbar-actions">
             <a
@@ -415,7 +448,7 @@ export default function AdminWorkspace({
                 })
               }}
             >
-              Voir le site
+              {t('navigation.visitSite')}
               <Icon name="external" size={14} />
             </a>
             <ThemeToggle />
@@ -437,13 +470,13 @@ export default function AdminWorkspace({
                 {error}
               </p>
               <button type="button" className="text-button" onClick={() => void loadProvider()}>
-                Réessayer
+                {t('common.retry')}
               </button>
             </div>
           )}
           {!provider && !error && (view === 'chat' || view === 'provider') && (
             <p className="loading-state" role="status">
-              Ouverture de votre espace…
+              {t('studio.loadingWorkspace')}
             </p>
           )}
           {provider && (
@@ -466,8 +499,15 @@ export default function AdminWorkspace({
             />
           )}
           {view === 'account' && <AccountForm session={session} onSessionEnd={onSessionEnd} />}
+          {view === 'language' && (
+            <LanguageForm session={session} guardRef={guardRef} onSessionEnd={onSessionEnd} />
+          )}
           {view === 'agents' && (
-            <PreferencesForm session={session} guardRef={guardRef} onSessionEnd={onSessionEnd} />
+            <PreferencesForm
+              session={session}
+              guardRef={guardRef}
+              onSessionEnd={onSessionEnd}
+            />
           )}
           {isContent(view) && (
             <ContentStudio

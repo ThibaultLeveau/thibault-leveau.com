@@ -86,7 +86,7 @@ async function openMenuIfNeeded(page: Page) {
     await page.getByRole('button', { name: 'Ouvrir le menu' }).click()
 }
 
-async function settingsView(page: Page, view: 'AI provider' | 'Admin user') {
+async function settingsView(page: Page, view: 'Fournisseur IA' | 'Compte administrateur') {
   if (!(await page.getByRole('button', { name: view, exact: true }).isVisible()))
     await openMenuIfNeeded(page)
   const button = page.getByRole('button', { name: 'Réglages du site', exact: true })
@@ -140,7 +140,7 @@ test('réglages accolés, fournisseur et confidentialité de la clé', async ({ 
     expect(second!.x).toBe(0)
     await expect(page.locator('.admin-main')).toHaveAttribute('inert', '')
   }
-  await page.getByRole('button', { name: 'AI provider', exact: true }).click()
+  await page.getByRole('button', { name: 'Fournisseur IA', exact: true }).click()
   await page.getByRole('radio', { name: 'Mistral', exact: true }).check()
   await expect(page.getByLabel('Modèle', { exact: true })).toHaveValue('mistral-small-latest')
   await page.getByLabel(/^Clé API/).fill('fake-key-for-browser-test')
@@ -158,7 +158,7 @@ test('réglages accolés, fournisseur et confidentialité de la clé', async ({ 
 test('compte administrateur, confirmation et retour à la connexion', async ({ page }) => {
   const writes = await mockAdmin(page)
   await page.goto('/admin')
-  await settingsView(page, 'Admin user')
+  await settingsView(page, 'Compte administrateur')
   await page.getByLabel('Nom d’utilisateur', { exact: true }).fill('nouvel-admin')
   await page.getByLabel('Mot de passe actuel', { exact: true }).fill('old-test-password')
   await page.getByLabel(/^Nouveau mot de passe/).fill('new-test-password')
@@ -252,12 +252,12 @@ test('thèmes, clavier et écran étroit dans chaque vue', async ({ page }) => {
   const settings = page.getByRole('button', { name: 'Réglages du site', exact: true })
   await settings.focus()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('button', { name: 'AI provider', exact: true })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Langue', exact: true })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: 'Ouvrir le menu' })).toBeFocused()
-  await settingsView(page, 'AI provider')
+  await settingsView(page, 'Fournisseur IA')
   await noOverflow(page)
-  await settingsView(page, 'Admin user')
+  await settingsView(page, 'Compte administrateur')
   await noOverflow(page)
   await page.getByRole('button', { name: 'Activer le thème clair' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
@@ -267,7 +267,7 @@ test('thèmes, clavier et écran étroit dans chaque vue', async ({ page }) => {
 test('session expirée et administration désactivée', async ({ page }) => {
   await mockAdmin(page)
   await page.goto('/admin')
-  await settingsView(page, 'AI provider')
+  await settingsView(page, 'Fournisseur IA')
   await page.route('**/api/admin/provider', (route) =>
     route.fulfill({ status: 401, json: { detail: 'Session expirée' } }),
   )
@@ -291,7 +291,7 @@ test('parcours réel React → FastAPI → SQLite → agents LangChain', async (
   await page.getByLabel('Nom d’utilisateur', { exact: true }).fill('playwright-admin')
   await page.getByLabel('Mot de passe', { exact: true }).fill('playwright-only-password')
   await page.getByRole('button', { name: 'Se connecter' }).click()
-  await settingsView(page, 'AI provider')
+  await settingsView(page, 'Fournisseur IA')
   await page.getByLabel(/^Clé API/).fill('isolated-e2e-fake-provider-key')
   await page.getByRole('button', { name: 'Enregistrer les réglages' }).click()
   await expect(page.getByRole('status')).toHaveText('Vos réglages sont enregistrés.')
@@ -305,7 +305,7 @@ test('parcours réel React → FastAPI → SQLite → agents LangChain', async (
   const cookie = cookies.find((item) => item.name === 'site_admin_session')!
   expect(cookie.httpOnly).toBe(true)
   expect(cookie.sameSite).toBe('Strict')
-  await settingsView(page, 'AI provider')
+  await settingsView(page, 'Fournisseur IA')
   await expect(page.getByLabel(/^Clé API/)).toHaveValue('')
   await page.getByRole('button', { name: 'Retirer la clé' }).click()
   await expect(page.getByRole('status')).toHaveText('La clé API a été retirée.')

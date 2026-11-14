@@ -1,36 +1,47 @@
+import { t } from '../../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import { Dialog } from '../content/Dialog'
 import type { NavigationGuard } from '../content/types'
-import { defaultStyle, families, type Family, type Preferences, type Style } from './types'
+import { defaultStyle, getFamilies, type Family, type Preferences, type Style } from './types'
 
-const choices = {
-  tone: {
-    label: 'Ton',
-    options: {
-      neutral: 'Neutre et professionnel',
-      warm: 'Chaleureux',
-      direct: 'Direct',
-      formal: 'Formel',
+function getChoices() {
+  return {
+    tone: {
+      label: t('preferences.tone'),
+      options: {
+        neutral: t('preferences.neutral'),
+        warm: t('preferences.warm'),
+        direct: t('preferences.direct'),
+        formal: t('preferences.formal'),
+      },
     },
-  },
-  technicality: {
-    label: 'Degré de technicité',
-    options: { accessible: 'Accessible', balanced: 'Équilibré', expert: 'Expert' },
-  },
-  detail: {
-    label: 'Niveau de détail',
-    options: { concise: 'Concis', balanced: 'Équilibré', detailed: 'Détaillé' },
-  },
-  voice: {
-    label: 'Personne narrative',
-    options: {
-      first_person: 'Première personne',
-      third_person: 'Troisième personne',
-      impersonal: 'Impersonnel',
+    technicality: {
+      label: t('preferences.technicality'),
+      options: {
+        accessible: t('preferences.accessible'),
+        balanced: t('preferences.balanced'),
+        expert: t('preferences.expert'),
+      },
     },
-  },
-} as const
+    detail: {
+      label: t('preferences.detail'),
+      options: {
+        concise: t('preferences.concise'),
+        balanced: t('preferences.balanced'),
+        detailed: t('preferences.detailed'),
+      },
+    },
+    voice: {
+      label: t('preferences.person'),
+      options: {
+        first_person: t('preferences.firstPerson'),
+        third_person: t('preferences.thirdPerson'),
+        impersonal: t('preferences.impersonal'),
+      },
+    },
+  } as const
+}
 
 export function PreferencesForm({
   session,
@@ -61,8 +72,7 @@ export function PreferencesForm({
       })
       .catch((e) => {
         if (controller.signal.aborted) return
-        if (e instanceof ApiError && e.status === 401)
-          onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+        if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
         else setError(errorMessage(e))
       })
     return () => controller.abort()
@@ -82,7 +92,8 @@ export function PreferencesForm({
     }
   }, [dirty, guardRef])
   const style =
-    draft && (family === 'defaults' ? draft.defaults : (draft.overrides[family] ?? draft.defaults))
+    draft &&
+    (family === 'defaults' ? draft.defaults : (draft.overrides[family] ?? draft.defaults))
   function update(value: Partial<Style>) {
     if (!draft || !style) return
     const next = { ...style, ...value }
@@ -107,10 +118,9 @@ export function PreferencesForm({
       })
       setDraft(value)
       setSaved(value)
-      setSuccess('Vos préférences de rédaction sont enregistrées.')
+      setSuccess(t('preferences.saved'))
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
       else setError(errorMessage(e))
     } finally {
       setPending(false)
@@ -118,11 +128,12 @@ export function PreferencesForm({
   }
   return (
     <section className="settings-content" aria-labelledby="agents-title">
-      <span className="eyebrow">RÉGLAGES DU SITE</span>
+      <span className="eyebrow">{t('settings.eyebrow')}</span>
       <h1 id="agents-title">
-        Agents et rédaction<span className="accent-dot">.</span>
+        {t('preferences.title')}
+        <span className="accent-dot">.</span>
       </h1>
-      <p className="settings-lead">Une voix cohérente, adaptée à chaque contenu.</p>
+      <p className="settings-lead">{t('preferences.subtitle')}</p>
       {error && (
         <div>
           <p className="form-error" role="alert">
@@ -137,23 +148,23 @@ export function PreferencesForm({
               else load()
             }}
           >
-            Recharger les préférences
+            {t('preferences.reload')}
           </button>
         </div>
       )}
       {!draft || !style ? (
-        !error && <p role="status">Chargement des préférences…</p>
+        !error && <p role="status">{t('preferences.loading')}</p>
       ) : (
         <form className="settings-card assistant-preferences" onSubmit={save}>
           <div className="field">
-            <label htmlFor="agent-family">Personnaliser</label>
+            <label htmlFor="agent-family">{t('preferences.customize')}</label>
             <select
               id="agent-family"
               value={family}
               onChange={(e) => setFamily(e.target.value as Family | 'defaults')}
             >
-              <option value="defaults">Tous les contenus</option>
-              {Object.entries(families).map(([key, label]) => (
+              <option value="defaults">{t('preferences.all')}</option>
+              {Object.entries(getFamilies()).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
                 </option>
@@ -163,19 +174,19 @@ export function PreferencesForm({
           {family !== 'defaults' && (
             <p className="field-help">
               {draft.overrides[family]
-                ? 'Cette famille utilise ses propres préférences.'
-                : 'Cette famille hérite des préférences globales. Modifier un champ crée une personnalisation.'}
+                ? t('preferences.customized')
+                : t('preferences.inherited')}
             </p>
           )}
           <fieldset disabled={pending}>
-            <legend className="sr-only">Préférences de rédaction</legend>
+            <legend className="sr-only">{t('preferences.formTitle')}</legend>
             <div className="assistant-style-grid">
-              {Object.entries(choices).map(([key, config]) => (
+              {Object.entries(getChoices()).map(([key, config]) => (
                 <div className="field" key={key}>
                   <label htmlFor={`agent-${key}`}>{config.label}</label>
                   <select
                     id={`agent-${key}`}
-                    value={style[key as keyof typeof choices]}
+                    value={style[key as keyof ReturnType<typeof getChoices>]}
                     onChange={(e) => update({ [key]: e.target.value })}
                   >
                     {Object.entries(config.options).map(([value, label]) => (
@@ -188,7 +199,7 @@ export function PreferencesForm({
               ))}
             </div>
             <div className="field">
-              <label htmlFor="agent-language">Langue de rédaction</label>
+              <label htmlFor="agent-language">{t('preferences.language')}</label>
               <input
                 id="agent-language"
                 value={style.language}
@@ -199,21 +210,21 @@ export function PreferencesForm({
                 aria-describedby="agent-language-help"
               />
               <span id="agent-language-help" className="field-help">
-                Code de langue : fr, en, fr-CA…
+                {t('preferences.languageHint')}
               </span>
             </div>
             <div className="field">
-              <label htmlFor="agent-audience">Public visé</label>
+              <label htmlFor="agent-audience">{t('preferences.audience')}</label>
               <input
                 id="agent-audience"
                 maxLength={300}
                 value={style.audience}
                 onChange={(e) => update({ audience: e.target.value })}
-                placeholder="Par exemple : responsables techniques, recruteurs…"
+                placeholder={t('preferences.audiencePlaceholder')}
               />
             </div>
             <div className="field">
-              <label htmlFor="agent-instructions">Consignes de rédaction</label>
+              <label htmlFor="agent-instructions">{t('preferences.instructions')}</label>
               <textarea
                 id="agent-instructions"
                 rows={4}
@@ -223,8 +234,7 @@ export function PreferencesForm({
                 aria-describedby="agent-instructions-help"
               />
               <span className="field-help" id="agent-instructions-help">
-                Vocabulaire préféré, formulations à éviter, style des exemples. Ces consignes
-                s’appliquent aux prochaines générations et à leurs spécialistes.
+                {t('preferences.instructionsHint')}
               </span>
             </div>
           </fieldset>
@@ -235,7 +245,7 @@ export function PreferencesForm({
           )}
           <div className="form-actions">
             <button className="primary-button" disabled={pending || !dirty}>
-              {pending ? 'Enregistrement…' : 'Enregistrer les préférences'}
+              {pending ? t('common.saving') : t('preferences.save')}
             </button>
             <button
               type="button"
@@ -251,17 +261,17 @@ export function PreferencesForm({
                 setSuccess('')
               }}
             >
-              {family === 'defaults' ? 'Réinitialiser le style global' : 'Revenir au style global'}
+              {family === 'defaults' ? t('preferences.reset') : t('preferences.inherit')}
             </button>
           </div>
         </form>
       )}
       {leave && (
-        <Dialog title="Préférences non enregistrées" onClose={() => setLeave(null)}>
-          <p>Vos changements de rédaction ne sont pas encore enregistrés.</p>
+        <Dialog title={t('preferences.unsavedTitle')} onClose={() => setLeave(null)}>
+          <p>{t('preferences.unsavedDescription')}</p>
           <div className="form-actions">
             <button type="button" className="primary-button" onClick={() => setLeave(null)}>
-              Rester
+              {t('common.stay')}
             </button>
             <button
               type="button"
@@ -273,7 +283,7 @@ export function PreferencesForm({
                 next()
               }}
             >
-              Abandonner les changements
+              {t('common.discardChanges')}
             </button>
           </div>
         </Dialog>

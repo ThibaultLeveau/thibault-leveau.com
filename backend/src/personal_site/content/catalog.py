@@ -3,6 +3,7 @@
 from typing import get_args, get_origin
 
 from personal_site.content.schemas import LABELS, MODELS, Entry
+from personal_site.i18n import localized_schema, schema_text
 
 COMMON = {
     name: info
@@ -60,9 +61,9 @@ def relation(kind, name):
 def catalog():
     return {
         kind: {
-            "label": LABELS[kind][0],
-            "description": LABELS[kind][1],
-            "schema": model.model_json_schema(),
+            "label": schema_text(LABELS[kind][0]),
+            "description": schema_text(LABELS[kind][1]),
+            "schema": localized_schema(model.model_json_schema()),
         }
         for kind, model in MODELS.items()
     }

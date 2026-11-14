@@ -1,6 +1,8 @@
 # Administration, contenus et chat LLM
 
-L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un assistant de contenus, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
+L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un assistant de contenus, les langues des interfaces, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
+
+**Réglages du site → Langue** permet de choisir indépendamment le français ou l’anglais pour le public et l’administration, connexion comprise. Voir le [guide des langues](languages.md) pour la portée, la sauvegarde et les contenus préservés.
 
 Le [studio de contenus](content-studio.md) organise les projets, le parcours, les services, les publications et leurs références. Aucune donnée biographique ni fiche de démonstration n'est préremplie. Une fiche **Prêt** dont la **Visibilité sur le site** est **Public** est publiée ; le brouillon et la visibilité confidentielle la conservent privée.
 
@@ -74,9 +76,9 @@ Limites : images fixes 10 Mio et 20 millions de pixels, PDF 20 Mio, vidéos 100 
 
 Les formulaires manuels fonctionnent sans fournisseur LLM et ne lui transmettent aucun contenu. L'assistant ci-dessous transmet seulement le contexte utile à la demande.
 
-## Configurer AI provider
+## Configurer Fournisseur IA
 
-1. Ouvrir **Réglages du site → AI provider**.
+1. Ouvrir **Réglages du site → Fournisseur IA**.
 2. Choisir **OpenAI**, **Anthropic** ou **Mistral**.
 3. Vérifier l'identifiant du modèle et son accès sur le compte fournisseur. Un modèle proposé est prérempli ; le champ reste modifiable.
 4. Saisir une clé API valide du fournisseur choisi, puis **Enregistrer les réglages**.
@@ -128,9 +130,9 @@ Modifier une famille crée une personnalisation complète de son style. **Reveni
 
 La navigation avertit d'une saisie non enregistrée. Si un autre onglet a modifié les préférences, recharger leur version enregistrée puis reprendre les changements nécessaires. Aucun bouton ne force un écrasement concurrent.
 
-## Modifier Admin user
+## Modifier Compte administrateur
 
-Ouvrir **Réglages du site → Admin user**, modifier le nom et/ou saisir un nouveau mot de passe, puis confirmer avec le mot de passe actuel. Le nouveau mot de passe doit comporter au moins 12 caractères ; le laisser vide conserve celui qui existe. Sa confirmation doit être identique.
+Ouvrir **Réglages du site → Compte administrateur**, modifier le nom et/ou saisir un nouveau mot de passe, puis confirmer avec le mot de passe actuel. Le nouveau mot de passe doit comporter au moins 12 caractères ; le laisser vide conserve celui qui existe. Sa confirmation doit être identique.
 
 Après modification, toutes les sessions sont révoquées et l'écran de connexion réapparaît. Utiliser les nouveaux identifiants dans tous les onglets. La session expire aussi au bout de 12 heures, sans prolongation automatique. Les tentatives de connexion et de vérification du mot de passe sont limitées à 5 par adresse et 30 globalement sur 15 minutes, y compris les tentatives réussies.
 

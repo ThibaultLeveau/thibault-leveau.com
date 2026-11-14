@@ -48,6 +48,10 @@ SQLite contient le compte unique (mot de passe haché), les sessions révocables
 
 Les messages ne sont pas enregistrés en base. React les garde en mémoire et transmet l'historique nécessaire au backend à chaque envoi ; FastAPI l'envoie au fournisseur choisi. La politique de conservation de ce fournisseur s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage` ; seule la préférence de thème y est conservée.
 
+## Langues des interfaces
+
+Les [langues d’interface](languages.md) étendent la base existante avec `site_languages` (migration 3). Deux codes globaux règlent indépendamment le public et l’administration. Les écritures restent derrière session/origine/CSRF ; l’amorçage anonyme expose seulement le code de la zone demandée. FastAPI localise les métadonnées et messages par requête et injecte la langue dans le document ; React utilise i18next et react-i18next, sans nouveau service ni routeur. Cette évolution de persistance et de contrats a été explicitement validée par Thibault (« Je valide cette conception »), [accord de l’issue #18](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/18#issuecomment-6883886744). Les valeurs des collections et la langue de rédaction des agents restent indépendantes.
+
 ## Chaîne de construction
 
 ```text

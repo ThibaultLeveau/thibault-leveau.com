@@ -6,6 +6,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, Response
 
 from personal_site.admin.llm import LLMGateway
@@ -22,6 +23,7 @@ from personal_site.content.files import MediaFiles
 from personal_site.content.store import ContentStore
 from personal_site.content.validation import ContentError
 from personal_site.delivery import mount_builds
+from personal_site.i18n import current_language, tr
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -65,17 +67,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if request.url.path.startswith("/api/admin/"):
             # FastAPI's default validation response includes rejected secret input.
             return JSONResponse(
-                {"detail": "Vérifiez le format et la longueur des champs ou du message."},
+                {"detail": tr("errors.requestFormat")},
                 status_code=422,
             )
         return await request_validation_exception_handler(request, exc)
 
     @app.middleware("http")
     async def response_policy(request: Request, call_next) -> Response:
-        response = await call_next(request)
         private = request.url.path in {"/admin", "/admin/"} or request.url.path.startswith(
             "/api/admin/"
         )
+        localized = (
+            private
+            or request.url.path.startswith("/api/public/")
+            or (
+                not request.url.path.startswith(("/assets/", "/fonts/", "/documentation", "/api/"))
+                and "." not in request.url.path.rsplit("/", 1)[-1]
+            )
+        )
+        language = "fr"
+        if localized and app.state.admin_store:
+            preferences = await run_in_threadpool(app.state.admin_store.languages)
+            language = preferences["admin_language" if private else "public_language"]
+        token = current_language.set(language)
+        try:
+            response = await call_next(request)
+        finally:
+            current_language.reset(token)
+        if localized:
+            response.headers["Content-Language"] = language
         if not settings.indexable or private:
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
         response.headers["X-Content-Type-Options"] = "nosniff"

@@ -5,6 +5,7 @@ from copy import deepcopy
 from personal_site.content.catalog import list_fields, target
 from personal_site.content.schemas import MODELS
 from personal_site.content.validation import ContentError, slugify, validate
+from personal_site.i18n import tr
 
 
 def reference_ids(kind, data):
@@ -22,7 +23,7 @@ def check_versions(db, versions):
         ).fetchone()
         if not row or row[0] != version:
             raise ContentError(
-                "Une fiche ou une référence a changé. Demandez une nouvelle proposition.",
+                tr("errors.batchConflict"),
                 status=409,
             )
 
@@ -33,20 +34,18 @@ def write_batch(store, db, operations, versions):
     keys = [op["key"] for op in operations]
     ids = [op["entry_id"] for op in operations if op["entry_id"] is not None]
     if len(set(keys)) != len(keys) or len(set(ids)) != len(ids):
-        raise ContentError("Le lot contient des fiches répétées.")
+        raise ContentError(tr("errors.batchDuplicate"))
     mapping, entries = {}, {}
     for op in operations:
         kind, ident = op["kind"], op["entry_id"]
         if kind not in MODELS:
-            raise ContentError("Collection inconnue.")
+            raise ContentError(tr("errors.unknownCollection"))
         if ident is not None:
             previous = store.read(db, kind, ident)
             if previous["version"] != op["version"]:
-                raise ContentError(
-                    "La fiche a changé. Demandez une nouvelle proposition.", status=409
-                )
+                raise ContentError(tr("errors.proposalEntryConflict"), status=409)
             if previous["status"] == "archived":
-                raise ContentError("Restaurez la fiche avant de la modifier.", status=409)
+                raise ContentError(tr("errors.restoreEntry"), status=409)
             entries[op["key"]] = {**previous["entry"], **deepcopy(op["changes"])}
             mapping[op["key"]] = ident
         else:
@@ -60,7 +59,7 @@ def write_batch(store, db, operations, versions):
         kind, data = op["kind"], entries[op["key"]]
         skeleton = {k: v for k, v in data.items() if not target(kind, k)}
         if kind == "media" and skeleton.get("source") == "file":
-            raise ContentError("Téléversez le fichier avant de demander ses métadonnées.")
+            raise ContentError(tr("errors.uploadBeforeMetadata"))
         normalized = validate(kind, skeleton)
         normalized["slug"] = normalized["slug"] or slugify(normalized["title"])
         mapping[op["key"]] = store.write(db, kind, normalized)
@@ -112,7 +111,5 @@ def write_batch(store, db, operations, versions):
             if name == "slug" and not expected[name]:
                 continue
             if actual[name] != expected[name]:
-                raise ContentError(
-                    "Les associations proposées se contredisent. Précisez la demande."
-                )
+                raise ContentError(tr("errors.batchRelationships"))
     return [store.read(db, op["kind"], mapping[op["key"]]) for op in operations]

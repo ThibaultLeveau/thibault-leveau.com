@@ -10,6 +10,7 @@ from personal_site.api.admin import Session, require_session
 from personal_site.content.catalog import catalog
 from personal_site.content.schemas import MODELS, Model, Save, Transition
 from personal_site.content.validation import ContentError, completeness, validate
+from personal_site.i18n import tr
 
 router = APIRouter(prefix="/api/admin/content", dependencies=[Depends(require_session)])
 
@@ -20,7 +21,7 @@ def store(request):
 
 def collection(kind):
     if kind not in MODELS:
-        raise ContentError("Collection inconnue.", status=404)
+        raise ContentError(tr("errors.unknownCollection"), status=404)
     return kind
 
 
@@ -55,9 +56,7 @@ def media_file(entry_id: int, request: Request):
     file = files.file(entry_id)
     path = files.directory / file["storage_name"]
     if not path.is_file():
-        raise ContentError(
-            "Le fichier n'est plus présent dans le stockage. Vérifiez la sauvegarde.", status=404
-        )
+        raise ContentError(tr("errors.missingStoredFile"), status=404)
     return FileResponse(
         path,
         media_type=file["mime"],
