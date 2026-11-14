@@ -191,7 +191,9 @@ export function Editor({
       setConfirm(null)
       setNotice(
         status === 'ready'
-          ? 'Fiche prête. Elle reste privée dans le studio.'
+          ? result.entry.visibility === 'public'
+            ? 'Fiche prête et publique. Les contenus autorisés sont visibles sur le site.'
+            : 'Fiche prête. Sa visibilité confidentielle la conserve privée.'
           : status === 'archived'
             ? 'Fiche archivée, associations conservées.'
             : 'Fiche restaurée en brouillon.',
@@ -375,10 +377,11 @@ export function Editor({
         </div>
         {activeSection[0] === 'review' && (
           <div className="review-panel">
-            <h3>Une fiche prête, jamais publiée automatiquement</h3>
+            <h3>Prêt et public : visible sur le site</h3>
             <p>
-              La relecture vérifie les informations nécessaires à cette fiche. Les preuves, images
-              et données non applicables restent facultatives.
+              La relecture vérifie les informations nécessaires. Marquer cette fiche prête la
+              publie si sa visibilité est « Public ». Une fiche confidentielle reste privée.
+              Les médias nécessitent aussi un usage public et les témoignages un consentement.
             </p>
             <button
               className="secondary-button"

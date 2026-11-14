@@ -2,7 +2,7 @@
 
 Ce guide décrit le fonctionnement et l'exploitation de **new.thibault-leveau.com**, le site personnel de Thibault Leveau. Il accompagne les sources du dépôt : les procédures, paramètres et contrats HTTP évoluent avec le code.
 
-L'accueil public conserve une navigation portant le nom du propriétaire, un sélecteur de thème et le titre « Bienvenue. ». L'administration privée sous `/admin` réunit le studio de contenus, un assistant LangChain/LangGraph, les préférences de rédaction, les réglages du fournisseur et un compte unique. La documentation reste publique sous `/documentation/`.
+Le site public organise quinze collections en huit pages : accueil, projets, parcours, expertise, services, journal, à propos et recherche Explorer, avec thèmes clair/sombre. L'administration privée sous `/admin` réunit le studio de contenus, un assistant LangChain/LangGraph, les préférences de rédaction, les réglages du fournisseur et un compte unique. La documentation reste publique sous `/documentation/`.
 
 ## Choisir son parcours
 

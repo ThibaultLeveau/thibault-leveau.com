@@ -210,3 +210,11 @@ Générer ensuite une nouvelle clé Fernet, la configurer et la sauvegarder, rec
 ## Nettoyage ciblé
 
 Sur un serveur partagé, éviter les commandes globales comme `docker system prune -a` ou l'arrêt du projet de plateforme. Examiner d'abord les images de cette application et ne supprimer que les versions devenues inutiles, après conservation d'un retour arrière valide.
+
+## Contrôler la publication publique
+
+Le [guide de publication](administration.md#publier-sur-le-site) décrit Prêt + Public et les usages de médias. Une fiche absente doit être vérifiée dans le studio : statut, visibilité, consentement pour un témoignage, présence d'un usage public pour un média. Les références ont leurs propres conditions ; rendre le projet public ne publie pas son référentiel privé.
+
+Les réponses dynamiques sont sans stockage HTTP. Les miniatures sont mises en cache en mémoire après contrôle de visibilité (24 dérivés maximum) et disparaissent au redémarrage. Aucun nettoyage de fichiers dérivés ni migration n'est nécessaire. Une erreur 404 sur une image peut indiquer la disparition du dernier usage public ; ne pas rendre directement accessible le dossier `media/` pour la contourner.
+
+Les tests publics de production ne modifient que la préférence de thème de leur navigateur. Compléter l'issue avec version exécutée, santé, HTTPS et résultats desktop/mobile/clair/sombre ; distinguer parcours sur contenus réels et collections encore vides.

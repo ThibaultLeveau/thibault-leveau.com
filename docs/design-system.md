@@ -6,9 +6,9 @@ Toutes les interfaces du site, publiques comme administratives, doivent offrir u
 
 La hiérarchie typographique, l’alignement et les espaces structurent les contenus. Les contrôles doivent avoir une utilité identifiable, des libellés explicites et des cibles tactiles confortables. Les nouvelles fonctionnalités doivent réutiliser les variables de couleur et le mécanisme de thème existants.
 
-L'accueil repose sur la typographie, l'espace et quelques traits. Le nom de Thibault Leveau identifie le site ; « Bienvenue. » constitue son seul message principal. La première version ne comporte pas de cartes, de statistiques, de témoignages ou de contenu de présentation inventé.
+L'accueil présente le profil public, ses projets sélectionnés et les accès aux rubriques. En l'absence de profil publié, une introduction neutre guide la découverte. Aucun contenu biographique, résultat ou témoignage n'est inventé. La [conception publique](public-site-design.md) détaille les quinze collections et leurs présentations.
 
-La page conserve une composition lisible en clair et en sombre. Le point final bleu, le monogramme et les détails du cadre forment les accents visuels. Ils n'ajoutent aucun sens indispensable à la compréhension du contenu.
+La page conserve une composition lisible en clair et en sombre. Le point final bleu, le monogramme, les repères typographiques et les séparateurs forment les accents visuels. Ils n'ajoutent aucun sens indispensable à la compréhension du contenu.
 
 ## Palette
 
@@ -35,7 +35,7 @@ Une couleur de séparation volontairement discrète ne doit pas être réutilis�
 
 Inter variable est hébergée avec le site ; les polices système assurent le repli. Le titre utilise une taille fluide `clamp()` pour s'adapter au viewport, un interlettrage resserré et une graisse intermédiaire. Le nom dans le header reste compact et lisible.
 
-Les marges horizontales s'adaptent entre 24 et 96 pixels. Le header mesure 112 pixels sur grand écran et 88 pixels sur mobile. Le bouton de thème conserve une cible de 44 × 44 pixels. Les règles mobile ajustent le titre et les espacements pour éviter le débordement, notamment à 320 pixels de largeur.
+Les marges horizontales s'adaptent entre 24 et 96 pixels, avec 20 pixels sur les petits téléphones. Le header public mesure 100 pixels sur grand écran et 82 pixels sur mobile. Le bouton de thème conserve une cible de 44 × 44 pixels. Les règles mobile ajustent le titre et les espacements pour éviter le débordement, notamment à 320 pixels de largeur.
 
 Ne pas fixer la hauteur totale de la page : un zoom navigateur, une police de secours ou une traduction doit pouvoir augmenter le contenu sans le tronquer.
 
@@ -61,3 +61,9 @@ Parcourir la page avec `Tab`, activer le bouton avec `Entrée`, zoomer à 200 %,
 MkDocs Material possède une palette bleue, des modes clair/sombre et une typographie système. `docs/stylesheets/extra.css` ajuste le fond, les titres et les blocs de code. Les préférences de thème sont indépendantes de celles de l'accueil, afin de préserver le fonctionnement natif de la documentation.
 
 Ne pas ajouter de Google Fonts au thème documentaire : `font: false` conserve les polices disponibles sur la machine et évite une requête externe pour les caractères.
+
+## Composition publique
+
+`styles/public.css` isole les couleurs secondaires sous `.public-site` : texte secondaire `#606a64` en clair et `#a8b1ac` en sombre, surfaces blanches ou `#202527`, panneaux minéraux et accent existant. La navigation desktop laisse place à un dialogue sous 1120 px. Les grilles passent de trois à deux puis une colonne ; les filtres, chronologies et fiches se replient jusqu'à 320 px.
+
+La page publique utilise grandes introductions typographiques, repères numérotés, couvertures réelles ou compositions de titre, séparateurs et contenus éditoriaux. Les fiches conservent une colonne de lecture bornée ; les formulaires et FAQ ont des contrôles explicites. Le thème, le focus, le dialogue modal, les états réseau et la réduction des animations sont vérifiés dans les deux palettes. Une page vide garde des accès aux autres collections, sans inventer de données pour remplir l'écran.

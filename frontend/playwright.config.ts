@@ -17,14 +17,34 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } } },
-    { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
+    {
+      name: 'desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+    {
+      name: 'mobile',
+      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' },
+    },
   ],
-  webServer: externalURL ? undefined : {
-    command: 'uv run python backend/tests/serve_e2e.py',
-    cwd: root,
-    url: 'http://127.0.0.1:8765/api/health',
-    reuseExistingServer: false,
-    timeout: 30_000,
-  },
+  webServer: externalURL
+    ? undefined
+    : [
+        {
+          command: 'uv run python backend/tests/serve_e2e.py',
+          cwd: root,
+          url: 'http://127.0.0.1:8765/api/health',
+          reuseExistingServer: false,
+          timeout: 90_000,
+        },
+        {
+          command: 'PUBLIC_FIXTURES=1 uv run python backend/tests/serve_e2e.py',
+          cwd: root,
+          url: 'http://127.0.0.1:8766/api/health',
+          reuseExistingServer: false,
+          timeout: 90_000,
+        },
+      ],
 })

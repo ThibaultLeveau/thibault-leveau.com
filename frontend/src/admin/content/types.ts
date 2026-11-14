@@ -112,7 +112,7 @@ export const sections = [
     'Reliez les savoir-faire et les outils réellement utilisés.',
   ],
   ['media', 'Liens et médias', 'Ajoutez des preuves et leur contexte.'],
-  ['review', 'Relecture', 'Préparez la présentation. Le contenu reste privé dans le studio.'],
+  ['review', 'Relecture', 'Prêt + Public publie la fiche sur le site.'],
 ] as const
 export function resolve(schema: FieldSchema, root: FieldSchema): FieldSchema {
   if (schema.$ref) return root.$defs?.[schema.$ref.split('/').pop()!] ?? schema
@@ -154,7 +154,7 @@ export const optionLabels: Record<string, string> = {
   completed: 'Terminé',
   paused: 'En pause',
   private: 'Confidentiel',
-  public: 'Public envisagé',
+  public: 'Public — visible si prêt',
   onsite: 'Sur site',
   hybrid: 'Hybride',
   remote: 'À distance',

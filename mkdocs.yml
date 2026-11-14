@@ -83,6 +83,7 @@ nav:
       - Administration et chat LLM: administration.md
       - Studio de contenus (proposition): content-studio.md
       - Assistant de contenus et agents: assistant-design.md
+      - Site public et publication: public-site-design.md
   - Architecture et code:
       - Vue d'ensemble: architecture.md
       - Backend et contrat HTTP: backend.md

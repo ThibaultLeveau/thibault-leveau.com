@@ -8,7 +8,7 @@ Depuis l'accueil de l'administration, décrire une réalisation, un parcours ou 
 
 L'assistant distingue les faits fournis, les reformulations éditoriales et les informations manquantes. Il demande une précision lorsque l'identité de la fiche, une association ou un fait nécessaire est incertain. Il peut préparer un brouillon incomplet quand les éléments absents sont facultatifs ; il ne transforme pas chaque champ vide en question obligatoire. Dates, diplômes, chiffres, niveaux de compétence, citations, consentements et licences ne doivent pas être inventés.
 
-La génération n'enregistre aucun contenu métier. Le résultat présente les modifications, les champs laissés vides et les références utilisées. Une commande explicite applique le lot relu, puis confirme les fiches réellement enregistrées avec des liens vers leurs éditeurs. Les changements restent privés selon les règles du studio ; le statut « Prêt » ne publie pas le site.
+La génération n'enregistre aucun contenu métier. Le résultat présente les modifications, les champs laissés vides et les références utilisées. Une commande explicite applique le lot relu, puis confirme les fiches réellement enregistrées avec des liens vers leurs éditeurs. Les nouvelles fiches restent en brouillon. Une fiche déjà Prêt + Public est visible sur le site ; appliquer sa modification actualise sa projection publique.
 
 ## Inventaire de couverture
 

@@ -61,7 +61,7 @@ test('studio réel : projet complet, références, médias, saisie et conflits',
   })
   await expect(page.getByRole('heading', { name: `preuve-${suffix}.png` })).toBeVisible()
   await section(page, 'Relecture')
-  await page.getByLabel('Diffusion envisagée').selectOption('public')
+  await page.getByLabel('Visibilité sur le site').selectOption('public')
   await page.getByRole('button', { name: 'Enregistrer le brouillon', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('enregistrée')
   await nav(page, 'Projets')

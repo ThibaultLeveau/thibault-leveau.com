@@ -112,7 +112,7 @@ class Entry(Model):
     body: Long = field("Description complète", widget="markdown")
     language: str = field("Langue du contenu", "fr", pattern=r"^[a-z]{2,3}(-[A-Z]{2})?$")
     visibility: Literal["private", "public"] = field(
-        "Diffusion envisagée", "private", section="review"
+        "Visibilité sur le site", "private", section="review"
     )
     featured: bool = field("Mettre en avant", False, section="review")
     sort_order: int = field("Ordre de présentation", 0, section="review", ge=0, le=100000)

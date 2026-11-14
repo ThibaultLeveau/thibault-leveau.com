@@ -6,7 +6,7 @@
 
 Renseigner une information une seule fois, puis la relier aux réalisations qui l'illustrent. Une expérience décrit un poste ou une mission ; un projet décrit une réalisation ; un service décrit une prestation proposée. Une compétence décrit un savoir-faire, une technologie un outil. Ces distinctions évitent de confondre un employeur avec un client, un diplôme avec une certification, ou une responsabilité avec un résultat.
 
-La demande porte sur la gestion privée de ces contenus. Le studio permet création, lecture, modification, duplication et archivage, ainsi que la gestion des médias. Le statut **Prêt** atteste une relecture éditoriale ; il ne publie rien sur l'accueil actuel. Le rendu public, ses URL et l'indexation demanderont une conception distincte. Les champs de présentation et de référencement seront néanmoins conservés pour éviter une nouvelle saisie.
+La demande porte sur la gestion privée de ces contenus. Le studio permet création, lecture, modification, duplication et archivage, ainsi que la gestion des médias. Le statut **Prêt** atteste une relecture éditoriale. Depuis l'[évolution publique approuvée](public-site-design.md), **Prêt + Public** publie la fiche et ses champs autorisés. Les autres fiches restent privées. L'indexation reste désactivée par défaut.
 
 La saisie restera utilisable sans fournisseur LLM. Aucun contenu biographique, client, témoignage ou résultat ne sera inventé pour remplir la base. Les éventuels exemples de maquette seront explicitement fictifs.
 
@@ -55,7 +55,7 @@ Les tables nommées ci-dessous structurent les données dans SQLite. Les sous-li
 
 Chaque fiche possède un identifiant stable, un type, un titre ou nom, un identifiant lisible (`slug`, unique par type et langue), un résumé court, une description longue, une langue de contenu (`fr` par défaut), un état éditorial, un ordre et une mise en avant facultative. Les dates de création/modification et la version sont gérées par le serveur. Le profil unique ne demande pas de slug à l'utilisateur.
 
-Les contenus destinés à une future présentation disposent aussi d'un titre SEO, d'une description SEO, d'une image de partage et d'une URL canonique facultatifs. Les recommandations de longueur SEO sont indicatives, pas des blocages arbitraires. **Diffusion envisagée** distingue public et confidentiel, avec confidentiel par défaut ; elle n'accorde aucun accès HTTP. Des notes privées séparées ne sont jamais incluses dans l'aperçu de présentation.
+Les contenus destinés à une future présentation disposent aussi d'un titre SEO, d'une description SEO, d'une image de partage et d'une URL canonique facultatifs. Les recommandations de longueur SEO sont indicatives, pas des blocages arbitraires. **Visibilité sur le site** distingue public et confidentiel, avec confidentiel par défaut ; associée au statut Prêt, elle autorise la projection publique. Des notes privées séparées ne sont jamais incluses dans l'aperçu de présentation.
 
 Les liens sont des lignes nommées avec type (site, dépôt, démo, documentation, article, autre), URL et ordre. Les lieux ont un libellé, une ville, une région et un pays, avec mode sur site, hybride ou à distance ; une zone desservie n'impose pas une adresse personnelle. Les dates acceptent année, mois ou jour avec précision conservée, état en cours distinct et fin inconnue distincte. Ne pas inventer un 1er janvier pour représenter une année.
 
@@ -71,7 +71,7 @@ Les liens sont des lignes nommées avec type (site, dépôt, démo, documentatio
 | Résultats | Résultats qualitatifs ; mesures facultatives avec libellé, valeur initiale, valeur finale, unité, période, contexte et preuve ; enseignements et suites |
 | Expertise | Compétences mobilisées avec contexte ; technologies utilisées avec version facultative et usage (interface, API, données, déploiement, design…) |
 | Preuves | Liens nommés, couverture, galerie ordonnée, vidéos, documents, légendes, texte alternatif et crédits ; témoignages reliés |
-| Présentation | Mise en avant, ordre, aperçu, diffusion envisagée, SEO et notes privées |
+| Présentation | Mise en avant, ordre, aperçu, visibilité publique ou confidentielle, SEO et notes privées |
 
 Une nature professionnelle n'impose pas un emploi salarié : une mission directe peut exister sans expérience liée. Un projet personnel peut n'avoir ni organisation, ni client, ni expérience. Plusieurs emplois successifs peuvent contribuer au même projet, sans dupliquer sa fiche. Le statut éditorial est indépendant de sa phase : un projet en cours peut être suffisamment documenté pour être **Prêt**.
 
@@ -245,7 +245,7 @@ Limites : JPEG/PNG/WebP jusqu'à 10 Mio par image, PDF jusqu'à 20 Mio, MP4/WebM
 
 Le middleware conserve la limite JSON de 256 Kio. Seul le téléversement binaire possède un traitement en flux, une limite propre à sa route, une authentification/origine/CSRF vérifiée avant consommation complète et un quota sérialisé. Les autres routes conservent leur limite. Aucun téléchargement serveur d'URL, aucune exécution de média ni intégration externe automatique. La CSP permettra seulement les sources locales nécessaires à l'aperçu (`blob:` si utilisé), sans autoriser scripts ou iframes distants.
 
-Les fichiers sont privés, sans cache, hors des répertoires statiques et accessibles par identifiant sous session. Les notes et contacts confidentiels restent en base sans chiffrement applicatif supplémentaire ; sauvegardes et permissions du volume doivent donc les protéger. Seule la clé fournisseur conserve son chiffrement actuel. Une page de contenu ne transmet rien au fournisseur LLM.
+Les fichiers restent hors des répertoires statiques. Les routes administratives exigent une session ; les routes publiques sont sans cache et vérifient média Prêt + Public et usage public avant chaque accès. Les notes et contacts confidentiels restent en base sans chiffrement applicatif supplémentaire ; sauvegardes et permissions du volume doivent donc les protéger. Seule la clé fournisseur conserve son chiffrement actuel. Une page de contenu ne transmet rien au fournisseur LLM.
 
 ### Migrations, sauvegardes et retour arrière
 

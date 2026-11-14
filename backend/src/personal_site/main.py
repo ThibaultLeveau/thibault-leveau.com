@@ -15,6 +15,7 @@ from personal_site.api.admin import router as admin_router
 from personal_site.api.assistant import router as assistant_router
 from personal_site.api.content import router as content_router
 from personal_site.api.health import router
+from personal_site.api.public import router as public_router
 from personal_site.assistant.service import AssistantService
 from personal_site.config import Settings
 from personal_site.content.files import MediaFiles
@@ -94,5 +95,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_router)
     app.include_router(content_router)
     app.include_router(assistant_router)
+    app.include_router(public_router)
     mount_builds(app, settings)
     return app
