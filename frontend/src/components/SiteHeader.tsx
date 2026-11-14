@@ -1,26 +1,27 @@
+import { t } from '../i18n'
 import { useRef } from 'react'
 import { ThemeToggle } from './ThemeToggle'
 
-const links = [
-  ['/projets', 'Projets'],
-  ['/parcours', 'Parcours'],
-  ['/expertise', 'Expertise'],
-  ['/services', 'Services'],
-  ['/journal', 'Journal'],
-  ['/a-propos', 'À propos'],
-]
+function getLinks() {
+  return [
+    ['/projets', t('collections.projects')],
+    ['/parcours', t('navigation.career')],
+    ['/expertise', t('navigation.expertise')],
+    ['/services', t('collections.services')],
+    ['/journal', t('navigation.journal')],
+    ['/a-propos', t('navigation.about')],
+  ]
+}
 
 export function SiteHeader() {
   const dialog = useRef<HTMLDialogElement>(null)
   const menuButton = useRef<HTMLButtonElement>(null)
   const current = window.location.pathname
-  const navigation = links.map(([url, name]) => (
+  const navigation = getLinks().map(([url, name]) => (
     <a
       href={url}
       key={url}
-      aria-current={
-        current === url || current.startsWith(url + '/') ? 'page' : undefined
-      }
+      aria-current={current === url || current.startsWith(url + '/') ? 'page' : undefined}
     >
       {name}
     </a>
@@ -31,7 +32,7 @@ export function SiteHeader() {
         <a
           className="brand inline-flex items-center gap-3.5"
           href="/"
-          aria-label="Thibault Leveau — accueil"
+          aria-label={t('navigation.brandHome')}
         >
           <svg
             className="brand-mark"
@@ -40,21 +41,18 @@ export function SiteHeader() {
             viewBox="0 0 32 32"
             aria-hidden="true"
           >
-            <path
-              d="M2 6h20v4h-8v20h-4V10H2zm20 8h4v12h6v4H22z"
-              fill="currentColor"
-            />
+            <path d="M2 6h20v4h-8v20h-4V10H2zm20 8h4v12h6v4H22z" fill="currentColor" />
           </svg>
           <span>Thibault Leveau</span>
         </a>
-        <nav className="desktop-navigation" aria-label="Navigation principale">
+        <nav className="desktop-navigation" aria-label={t('navigation.main')}>
           {navigation}
         </nav>
         <div className="header-tools">
           <a
             className="explore-link"
             href="/explorer"
-            aria-label="Explorer les collections"
+            aria-label={t('navigation.exploreCollections')}
           >
             <svg
               width="19"
@@ -68,7 +66,7 @@ export function SiteHeader() {
               <circle cx="10.5" cy="10.5" r="6.5" />
               <path d="m16 16 5 5" />
             </svg>
-            <span>Explorer</span>
+            <span>{t('navigation.explore')}</span>
           </a>
           <ThemeToggle />
           <button
@@ -77,7 +75,7 @@ export function SiteHeader() {
             onClick={() => dialog.current?.showModal()}
             aria-haspopup="dialog"
           >
-            Menu
+            {t('navigation.menu')}
             <svg
               width="18"
               height="18"
@@ -98,9 +96,7 @@ export function SiteHeader() {
         onKeyDown={(event) => {
           if (event.key !== 'Tab') return
           const controls = Array.from(
-            event.currentTarget.querySelectorAll<HTMLElement>(
-              'a[href], button',
-            ),
+            event.currentTarget.querySelectorAll<HTMLElement>('a[href], button'),
           )
           const first = controls[0]
           const last = controls[controls.length - 1]
@@ -114,21 +110,21 @@ export function SiteHeader() {
         }}
       >
         <div className="menu-top">
-          <h2 id="menu-title">À découvrir</h2>
+          <h2 id="menu-title">{t('navigation.discover')}</h2>
           <button
             onClick={() => dialog.current?.close()}
-            aria-label="Fermer le menu"
+            aria-label={t('navigation.closeMenu')}
             autoFocus
           >
-            Fermer ×
+            {t('navigation.close')}
           </button>
         </div>
-        <nav aria-label="Navigation mobile">
-          <a href="/">Accueil</a>
+        <nav aria-label={t('navigation.mobile')}>
+          <a href="/">{t('navigation.home')}</a>
           {navigation}
-          <a href="/explorer">Explorer les collections</a>
+          <a href="/explorer">{t('navigation.exploreCollections')}</a>
         </nav>
-        <p>Thibault Leveau · Site personnel</p>
+        <p>{t('navigation.personalSite')}</p>
       </dialog>
     </header>
   )

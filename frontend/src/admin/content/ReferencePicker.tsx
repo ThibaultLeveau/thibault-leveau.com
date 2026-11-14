@@ -1,9 +1,10 @@
+import { t } from '../../i18n'
 import { useEffect, useId, useState } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import { Dialog } from './Dialog'
 import {
-  collectionLabels,
-  statusLabels,
+  getCollectionLabels,
+  getStatusLabels,
   type Collection,
   type Item,
   type Listing,
@@ -65,7 +66,7 @@ export function ReferencePicker({
           if (!controller.signal.aborted) {
             setError(errorMessage(e))
             if (e instanceof ApiError && e.status === 401)
-              onSessionEnd('Votre session a expiré. La saisie est conservée dans cet onglet.')
+              onSessionEnd(t('references.sessionExpired'))
           }
         })
         .finally(() => {
@@ -100,8 +101,7 @@ export function ReferencePicker({
       setCreating(false)
     } catch (e) {
       setError(errorMessage(e))
-      if (e instanceof ApiError && e.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
     } finally {
       setSaving(false)
     }
@@ -116,43 +116,45 @@ export function ReferencePicker({
         className="reference-button"
         onClick={() => setOpen(true)}
       >
-        {value ? (item?.title ?? 'Fiche associée') : `Choisir · ${collectionLabels[target]}`}
+        {value
+          ? (item?.title ?? t('references.linkedEntry'))
+          : t('fields.chooseReference', { label: getCollectionLabels()[target] })}
         <span aria-hidden="true">⌕</span>
       </button>
       {value && (
         <div className="reference-actions">
           <span>
             {item?.status === 'archived'
-              ? 'Archivé · association conservée'
+              ? t('references.archived')
               : item?.visibility === 'private'
-                ? 'Référence confidentielle'
-                : 'Référence sélectionnée'}
+                ? t('references.private')
+                : t('references.selected')}
           </span>
           <button type="button" className="text-button" onClick={() => onOpen(target, value)}>
-            Ouvrir
+            {t('common.open')}
           </button>
           <button
             type="button"
             className="text-button"
-            aria-label={`Retirer ${label}`}
+            aria-label={t('references.remove', { label })}
             onClick={() => {
               onChange(null)
               setChosen(undefined)
             }}
           >
-            Retirer
+            {t('common.remove')}
           </button>
         </div>
       )}
       {open && (
         <Dialog
-          title={`Choisir · ${collectionLabels[target]}`}
+          title={t('fields.chooseReference', { label: getCollectionLabels()[target] })}
           onClose={() => {
             if (!saving) setOpen(false)
           }}
         >
           <label className="content-field" htmlFor={searchId}>
-            Rechercher une fiche
+            {t('references.search')}
             <input
               id={searchId}
               value={query}
@@ -167,7 +169,7 @@ export function ReferencePicker({
               checked={archived}
               onChange={(e) => setArchived(e.target.checked)}
             />
-            Voir les fiches archivées
+            {t('references.showArchived')}
           </label>
           {error && (
             <p role="alert" className="form-error">
@@ -175,7 +177,7 @@ export function ReferencePicker({
             </p>
           )}
           {loading ? (
-            <p role="status">Recherche…</p>
+            <p role="status">{t('content.searching')}</p>
           ) : (
             <div className="reference-results">
               {items.map((result) => (
@@ -190,18 +192,16 @@ export function ReferencePicker({
                 >
                   <strong>{result.title}</strong>
                   <span>
-                    {statusLabels[result.status]}
+                    {getStatusLabels()[result.status]}
                     {result.summary && ` · ${result.summary}`}
                   </span>
                 </button>
               ))}
-              {!items.length && <p>Aucune fiche correspondante.</p>}
+              {!items.length && <p>{t('references.noMatches')}</p>}
             </div>
           )}
           {total > 30 && (
-            <p className="muted">
-              {total} résultats. Précisez la recherche pour retrouver la fiche souhaitée.
-            </p>
+            <p className="muted">{t('references.refineResults', { count: total })}</p>
           )}
           {target === 'organizations' && !creating && (
             <button
@@ -212,15 +212,19 @@ export function ReferencePicker({
                 setTitle(query)
               }}
             >
-              Créer une organisation
+              {t('references.createOrganization')}
             </button>
           )}
           {creating && (
             <div className="inline-create">
-              <p>Vérifiez les résultats ci-dessus pour réutiliser une organisation existante.</p>
+              <p>{t('references.reuseHint')}</p>
               <label className="content-field">
-                Nom de l’organisation
-                <input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} />
+                {t('references.organizationName')}
+                <input
+                  value={title}
+                  maxLength={160}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </label>
               <button
                 type="button"
@@ -228,7 +232,7 @@ export function ReferencePicker({
                 disabled={!title.trim() || saving}
                 onClick={() => void create()}
               >
-                {saving ? 'Création…' : 'Créer et associer le brouillon'}
+                {saving ? t('references.creating') : t('references.createLink')}
               </button>
             </div>
           )}

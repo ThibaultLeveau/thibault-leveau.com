@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { useEffect, useState } from 'react'
 import { adminRequest } from '../api'
 import type { Collection, Item, Listing } from './types'
@@ -11,7 +12,10 @@ export function SimilarEntries({
   title: string
   onOpen: (kind: Collection, id: number) => void
 }) {
-  const [result, setResult] = useState<{ query: string; items: Item[] }>({ query: '', items: [] })
+  const [result, setResult] = useState<{ query: string; items: Item[] }>({
+    query: '',
+    items: [],
+  })
   useEffect(() => {
     if (title.trim().length < 3) return
     const controller = new AbortController()
@@ -30,7 +34,7 @@ export function SimilarEntries({
   if (result.query !== title || !result.items.length) return null
   return (
     <div className="similar-entries">
-      <p>Ces fiches existent déjà. Vérifiez si vous pouvez les réutiliser :</p>
+      <p>{t('references.similar')}</p>
       {result.items.map((item) => (
         <button
           type="button"

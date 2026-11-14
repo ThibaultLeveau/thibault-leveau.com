@@ -22,6 +22,7 @@ from personal_site.content.validation import (
     slugify,
     validate,
 )
+from personal_site.i18n import tr
 
 
 def now():
@@ -43,12 +44,12 @@ class ContentStore:
 
     def require(self, db, kind, entry_id):
         if kind not in MODELS:
-            raise ContentError("Collection inconnue.", status=404)
+            raise ContentError(tr("errors.unknownCollection"), status=404)
         row = db.execute(
             "SELECT * FROM content_entries WHERE id = ? AND kind = ?", (entry_id, kind)
         ).fetchone()
         if not row:
-            raise ContentError("Fiche introuvable.", status=404)
+            raise ContentError(tr("errors.entryMissing"), status=404)
         return dict(row)
 
     def read(self, db, kind, entry_id):
@@ -254,9 +255,7 @@ class ContentStore:
                 ).fetchone()
                 path = f"{name}.{index}.id" if isinstance(value, list) else name
                 if not row or row[0] != dest:
-                    errors.append(
-                        issue(path, "Choisissez une fiche existante du bon type.", "reference")
-                    )
+                    errors.append(issue(path, tr("errors.referenceType"), "reference"))
                     continue
                 if dest == "media":
                     nature = db.execute(
@@ -269,7 +268,7 @@ class ContentStore:
                         errors.append(
                             issue(
                                 f"{name}.{index}.role",
-                                "Choisissez un usage adapté au type de média.",
+                                tr("errors.mediaRole"),
                                 "media_role",
                             )
                         )
@@ -288,49 +287,44 @@ class ContentStore:
                         errors.append(
                             issue(
                                 path,
-                                "La portée de cette catégorie ne correspond pas à ce champ.",
+                                tr("errors.taxonomyScope"),
                                 "scope",
                             )
                         )
         if errors:
-            raise ContentError("Vérifiez les associations.", errors=errors)
+            raise ContentError(tr("errors.relationships"), errors=errors)
 
     def write(self, db, kind, data, *, entry_id=None, version=None, as_draft=False, uploaded=False):
         if kind == "media" and data["source"] == "file" and not uploaded:
             previous = self.read(db, kind, entry_id)["entry"] if entry_id else None
             if not previous or previous["source"] != "file" or previous["nature"] != data["nature"]:
-                raise ContentError("Utilisez le téléversement pour ajouter un fichier.")
+                raise ContentError(tr("errors.uploadRequired"))
         if kind == "media" and entry_id:
             previous = self.read(db, kind, entry_id)["entry"]
             if previous["source"] != data["source"]:
-                raise ContentError("La source d'un média existant ne peut pas changer.")
+                raise ContentError(tr("errors.mediaSource"))
         self.check_relations(db, kind, data)
         if kind == "taxonomies" and entry_id:
             previous_scope = db.execute(
                 "SELECT scope FROM taxonomies WHERE id = ?", (entry_id,)
             ).fetchone()
             if previous_scope and previous_scope[0] != data["scope"] and self.usages(db, entry_id):
-                raise ContentError(
-                    "Retirez les usages de cette catégorie avant de changer sa portée.", status=409
-                )
+                raise ContentError(tr("errors.taxonomyScopeUsed"), status=409)
         if (
             kind == "media"
             and entry_id
             and previous["nature"] != data["nature"]
             and self.usages(db, entry_id)
         ):
-            raise ContentError(
-                "Retirez les usages de ce média avant de changer sa nature.", status=409
-            )
+            raise ContentError(tr("errors.mediaNatureUsed"), status=409)
         old = self.require(db, kind, entry_id) if entry_id else None
         if old and old["version"] != version:
             raise ContentError(
-                "Cette fiche a changé dans un autre onglet. Votre saisie est conservée "
-                "; rechargez la version enregistrée avant de réessayer.",
+                tr("errors.entryConflict"),
                 status=409,
             )
         if old and old["status"] == "archived":
-            raise ContentError("Restaurez cette fiche avant de la modifier.", status=409)
+            raise ContentError(tr("errors.restoreFirst"), status=409)
         data["slug"] = data["slug"] or slugify(data["title"])
         status = "draft" if as_draft or not old else old["status"]
         if status == "ready":
@@ -340,7 +334,7 @@ class ContentStore:
             errors = completeness(kind, data, natures)
             if errors:
                 raise ContentError(
-                    "La fiche n'est plus complète. Corrigez-la ou enregistrez en brouillon.",
+                    tr("errors.entryIncomplete"),
                     errors=errors,
                 )
         timestamp = now()
@@ -425,10 +419,9 @@ class ContentStore:
                 )
         except sqlite3.IntegrityError:
             raise ContentError(
-                "Cet identifiant existe déjà pour ce type et cette langue, ou le "
-                "profil unique existe déjà.",
+                tr("errors.entryExists"),
                 status=409,
-                errors=[issue("slug", "Choisissez un identifiant disponible.", "unique")],
+                errors=[issue("slug", tr("errors.slugTaken"), "unique")],
             ) from None
         return self.get(kind, entry_id)
 
@@ -437,15 +430,11 @@ class ContentStore:
             db.execute("BEGIN IMMEDIATE")
             result = self.read(db, kind, entry_id)
             if version != result["version"]:
-                raise ContentError(
-                    "La fiche a changé. Rechargez sa version enregistrée.", status=409
-                )
+                raise ContentError(tr("errors.entryReload"), status=409)
             if result["status"] == "archived" and status != "draft":
-                raise ContentError("Une fiche archivée se restaure en brouillon.", status=409)
+                raise ContentError(tr("errors.restoreDraft"), status=409)
             if status == "ready" and result["errors"]:
-                raise ContentError(
-                    "Complétez la fiche avant de la marquer prête.", errors=result["errors"]
-                )
+                raise ContentError(tr("errors.completeFirst"), errors=result["errors"])
             db.execute(
                 "UPDATE content_entries SET status = ?, version = version + 1, "
                 "updated_at = ? WHERE id = ?",
@@ -459,13 +448,13 @@ class ContentStore:
             old = self.require(db, kind, entry_id)
             if old["version"] != version or old["status"] != "archived":
                 raise ContentError(
-                    "Archivez la fiche et utilisez sa version actuelle avant de la supprimer.",
+                    tr("errors.archiveFirst"),
                     status=409,
                 )
             usages = self.usages(db, entry_id)
             if usages:
                 raise ContentError(
-                    "Cette fiche est encore utilisée. Retirez ses associations avant suppression.",
+                    tr("errors.entryUsed"),
                     status=409,
                     usages=usages,
                 )
@@ -480,11 +469,11 @@ class ContentStore:
             db.execute("BEGIN IMMEDIATE")
             saved = self.read(db, kind, entry_id)
             if saved["version"] != version:
-                raise ContentError("La fiche a changé. Rechargez-la avant duplication.", status=409)
+                raise ContentError(tr("errors.duplicateConflict"), status=409)
             if kind in {"media", "profiles"}:
-                raise ContentError("Cette collection ne se duplique pas.")
+                raise ContentError(tr("errors.duplicateUnsupported"))
             data = saved["entry"]
-            data["title"] = data["title"][:150] + " — copie"
+            data["title"] = tr("content.copyTitle", title=data["title"][:150])
             base = slugify(data["slug"] + "-copie")
             suffix = 1
             while db.execute(

@@ -1,5 +1,7 @@
 # Configuration
 
+Les langues du public et de l’administration se règlent dans **Réglages du site → Langue**, sans variable d’environnement ni redémarrage. Le français est initial ; les deux codes et leur version sont conservés dans la même base SQLite. Voir [Langues des interfaces](languages.md). La langue de rédaction des agents reste un réglage distinct.
+
 ## Paramètres applicatifs
 
 `personal_site.config` utilise Pydantic Settings. Les variables sont préfixées par `SITE_` pour éviter les collisions avec les autres services du serveur. Une valeur invalide provoque une erreur explicite au chargement de la configuration.
@@ -97,7 +99,7 @@ Toute nouvelle variable doit être ajoutée au modèle de configuration, à `.en
 
 ## Configuration de l'assistant
 
-Aucune nouvelle variable d'environnement n'est nécessaire. L'assistant utilise le fournisseur et le modèle enregistrés dans **AI provider** ; la clé reste chiffrée avec `SITE_SECRET_KEY`. Les préférences globales et par famille sont réglées dans **Agents et rédaction**, validées et versionnées en SQLite. Elles sont incluses dans la sauvegarde du studio.
+Aucune nouvelle variable d'environnement n'est nécessaire. L'assistant utilise le fournisseur et le modèle enregistrés dans **Fournisseur IA** ; la clé reste chiffrée avec `SITE_SECRET_KEY`. Les préférences globales et par famille sont réglées dans **Agents et rédaction**, validées et versionnées en SQLite. Elles sont incluses dans la sauvegarde du studio.
 
 Les budgets d'exécution sont des constantes serveur dans `assistant/models.py` et des limites de contrats dans `assistant/contracts.py` ; les prompts de `assistant/prompts/` restent versionnés dans le dépôt. Ne pas exposer de prompt système modifiable, d'URL fournisseur libre ou de réglage de permissions dans les préférences éditoriales. Les plafonds effectifs sont décrits dans l'[architecture de l'assistant](assistant-design.md#limites-et-extension-du-code).
 

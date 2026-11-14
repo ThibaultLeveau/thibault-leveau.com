@@ -13,6 +13,12 @@ from personal_site.content.public import PublicContent, missing
 router = APIRouter(prefix="/api/public")
 
 
+@router.get("/language")
+def interface_language(request: Request, area: Literal["public", "admin"] = "public"):
+    settings = request.app.state.admin_store
+    return {"language": settings.languages()[f"{area}_language"] if settings else "fr"}
+
+
 @lru_cache(maxsize=24)
 def image_bytes(path, digest, width):
     # Bounded, ephemeral derivatives; no new durable storage. Authorization precedes cache use.

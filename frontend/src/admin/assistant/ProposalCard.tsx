@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { language, t } from '../../i18n'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import {
-  collectionLabels,
-  optionLabels,
+  getCollectionLabels,
+  getOptionLabels,
   resolve,
   type Catalog,
   type Collection,
@@ -25,8 +26,8 @@ function DisplayValue({
 }) {
   const f = schema && root ? resolve(schema, root) : schema
   if (value === null || value === '' || (Array.isArray(value) && value.length === 0))
-    return <span className="muted">Non renseigné</span>
-  if (typeof value === 'boolean') return <span>{value ? 'Oui' : 'Non'}</span>
+    return <span className="muted">{t('common.notProvided')}</span>
+  if (typeof value === 'boolean') return <span>{value ? t('common.yes') : t('common.no')}</span>
   if (Array.isArray(value))
     return (
       <ol className="proposal-rows">
@@ -40,11 +41,13 @@ function DisplayValue({
                   .map(([name, v]) => (
                     <div key={name}>
                       <dt>
-                        {name === 'id' ? 'Fiche' : (child?.properties?.[name]?.title ?? name)}
+                        {name === 'id'
+                          ? t('content.entry')
+                          : (child?.properties?.[name]?.title ?? name)}
                       </dt>
                       <dd>
                         {name === 'id' && typeof v === 'number' ? (
-                          (references[v]?.title ?? `Fiche ${v}`)
+                          (references[v]?.title ?? t('content.entryNumber', { id: v }))
                         ) : (
                           <DisplayValue
                             value={v}
@@ -63,10 +66,12 @@ function DisplayValue({
       </ol>
     )
   if (f?.target && typeof value === 'number')
-    return <span>{references[value]?.title ?? `Fiche ${value}`}</span>
+    return <span>{references[value]?.title ?? t('content.entryNumber', { id: value })}</span>
   return (
     <span>
-      {typeof value === 'string' && f?.enum ? (optionLabels[value] ?? value) : String(value)}
+      {typeof value === 'string' && f?.enum
+        ? (getOptionLabels()[value] ?? value)
+        : String(value)}
     </span>
   )
 }
@@ -91,6 +96,27 @@ export function ProposalCard({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [uncertain, setUncertain] = useState(false)
+  const activeLanguage = language()
+  const renderedLanguage = useRef(activeLanguage)
+  const localized = useEffectEvent((value: Proposal) => onChanged(value))
+  const localizationFailed = useEffectEvent((e: unknown) => {
+    if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
+    else setError(errorMessage(e))
+  })
+  useEffect(() => {
+    if (renderedLanguage.current === activeLanguage) return
+    const abort = new AbortController()
+    adminRequest<Proposal>(`/assistant/proposals/${proposal.id}`, { signal: abort.signal })
+      .then((value) => {
+        if (abort.signal.aborted) return
+        renderedLanguage.current = activeLanguage
+        localized(value)
+      })
+      .catch((e) => {
+        if (!abort.signal.aborted) localizationFailed(e)
+      })
+    return () => abort.abort()
+  }, [activeLanguage, proposal.id])
   async function action(action: 'apply' | 'cancel' | 'verify') {
     setPending(true)
     setError('')
@@ -106,8 +132,7 @@ export function ProposalCard({
       onChanged(value)
       setUncertain(false)
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (e instanceof ApiError && e.status === 401) onSessionEnd(t('session.expired'))
       else {
         setError(errorMessage(e))
         if (action === 'apply' && e instanceof ApiError && e.status === 0) setUncertain(true)
@@ -117,54 +142,51 @@ export function ProposalCard({
     }
   }
   return (
-    <section className="assistant-proposal" aria-label="Proposition de contenu">
+    <section className="assistant-proposal" aria-label={t('proposal.title')}>
       <div className="proposal-heading">
         <div>
-          <span className="eyebrow">À RELIRE</span>
-          <h2>
-            {proposal.items.length} fiche{proposal.items.length > 1 ? 's' : ''} proposée
-            {proposal.items.length > 1 ? 's' : ''}
-          </h2>
+          <span className="eyebrow">{t('proposal.eyebrow')}</span>
+          <h2>{t('proposal.count', { count: proposal.items.length })}</h2>
         </div>
         <span className="proposal-state">
           {proposal.state === 'applied'
-            ? 'Enregistrée'
+            ? t('proposal.saved')
             : proposal.state === 'cancelled'
-              ? 'Abandonnée'
+              ? t('proposal.discarded')
               : proposal.state === 'superseded'
-                ? 'À actualiser'
-                : 'En attente'}
+                ? t('proposal.refreshNeeded')
+                : t('status.pending')}
         </span>
       </div>
-      <p className="muted">
-        Vérifiez les faits et les champs ci-dessous. Vous pouvez préciser votre demande dans la
-        conversation.
-      </p>
+      <p className="muted">{t('proposal.help')}</p>
       {proposal.items.map((item) => (
         <details key={item.key} className="proposal-item" open={proposal.items.length === 1}>
           <summary>
             <span>
-              {item.id ? 'Modifier' : 'Créer'} · {collectionLabels[item.kind]}
+              {item.id ? t('common.edit') : t('common.create')} ·{' '}
+              {getCollectionLabels()[item.kind]}
             </span>
             <strong>{item.title}</strong>
           </summary>
-          {item.related && (
-            <p className="field-help">Cette association réciproque sera mise à jour avec le lot.</p>
-          )}
+          {item.related && <p className="field-help">{t('proposal.reciprocal')}</p>}
           {item.status_before !== item.status_after && (
             <p className="proposal-status">
-              Statut : {item.status_before === 'ready' ? 'Prêt → ' : ''}
-              {item.status_after === 'draft' ? 'Brouillon' : item.status_after}
+              {t('proposal.status')}{' '}
+              {item.status_before === 'ready' ? t('proposal.readyFragment') : ''}
+              {item.status_after === 'draft' ? t('status.draft') : item.status_after}
             </p>
           )}
           <div className="proposal-fields">
             {item.changes.map((change) => (
               <section className="proposal-field" key={change.field}>
-                <h3>{change.label}</h3>
+                <h3>
+                  {catalog?.[item.kind].schema.properties?.[change.field]?.title ??
+                    change.label}
+                </h3>
                 <div className="proposal-comparison">
                   {item.id && (
                     <div>
-                      <span className="comparison-label">Actuel</span>
+                      <span className="comparison-label">{t('proposal.current')}</span>
                       <DisplayValue
                         value={change.before}
                         schema={catalog?.[item.kind].schema.properties?.[change.field]}
@@ -174,7 +196,7 @@ export function ProposalCard({
                     </div>
                   )}
                   <div>
-                    <span className="comparison-label">Proposé</span>
+                    <span className="comparison-label">{t('proposal.proposed')}</span>
                     <DisplayValue
                       value={change.after}
                       schema={catalog?.[item.kind].schema.properties?.[change.field]}
@@ -188,7 +210,7 @@ export function ProposalCard({
           </div>
           {(item.missing.length > 0 || item.errors.length > 0) && (
             <div className="proposal-missing">
-              <strong>À compléter</strong>
+              <strong>{t('proposal.incomplete')}</strong>
               <ul>
                 {[...new Set([...item.missing, ...item.errors.map((e) => e.message)])].map(
                   (text) => (
@@ -214,8 +236,8 @@ export function ProposalCard({
             onClick={() => void action('apply')}
           >
             {pending
-              ? 'Vérification…'
-              : `Enregistrer ${proposal.items.length > 1 ? 'les fiches' : 'la fiche'}`}
+              ? t('common.checking')
+              : t('proposal.save', { count: proposal.items.length })}
           </button>
           <button
             type="button"
@@ -223,7 +245,7 @@ export function ProposalCard({
             disabled={disabled || pending}
             onClick={() => void action('cancel')}
           >
-            Abandonner la proposition
+            {t('proposal.discard')}
           </button>
           {uncertain && (
             <button
@@ -232,14 +254,14 @@ export function ProposalCard({
               disabled={pending}
               onClick={() => void action('verify')}
             >
-              Vérifier l’enregistrement
+              {t('proposal.checkSaved')}
             </button>
           )}
         </div>
       )}
       {proposal.state === 'applied' && (
         <div role="status" className="proposal-result">
-          <p>Les fiches ont été enregistrées.</p>
+          <p>{t('proposal.savedMessage')}</p>
           {proposal.result?.map((item) => (
             <button
               type="button"
@@ -247,7 +269,7 @@ export function ProposalCard({
               key={item.id}
               onClick={() => onOpen(item.kind, item.id)}
             >
-              Ouvrir {item.title} →
+              {t('proposal.openEntry', { title: item.title })}
             </button>
           ))}
         </div>

@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from personal_site.content.schemas import Model
+from personal_site.i18n import tr
 
 Kind = Literal[
     "projects",
@@ -64,17 +65,15 @@ class Turn(Model):
     @model_validator(mode="after")
     def bounded(self):
         if self.messages[-1].role != "user" or sum(len(m.content) for m in self.messages) > 80000:
-            raise ValueError("Terminez par une demande ; historique limité à 80 000 caractères.")
+            raise ValueError(tr("errors.historyBounds"))
         for i, message in enumerate(self.messages):
             if (
                 message.role != ("user" if i % 2 == 0 else "assistant")
                 or not message.content.strip()
             ):
-                raise ValueError(
-                    "Les messages non vides doivent alterner utilisateur et assistant."
-                )
+                raise ValueError(tr("errors.nonemptyMessages"))
             if message.role == "user" and len(message.content) > 16000:
-                raise ValueError("Le message utilisateur dépasse 16 000 caractères.")
+                raise ValueError(tr("errors.userMessageSize"))
         return self
 
 

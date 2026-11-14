@@ -8,6 +8,8 @@ import secrets
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from personal_site.i18n import tr
+
 SESSION_SECONDS = 12 * 60 * 60
 COOKIE_NAME = "site_admin_session"
 COOKIE_PATH = "/api/admin"
@@ -56,7 +58,7 @@ class AdminBodyLimit:
                 return
             body.extend(message.get("body", b""))
             if len(body) > 256 * 1024:
-                response = JSONResponse({"detail": "La requête dépasse 256 Kio."}, status_code=413)
+                response = JSONResponse({"detail": tr("errors.bodyLimit")}, status_code=413)
                 return await response(scope, receive, send)
             if not message.get("more_body", False):
                 break

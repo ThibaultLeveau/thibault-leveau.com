@@ -19,8 +19,10 @@ type IconName =
   | 'library'
   | 'image'
   | 'menu'
+  | 'language'
 
 const paths: Record<IconName, string> = {
+  language: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c-4 5-4 13 0 18 4-5 4-13 0-18Z',
   projects: 'M3 7h7l2 2h9v11H3V7Zm0 0V4h7l2 3',
   career: 'M3 7h18v13H3V7Zm5 0V4h8v3M3 12h18m-11 0v3h4v-3',
   services: 'm12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5',

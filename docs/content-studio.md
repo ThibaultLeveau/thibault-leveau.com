@@ -38,7 +38,7 @@ Bibliothèque
   Médias
   Mon profil
 
-Réglages du site        → AI provider · Admin user
+Réglages du site        → Fournisseur IA · Compte administrateur
 ```
 
 Les groupes à sous-vues ouvrent le second menu accolé existant. Une seule sous-navigation est ouverte à la fois. Le menu des réglages conserve son comportement. Les éditeurs de fiches utilisent la zone centrale, sans créer une troisième sidebar permanente.

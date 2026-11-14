@@ -172,6 +172,14 @@ Après démarrage, vérifier le schéma, la conservation des comptes/contenus/m�
 
 ## Livraison des pages publiques
 
+Cette section décrit la livraison de l’issue #14, antérieure à la migration des langues ci-dessous.
+
 La version publique ne change pas le schéma 2 ni les volumes. Avant déploiement, sauvegarder et vérifier le couple base/médias et conserver l'image précédente. L'accord de l'issue #14 inclut la publication des fiches déjà Prêt + Public ; vérifier leur nombre par collection sans exporter leur texte dans les journaux. Les API administratives et l'indexation gardent leurs règles.
 
 Après remplacement du seul service `site`, contrôler les huit pages, `/api/public/home`, une liste et les 404. Vérifier un contenu réellement publié s'il existe, ainsi que les états vides sinon ; ne pas créer de données fictives en production. Vérifier le navigateur aux largeurs desktop/mobile, les deux thèmes, Menu et le focus. En cas de régression, l'image précédente utilise le même schéma : retour au tag conservé sans restauration des données, sauf incident distinct sur celles-ci.
+
+## Livraison des langues d’interface
+
+L’issue #18 passe le schéma SQLite de 2 à 3. Appliquer la [procédure de migration des langues](operations.md#migration-des-langues-schema-2-vers-3) avant le remplacement du service. Aucun changement Caddy, DNS, réseau ou secret n’est requis. Les valeurs initiales restent français/français.
+
+Après déploiement, vérifier le schéma et les données conservées, les codes publics minimaux, les en-têtes `Content-Language`, le `lang` HTML, la connexion et **Réglages du site → Langue** en bureau/mobile et clair/sombre. Le compte rendu de l’issue précise l’image précédente, la sauvegarde, le commit/image exécuté et les résultats HTTPS et navigateur. Une image de schéma 2 exige la restauration préalable de la sauvegarde correspondante.

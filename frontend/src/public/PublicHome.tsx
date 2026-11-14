@@ -1,25 +1,22 @@
+import { t } from '../i18n'
 import { Arrow, Cards, Feedback, SectionHeading } from './components'
 import { safeLink, text, useContent, type Home } from './content'
 
-const destinations = [
-  ['/projets', 'Projets', 'De l’idée à la réalisation.'],
-  [
-    '/parcours',
-    'Parcours',
-    'Les expériences qui construisent une trajectoire.',
-  ],
-  ['/expertise', 'Expertise', 'Les savoir-faire et les outils.'],
-  ['/services', 'Services', 'Des réponses à vos besoins.'],
-  ['/journal', 'Journal', 'Articles, interventions et points de vue.'],
-  ['/a-propos', 'À propos', 'Un peu plus personnel.'],
-]
+function getDestinations() {
+  return [
+    ['/projets', t('collections.projects'), t('home.projectsDescription')],
+    ['/parcours', t('navigation.career'), t('home.careerDescription')],
+    ['/expertise', t('navigation.expertise'), t('home.expertiseDescription')],
+    ['/services', t('collections.services'), t('home.servicesDescription')],
+    ['/journal', t('navigation.journal'), t('home.journalDescription')],
+    ['/a-propos', t('navigation.about'), t('home.aboutDescription')],
+  ]
+}
 export default function PublicHome() {
   const state = useContent<Home>('home')
   const data = state.data
   const profile = data?.profile?.entry
-  const contact = profile
-    ? safeLink(text(profile, 'public_contact'), true)
-    : undefined
+  const contact = profile ? safeLink(text(profile, 'public_contact'), true) : undefined
   return (
     <main id="contenu" className="public-main" tabIndex={-1}>
       <section className="public-hero">
@@ -28,36 +25,37 @@ export default function PublicHome() {
             <span />
             {profile
               ? text(profile, 'public_location') || 'Thibault Leveau'
-              : 'Le site personnel de Thibault Leveau'}
+              : t('home.eyebrow')}
           </p>
           <h1>
             {profile ? (
               text(profile, 'profession')
             ) : (
               <>
-                Des idées.
+                {t('home.ideas')}
                 <br />
-                Des réalisations<span className="accent">.</span>
+                {t('home.work')}
+                <span className="accent">.</span>
               </>
             )}
           </h1>
           <p className="hero-description">
             {profile
               ? text(profile, 'tagline') || text(profile, 'summary')
-              : 'Mon travail, mon parcours et ce qui m’anime. Un espace pour découvrir, comprendre et échanger.'}
+              : t('home.description')}
           </p>
           <div className="hero-actions">
             <a className="public-button primary" href="/projets">
-              Découvrir les projets
+              {t('home.discoverProjects')}
               <Arrow diagonal />
             </a>
             <a className="text-link" href={contact || '/a-propos'}>
-              {contact ? 'Échangeons' : 'Faire connaissance'}
+              {contact ? t('detail.letsTalk') : t('home.getAcquainted')}
               <Arrow />
             </a>
           </div>
         </div>
-        <aside className="hero-aside" aria-label="Découvrir le site">
+        <aside className="hero-aside" aria-label={t('home.discoverSite')}>
           {data?.profile?.cover && (
             <img
               className="profile-portrait"
@@ -70,11 +68,11 @@ export default function PublicHome() {
               fetchPriority="high"
             />
           )}
-          <p className="aside-label">Quelques portes d’entrée</p>
+          <p className="aside-label">{t('home.entryPoints')}</p>
           {[
-            ['01', '/projets', 'Voir les réalisations'],
-            ['02', '/expertise', 'Explorer les savoir-faire'],
-            ['03', '/journal', 'Prendre le temps de lire'],
+            ['01', '/projets', t('home.viewWork')],
+            ['02', '/expertise', t('home.exploreSkills')],
+            ['03', '/journal', t('home.read')],
           ].map(([n, url, label]) => (
             <a key={url} href={url}>
               <span>{n}</span>
@@ -83,10 +81,7 @@ export default function PublicHome() {
             </a>
           ))}
           <p className="aside-note">
-            {profile
-              ? text(profile, 'availability') ||
-                'Chaque réalisation raconte une partie du parcours.'
-              : 'Un regard sur les réalisations, les expériences et les idées.'}
+            {profile ? text(profile, 'availability') || t('home.profileNote') : t('home.note')}
           </p>
         </aside>
       </section>
@@ -94,23 +89,23 @@ export default function PublicHome() {
       {!!data?.projects.length && (
         <section className="public-section">
           <SectionHeading
-            title="Quelques réalisations"
+            title={t('home.featuredProjects')}
             href="/projets"
             number="01"
-            link="Tous les projets"
+            link={t('home.allProjects')}
           />
           <Cards items={data.projects} />
         </section>
       )}
       <section className="public-section discover-section">
         <SectionHeading
-          title="À chaque curiosité, un chemin"
+          title={t('home.discoverTitle')}
           href="/explorer"
           number={data?.projects.length ? '02' : '01'}
-          link="Tout explorer"
+          link={t('home.exploreAll')}
         />
         <div className="destination-grid">
-          {destinations.map(([url, name, desc], i) => (
+          {getDestinations().map(([url, name, desc], i) => (
             <a key={url} href={url}>
               <span className="destination-number">0{i + 1}</span>
               <h3>
@@ -125,14 +120,14 @@ export default function PublicHome() {
       {!!data?.skills.length && (
         <section className="public-section expertise-teaser">
           <div>
-            <p className="eyebrow">Savoir-faire</p>
+            <p className="eyebrow">{t('home.expertiseEyebrow')}</p>
             <h2>
-              Les compétences
+              {t('home.skillsStart')}
               <br />
-              prennent vie dans les projets.
+              {t('home.skillsEnd')}
             </h2>
             <a className="text-link" href="/expertise">
-              Découvrir mon expertise
+              {t('home.discoverExpertise')}
               <Arrow />
             </a>
           </div>
@@ -149,10 +144,10 @@ export default function PublicHome() {
       {!!data?.posts.length && (
         <section className="public-section">
           <SectionHeading
-            title="Dans le journal"
+            title={t('home.journalTitle')}
             href="/journal"
             number="03"
-            link="Tous les écrits"
+            link={t('home.allWriting')}
           />
           <Cards items={data.posts} layout="rows" />
         </section>
@@ -160,19 +155,19 @@ export default function PublicHome() {
       {!!data?.services.length && (
         <section className="public-section">
           <SectionHeading
-            title="Travaillons ensemble"
+            title={t('home.servicesTitle')}
             href="/services"
             number="04"
-            link="Voir les services"
+            link={t('home.viewServices')}
           />
           <Cards items={data.services} />
         </section>
       )}
       <section className="public-outro">
-        <p className="eyebrow">La conversation continue</p>
-        <h2>{contact ? 'Une idée en tête ?' : 'Faisons connaissance.'}</h2>
+        <p className="eyebrow">{t('home.outroEyebrow')}</p>
+        <h2>{contact ? t('home.idea') : t('home.meet')}</h2>
         <a className="public-button primary" href={contact || '/a-propos'}>
-          {contact ? 'Parlons-en' : 'Découvrir mon profil'}
+          {contact ? t('home.talk') : t('home.profile')}
           <Arrow diagonal />
         </a>
       </section>

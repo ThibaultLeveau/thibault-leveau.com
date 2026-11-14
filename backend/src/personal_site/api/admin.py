@@ -17,6 +17,7 @@ from personal_site.admin.security import (
     token_hash,
 )
 from personal_site.admin.store import AdminStore
+from personal_site.i18n import tr
 
 router = APIRouter(prefix="/api/admin")
 
@@ -28,6 +29,12 @@ class Payload(BaseModel):
 class Login(Payload):
     username: str = Field(min_length=1, max_length=128)
     password: SecretStr = Field(min_length=1, max_length=128)
+
+
+class LanguageUpdate(Payload):
+    public_language: Literal["fr", "en"]
+    admin_language: Literal["fr", "en"]
+    version: Annotated[int, Field(strict=True, ge=1, le=9223372036854775807)]
 
 
 class AccountUpdate(Payload):
@@ -46,13 +53,13 @@ class ProviderUpdate(Payload):
     @classmethod
     def validate_key(cls, value):
         if value and any(ord(c) < 33 or ord(c) > 126 for c in value.get_secret_value()):
-            raise ValueError("La clé ne doit pas contenir d’espace ou de caractère de contrôle")
+            raise ValueError(tr("errors.apiKeyFormat"))
         return value
 
     @model_validator(mode="after")
     def no_conflicting_key(self):
         if self.api_key and self.clear_api_key:
-            raise ValueError("Choisissez une nouvelle clé ou sa suppression")
+            raise ValueError(tr("errors.conflictingKey"))
         return self
 
 
@@ -67,27 +74,23 @@ class Chat(Payload):
     @model_validator(mode="after")
     def bounded_conversation(self):
         if self.messages[-1].role != "user" or self.messages[0].role != "user":
-            raise ValueError("La conversation commence et se termine par un message utilisateur")
+            raise ValueError(tr("errors.conversationOrder"))
         if sum(len(m.content) for m in self.messages) > 40000:
-            raise ValueError(
-                "La conversation dépasse 40 000 caractères ; ouvrez une nouvelle conversation"
-            )
+            raise ValueError(tr("errors.conversationSize"))
         for index, message in enumerate(self.messages):
             if message.role != ("user" if index % 2 == 0 else "assistant"):
-                raise ValueError("Les messages doivent alterner utilisateur et assistant")
+                raise ValueError(tr("errors.messageOrder"))
             if not message.content.strip() or (
                 message.role == "user" and len(message.content) > 4000
             ):
-                raise ValueError("Le message utilisateur doit contenir entre 1 et 4 000 caractères")
+                raise ValueError(tr("errors.messageSize"))
         return self
 
 
 def get_store(request: Request) -> AdminStore:
     store = request.app.state.admin_store
     if store is None:
-        raise HTTPException(
-            503, "L’administration n’est pas activée. Consultez le guide de configuration."
-        )
+        raise HTTPException(503, tr("errors.adminDisabled"))
     return store
 
 
@@ -96,18 +99,18 @@ Store = Annotated[AdminStore, Depends(get_store)]
 
 def same_origin(request: Request):
     if request.headers.get("origin") != request.app.state.settings.admin_origin:
-        raise HTTPException(403, "Origine de la requête refusée.")
+        raise HTTPException(403, tr("errors.origin"))
 
 
 def require_session(request: Request, store: Store):
     session = store.session(request.cookies.get(COOKIE_NAME, ""))
     if not session:
-        raise HTTPException(401, "Connectez-vous pour accéder à l’administration.")
+        raise HTTPException(401, tr("errors.signIn"))
     if request.method not in {"GET", "HEAD"}:
         same_origin(request)
         supplied = request.headers.get("x-csrf-token", "")
         if not hmac.compare_digest(supplied.encode(), session["csrf"].encode()):
-            raise HTTPException(403, "Session de formulaire invalide. Rechargez la page.")
+            raise HTTPException(403, tr("errors.csrf"))
     return session
 
 
@@ -117,9 +120,7 @@ Session = Annotated[dict, Depends(require_session)]
 def limit(store: AdminStore, bucket: str, count: int, seconds: int):
     retry = store.rate_limit(bucket, count, seconds)
     if retry:
-        raise HTTPException(
-            429, "Trop de tentatives. Réessayez plus tard.", headers={"Retry-After": str(retry)}
-        )
+        raise HTTPException(429, tr("errors.rateLimit"), headers={"Retry-After": str(retry)})
 
 
 def credentials_limit(request: Request, store: AdminStore):
@@ -146,10 +147,10 @@ def login(payload: Login, request: Request, response: Response, store: Store):
     if not valid_password or not hmac.compare_digest(
         payload.username.encode(), account["username"].encode()
     ):
-        raise HTTPException(401, "Identifiants incorrects.")
+        raise HTTPException(401, tr("errors.credentials"))
     result = store.new_session(request.cookies.get(COOKIE_NAME, ""), account)
     if result is None:
-        raise HTTPException(401, "Le compte a changé. Reconnectez-vous.")
+        raise HTTPException(401, tr("errors.accountChanged"))
     token, csrf = result
     response.set_cookie(
         COOKIE_NAME,
@@ -181,22 +182,32 @@ def update_account(
     credentials_limit(request, store)
     account = store.account()
     if not password_matches(payload.current_password.get_secret_value(), account["password_hash"]):
-        raise HTTPException(400, "Le mot de passe actuel est incorrect.")
+        raise HTTPException(400, tr("errors.currentPassword"))
     if payload.username == account["username"] and payload.new_password is None:
-        raise HTTPException(400, "Aucune modification à enregistrer.")
+        raise HTTPException(400, tr("errors.noChanges"))
     hashed = (
         password_hash(payload.new_password.get_secret_value())
         if payload.new_password
         else account["password_hash"]
     )
     if not store.update_account(payload.username, hashed, account):
-        raise HTTPException(409, "Le compte a changé. Reconnectez-vous.")
+        raise HTTPException(409, tr("errors.accountChanged"))
     clear_cookie(response, request)
 
 
 @router.get("/provider")
 def provider_info(store: Store, session: Session):
     return {**store.provider(), "providers": PROVIDERS}
+
+
+@router.get("/languages")
+def language_info(store: Store, session: Session):
+    return store.languages()
+
+
+@router.put("/languages")
+def update_languages(payload: LanguageUpdate, store: Store, session: Session):
+    return store.save_languages(**payload.model_dump())
 
 
 @router.put("/provider")
@@ -218,10 +229,10 @@ async def chat(payload: Chat, request: Request, store: Store, session: Session):
     await run_in_threadpool(limit, store, "chat:global", 10, 60)
     config = await run_in_threadpool(store.provider, decrypt=True)
     if not config["has_api_key"]:
-        raise HTTPException(409, "Configurez une clé API dans les réglages AI provider.")
+        raise HTTPException(409, tr("errors.configureProvider"))
     lock = request.app.state.chat_lock
     if lock.locked():
-        raise HTTPException(429, "Une réponse est déjà en cours. Patientez un instant.")
+        raise HTTPException(429, tr("errors.responsePending"))
     async with lock:
         try:
             reply = await request.app.state.llm.reply(

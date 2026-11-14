@@ -1,9 +1,11 @@
+import { t } from '../../i18n'
 import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 import { adminRequest } from '../api'
 import { Dialog } from './Dialog'
 import {
-  optionLabels,
+  getOptionLabels,
+  resolve,
   safeHref,
   type ContentRecord,
   type Draft,
@@ -20,7 +22,9 @@ export function SafeMarkdown({ text }: { text: string }) {
         urlTransform={(url) => safeHref(url) ?? ''}
         components={{
           img: ({ alt }) => (
-            <span>{alt ? `[Image : ${alt}]` : '[Image distante non chargée]'}</span>
+            <span>
+              {alt ? t('preview.image', { alt: alt ?? '' }) : t('preview.remoteImage')}
+            </span>
           ),
           a: ({ href, children }) =>
             href ? (
@@ -59,7 +63,7 @@ function PreviewMedia({ row }: { row: Row }) {
         <img src={url} alt={row.decorative ? '' : String(row.alt ?? '')} />
       ) : media.file && media.entry.nature === 'video' ? (
         <video controls src={url} preload="metadata">
-          <a href={url}>Télécharger la vidéo</a>
+          <a href={url}>{t('media.downloadVideo')}</a>
         </video>
       ) : (
         <a href={url} target="_blank" rel="noreferrer">
@@ -70,7 +74,7 @@ function PreviewMedia({ row }: { row: Row }) {
       {media.entry.credit && <small>{String(media.entry.credit)}</small>}
       {row.transcript && (
         <details>
-          <summary>Transcription</summary>
+          <summary>{t('media.transcript')}</summary>
           <p>{String(row.transcript)}</p>
         </details>
       )}
@@ -115,17 +119,14 @@ export function Preview({
     ),
   )
   return (
-    <Dialog title="Aperçu de présentation" onClose={onClose}>
-      <p className="muted">
-        Prévisualisation privée · cet aperçu ne change pas la publication. Notes privées, justificatifs et références
-        confidentielles exclus.
-      </p>
+    <Dialog title={t('preview.title')} onClose={onClose}>
+      <p className="muted">{t('preview.privacy')}</p>
       <article className="entry-preview">
-        <h1>{String(draft.title || 'Sans titre')}</h1>
+        <h1>{String(draft.title || t('content.untitled'))}</h1>
         <p className="preview-lead">{String(draft.summary ?? '')}</p>
         {draft.body && (
           <>
-            <p className="muted">Lecture estimée : {readingTime} min</p>
+            <p className="muted">{t('preview.readingTime', { count: readingTime })}</p>
             <SafeMarkdown text={String(draft.body)} />
           </>
         )}
@@ -167,14 +168,20 @@ export function Preview({
                             <span key={key}>
                               {key.endsWith('url') || key === 'url' ? (
                                 safeHref(String(v)) ? (
-                                  <a href={safeHref(String(v))} target="_blank" rel="noreferrer">
+                                  <a
+                                    href={safeHref(String(v))}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
                                     {String(v)}
                                   </a>
                                 ) : (
                                   String(v)
                                 )
+                              ) : resolve(field.items ?? {}, schema).properties?.[key]?.enum ? (
+                                (getOptionLabels()[String(v)] ?? String(v))
                               ) : (
-                                (optionLabels[String(v)] ?? String(v))
+                                String(v)
                               )}{' '}
                             </span>
                           ))}
@@ -192,7 +199,13 @@ export function Preview({
                     {String(value)}
                   </a>
                 ) : (
-                  <p>{value === true ? 'Oui' : (optionLabels[String(value)] ?? String(value))}</p>
+                  <p>
+                    {value === true
+                      ? t('common.yes')
+                      : field.enum
+                        ? (getOptionLabels()[String(value)] ?? String(value))
+                        : String(value)}
+                  </p>
                 )}
               </section>
             )
@@ -201,7 +214,8 @@ export function Preview({
           draft.media
             .filter(
               (row) =>
-                row.role !== 'private_proof' && references[Number(row.id)]?.visibility === 'public',
+                row.role !== 'private_proof' &&
+                references[Number(row.id)]?.visibility === 'public',
             )
             .map((row) => <PreviewMedia key={Number(row.id)} row={row} />)}
       </article>

@@ -1,8 +1,9 @@
+import { t } from '../../i18n'
 import type { Session } from '../api'
 import { ReferencePicker } from './ReferencePicker'
 import {
   defaults,
-  optionLabels,
+  getOptionLabels,
   resolve,
   type Collection,
   type Draft,
@@ -72,7 +73,7 @@ export function FieldControl(props: Props) {
         aria-describedby={errorId}
       >
         <legend>
-          {label} <span>{items.length ? `· ${items.length}` : '· facultatif en brouillon'}</span>
+          {label} <span>{items.length ? `· ${items.length}` : t('fields.optionalDraft')}</span>
         </legend>
         {error}
         {items.map((row, index) => (
@@ -87,7 +88,7 @@ export function FieldControl(props: Props) {
                   className="icon-button"
                   id={`${id}-${index}-move-1`}
                   disabled={disabled || index === 0}
-                  aria-label={`Monter ${label}, ligne ${index + 1}`}
+                  aria-label={t('fields.moveUp', { label, row: index + 1 })}
                   onClick={() => move(index, -1)}
                 >
                   ↑
@@ -97,7 +98,7 @@ export function FieldControl(props: Props) {
                   className="icon-button"
                   id={`${id}-${index}-move1`}
                   disabled={disabled || index === items.length - 1}
-                  aria-label={`Descendre ${label}, ligne ${index + 1}`}
+                  aria-label={t('fields.moveDown', { label, row: index + 1 })}
                   onClick={() => move(index, 1)}
                 >
                   ↓
@@ -105,13 +106,13 @@ export function FieldControl(props: Props) {
                 <button
                   type="button"
                   className="icon-button"
-                  aria-label={`Retirer ${label}, ligne ${index + 1}`}
+                  aria-label={t('fields.removeRow', { label, row: index + 1 })}
                   onClick={() => {
                     onChange(items.filter((_, i) => i !== index))
                     requestAnimationFrame(() => document.getElementById(`${id}-add`)?.focus())
                   }}
                 >
-                  ×
+                  {t('dialog.closeSymbol')}
                 </button>
               </div>
             </div>
@@ -122,7 +123,11 @@ export function FieldControl(props: Props) {
                   {...props}
                   schema={
                     key === 'id' && f.target
-                      ? { type: 'integer', target: f.target, title: `Choisir · ${label}` }
+                      ? {
+                          type: 'integer',
+                          target: f.target,
+                          title: t('fields.chooseReference', { label }),
+                        }
                       : item
                   }
                   name={`${name}.${index}.${key}`}
@@ -153,9 +158,9 @@ export function FieldControl(props: Props) {
             )
           }}
         >
-          + Ajouter · {label}
+          {t('fields.add', { label })}
         </button>
-        {items.length >= 100 && <p className="muted">Limite de 100 lignes atteinte.</p>}
+        {items.length >= 100 && <p className="muted">{t('fields.rowLimit')}</p>}
       </fieldset>
     )
   }
@@ -180,7 +185,7 @@ export function FieldControl(props: Props) {
     >
       <label htmlFor={id}>
         {label}
-        {f.minLength ? <span className="required-note"> · requis</span> : null}
+        {f.minLength ? <span className="required-note"> {t('fields.required')}</span> : null}
       </label>
       {f.target ? (
         <ReferencePicker
@@ -199,10 +204,14 @@ export function FieldControl(props: Props) {
           invalid={ownErrors.length > 0}
         />
       ) : f.enum ? (
-        <select {...shared} value={String(value ?? '')} onChange={(e) => onChange(e.target.value)}>
+        <select
+          {...shared}
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value)}
+        >
           {f.enum.map((option) => (
             <option key={option} value={option}>
-              {option ? (optionLabels[option] ?? option) : 'À renseigner'}
+              {option ? (getOptionLabels()[option] ?? option) : t('fields.choose')}
             </option>
           ))}
         </select>
@@ -225,7 +234,7 @@ export function FieldControl(props: Props) {
           min={f.minimum}
           max={f.maximum}
           maxLength={f.maxLength}
-          placeholder={f.widget === 'date' ? '2024 ou 2024-06 ou 2024-06-15' : undefined}
+          placeholder={f.widget === 'date' ? t('fields.dateExample') : undefined}
           onChange={(e) =>
             onChange(
               f.type === 'integer'
@@ -240,10 +249,10 @@ export function FieldControl(props: Props) {
       {helpId && (
         <span className="field-help" id={helpId}>
           {f.widget === 'date'
-            ? 'Conservez la précision connue ; ne complétez pas une date au hasard.'
+            ? t('fields.dateHint')
             : f.widget === 'markdown'
-              ? 'Markdown : titres, listes et liens. Le HTML et les images distantes ne sont pas exécutés dans l’aperçu.'
-              : `${f.maxLength?.toLocaleString('fr-FR')} caractères maximum`}
+              ? t('fields.markdownHint')
+              : t('fields.maxLength', { count: f.maxLength ?? 0 })}
         </span>
       )}
       {error}

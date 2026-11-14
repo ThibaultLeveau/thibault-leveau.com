@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { ApiError } from '../api'
 import type { ContentRecord } from './types'
 
@@ -38,16 +39,16 @@ export function uploadFile(
       try {
         data = JSON.parse(request.responseText)
       } catch {
-        reject(new ApiError(0, 'Réponse du serveur illisible.'))
+        reject(new ApiError(0, t('errors.unreadable')))
         return
       }
       if (request.status >= 200 && request.status < 300) resolve(data)
-      else reject(new ApiError(request.status, data.detail ?? 'Téléversement refusé.', data.errors))
+      else
+        reject(new ApiError(request.status, data.detail ?? t('upload.rejected'), data.errors))
     }
-    request.onerror = () =>
-      reject(new ApiError(0, 'Connexion interrompue. Réessayez le téléversement.'))
-    request.ontimeout = () => reject(new ApiError(0, 'Le téléversement a dépassé cinq minutes.'))
-    request.onabort = () => reject(new ApiError(0, 'Téléversement annulé.'))
+    request.onerror = () => reject(new ApiError(0, t('upload.connectionInterrupted')))
+    request.ontimeout = () => reject(new ApiError(0, t('upload.timeout')))
+    request.onabort = () => reject(new ApiError(0, t('upload.cancelled')))
     signal.addEventListener('abort', () => request.abort(), { once: true })
     request.send(file)
   })

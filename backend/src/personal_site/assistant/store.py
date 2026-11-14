@@ -7,7 +7,9 @@ import time
 
 from personal_site.assistant.contracts import Preferences
 from personal_site.content.batch import write_batch
-from personal_site.content.validation import ContentError
+from personal_site.content.schemas import MODELS
+from personal_site.content.validation import ContentError, localized_errors
+from personal_site.i18n import schema_text, tr
 
 PROPOSAL_SECONDS = 3600
 RECEIPT_SECONDS = 86400
@@ -36,9 +38,7 @@ class AssistantStore:
             row = db.execute("SELECT version FROM assistant_preferences WHERE id = 1").fetchone()
             version = row[0] if row else 1
             if version != preferences.version:
-                raise ContentError(
-                    "Ces réglages ont changé. Rechargez-les avant de réessayer.", status=409
-                )
+                raise ContentError(tr("errors.settingsConflict"), status=409)
             value = preferences.model_copy(update={"version": version + 1})
             db.execute(
                 "INSERT INTO assistant_preferences VALUES (1, ?, ?) "
@@ -59,7 +59,7 @@ class AssistantStore:
         if not db.execute(
             "SELECT 1 FROM sessions WHERE token_hash=? AND expires>?", (owner, time.time())
         ).fetchone():
-            raise ContentError("Votre session a expiré. Reconnectez-vous.", status=401)
+            raise ContentError(tr("errors.sessionExpired"), status=401)
 
     def latest(self, owner, thread_id):
         with self.admin.connect() as db:
@@ -82,9 +82,7 @@ class AssistantStore:
         ident, timestamp = secrets.token_urlsafe(24), time.time()
         encoded = json.dumps(payload, ensure_ascii=False)
         if len(encoded.encode()) > 2 * 1024 * 1024:
-            raise ContentError(
-                "La proposition est trop volumineuse. Traitez moins de fiches à la fois."
-            )
+            raise ContentError(tr("errors.proposalSize"))
         with self.admin.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             self.require_session(db, owner)
@@ -107,15 +105,19 @@ class AssistantStore:
             "SELECT * FROM assistant_proposals WHERE id=? AND owner=?", (ident, owner)
         ).fetchone()
         if not row:
-            raise ContentError("Proposition introuvable.", status=404)
+            raise ContentError(tr("errors.proposalMissing"), status=404)
         if row["expires"] <= time.time():
-            raise ContentError(
-                "Cette proposition a expiré. Demandez une nouvelle version.", status=410
-            )
+            raise ContentError(tr("errors.proposalExpired"), status=410)
         return row
 
     def _public(self, row):
         payload = json.loads(row["payload"])
+        for item in payload["preview"]:
+            item["errors"] = localized_errors(item["kind"], item["errors"])
+            for change in item["changes"]:
+                change["label"] = schema_text(
+                    MODELS[item["kind"]].model_fields[change["field"]].title
+                )
         return {
             "id": row["id"],
             "revision": row["revision"],
@@ -134,7 +136,7 @@ class AssistantStore:
             db.execute("BEGIN IMMEDIATE")
             row = self._row(db, owner, ident)
             if row["revision"] != revision or row["state"] == "applied":
-                raise ContentError("Cette proposition a déjà changé ou été appliquée.", status=409)
+                raise ContentError(tr("errors.proposalChanged"), status=409)
             db.execute("UPDATE assistant_proposals SET state='cancelled' WHERE id=?", (ident,))
         return self.get(owner, ident)
 
@@ -144,7 +146,7 @@ class AssistantStore:
                 db.execute("BEGIN IMMEDIATE")
                 row = self._row(db, owner, ident)
                 if row["revision"] != revision or row["state"] not in {"pending", "applied"}:
-                    raise ContentError("Cette proposition n'est plus applicable.", status=409)
+                    raise ContentError(tr("errors.proposalInapplicable"), status=409)
                 if row["state"] == "applied":
                     return self._public(row)
                 payload = json.loads(row["payload"])
@@ -170,7 +172,5 @@ class AssistantStore:
                     (json.dumps(result), time.time() + RECEIPT_SECONDS, ident),
                 )
         except sqlite3.IntegrityError:
-            raise ContentError(
-                "Un identifiant ou le profil unique existe déjà. Précisez la demande.", status=409
-            ) from None
+            raise ContentError(tr("errors.identifierExists"), status=409) from None
         return self.get(owner, ident)

@@ -9,11 +9,12 @@ from starlette.concurrency import run_in_threadpool
 
 from personal_site.assistant.agents import invoke
 from personal_site.assistant.contracts import Operation, Plan, Question
-from personal_site.assistant.prompts import PLANNER, POLICY, SPECIALIST
+from personal_site.assistant.prompts import PLANNER, SPECIALIST, policy
 from personal_site.assistant.proposals import prepare
 from personal_site.assistant.registry import FAMILIES, PRIVATE_FIELDS, output_model
 from personal_site.content.schemas import LABELS, MODELS
 from personal_site.content.validation import ContentError
+from personal_site.i18n import current_language, schema_text, tr
 
 
 class State(TypedDict, total=False):
@@ -24,6 +25,7 @@ class State(TypedDict, total=False):
 
 
 def build_graph(model, context, preferences, turn, previous):
+    system_policy = policy(current_language.get())
     history = [m.model_dump() for m in turn.messages]
     common = {
         "messages": history,
@@ -47,21 +49,21 @@ def build_graph(model, context, preferences, turn, previous):
         plan = await invoke(
             model,
             Plan,
-            POLICY + PLANNER,
+            system_policy + PLANNER,
             {**common, "collections": {k: v[0] for k, v in LABELS.items()}},
             context,
         )
         if plan.questions or not plan.tasks:
             return {"plan": plan, "workers": []}
         if len({t.key for t in plan.tasks}) != len(plan.tasks):
-            raise ContentError("Le plan contient des identifiants de tâches répétés.")
+            raise ContentError(tr("errors.planTaskDuplicate"))
         targets = [
             (t.kind, t.entry_id)
             for t in plan.tasks
             if t.entry_id is not None or t.kind == "profiles"
         ]
         if len(set(targets)) != len(targets):
-            raise ContentError("Le plan répète une fiche. Précisez les modifications à regrouper.")
+            raise ContentError(tr("errors.planEntryDuplicate"))
         workers = []
         for task in plan.tasks:
             output_model(task.kind, task.fields, context.include_private)
@@ -70,10 +72,10 @@ def build_graph(model, context, preferences, turn, previous):
                 if existing["total"]:
                     return {
                         "plan": Plan(
-                            message="Un profil existe déjà.",
+                            message=tr("assistant.profileExists"),
                             questions=[
                                 Question(
-                                    question="Souhaitez-vous modifier le profil existant ?",
+                                    question=tr("assistant.editProfile"),
                                     fields=["profiles"],
                                 )
                             ],
@@ -109,10 +111,8 @@ def build_graph(model, context, preferences, turn, previous):
         if len(workers) > 16:
             return {
                 "plan": Plan(
-                    message="Cette demande couvre trop de sections pour un seul envoi.",
-                    questions=[
-                        Question(question="Quelles fiches souhaitez-vous traiter en premier ?")
-                    ],
+                    message=tr("assistant.scopeTooLarge"),
+                    questions=[Question(question=tr("assistant.prioritize"))],
                 ),
                 "workers": [],
             }
@@ -128,7 +128,7 @@ def build_graph(model, context, preferences, turn, previous):
         result = await invoke(
             model,
             schema,
-            POLICY + SPECIALIST,
+            system_policy + SPECIALIST,
             {
                 **common,
                 "preferences": style.model_dump(),
@@ -174,16 +174,16 @@ def build_graph(model, context, preferences, turn, previous):
                 if result["key"] != task.key:
                     continue
                 if changes.keys() & result["changes"].keys():
-                    raise ContentError(
-                        "Deux spécialistes proposent des modifications concurrentes."
-                    )
+                    raise ContentError(tr("errors.specialistConflict"))
                 changes.update(result["changes"])
                 missing.setdefault(task.key, []).extend(result["missing"])
                 as_draft |= result["as_draft"]
             if not changes:
                 response["questions"].append(
                     Question(
-                        question=f"Que souhaitez-vous renseigner pour {LABELS[task.kind][0]} ?"
+                        question=tr(
+                            "assistant.entryQuestion", collection=schema_text(LABELS[task.kind][0])
+                        )
                     ).model_dump()
                 )
                 continue
@@ -203,9 +203,7 @@ def build_graph(model, context, preferences, turn, previous):
                     prepare, context.content, operations, context.versions, missing
                 )
             except ContentError as exc:
-                response["message"] = (
-                    "La proposition demande encore une précision avant de pouvoir être enregistrée."
-                )
+                response["message"] = tr("errors.proposalClarification")
                 response["questions"] = [
                     Question(
                         question=exc.message, reason=" ".join(e["message"] for e in exc.errors[:5])

@@ -1,12 +1,29 @@
+import { t } from '../i18n'
 import { useTheme } from '../theme/theme'
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
-  const label = theme === 'dark' ? 'Activer le thème clair' : 'Activer le thème sombre'
+  const label = theme === 'dark' ? t('theme.light') : t('theme.dark')
 
   return (
-    <button className="theme-toggle grid size-11 shrink-0 place-items-center rounded-full" type="button" onClick={toggleTheme} aria-label={label} title={label}>
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <button
+      className="theme-toggle grid size-11 shrink-0 place-items-center rounded-full"
+      type="button"
+      onClick={toggleTheme}
+      aria-label={label}
+      title={label}
+    >
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
         {theme === 'dark' ? (
           <>
             <circle cx="12" cy="12" r="4" />

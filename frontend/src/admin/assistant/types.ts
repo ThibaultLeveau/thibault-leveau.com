@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import type { Collection, FieldError, Item, Value } from '../content/types'
 
 export interface Question {
@@ -24,7 +25,8 @@ export interface Proposal {
   state: 'pending' | 'applied' | 'cancelled' | 'superseded'
   expires: number
   items: ProposalItem[]
-  result: { id: number; kind: Collection; title: string; status: string; version: number }[] | null
+  result:
+    { id: number; kind: Collection; title: string; status: string; version: number }[] | null
 }
 export interface AssistantReply {
   message: string
@@ -35,15 +37,17 @@ export interface AssistantReply {
   calls: number
   delegations: number
 }
-export const families = {
-  profile: 'Profil',
-  career: 'Parcours',
-  expertise: 'Projets et expertise',
-  services: 'Services',
-  editorial: 'Rédaction et publications',
-  library: 'Bibliothèque',
-} as const
-export type Family = keyof typeof families
+export function getFamilies() {
+  return {
+    profile: t('collections.profile'),
+    career: t('navigation.career'),
+    expertise: t('preferences.projectsExpertise'),
+    services: t('collections.services'),
+    editorial: t('preferences.writing'),
+    library: t('navigation.library'),
+  } as const
+}
+export type Family = keyof ReturnType<typeof getFamilies>
 export interface Style {
   language: string
   tone: 'neutral' | 'warm' | 'direct' | 'formal'

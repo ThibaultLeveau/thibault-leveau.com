@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 
 export function Dialog({
@@ -38,10 +39,10 @@ export function Dialog({
         <button
           type="button"
           className="icon-button"
-          aria-label="Fermer la fenêtre"
+          aria-label={t('dialog.close')}
           onClick={onClose}
         >
-          ×
+          {t('dialog.closeSymbol')}
         </button>
       </div>
       {children}

@@ -9,6 +9,7 @@ from personal_site.assistant.contracts import Question
 from personal_site.content.catalog import list_fields, target
 from personal_site.content.schemas import LABELS, MODELS, Model
 from personal_site.content.validation import ContentError
+from personal_site.i18n import tr
 
 FAMILIES = {
     "profiles": "profile",
@@ -45,9 +46,9 @@ def output_model(kind: str, names: list[str], include_private: bool):
         or len(set(names)) != len(names)
         or not set(names) <= MODELS[kind].model_fields.keys()
     ):
-        raise ContentError("Le plan contient des champs inconnus ou répétés.")
+        raise ContentError(tr("errors.planFields"))
     if not include_private and PRIVATE_FIELDS.intersection(names):
-        raise ContentError("Activez le partage des notes privées pour demander leur modification.")
+        raise ContentError(tr("errors.privateNotesDisabled"))
     fields = {}
     lists = list_fields(kind)
     for name in names:

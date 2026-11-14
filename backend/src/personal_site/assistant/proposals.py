@@ -6,6 +6,7 @@ from personal_site.content.batch import reference_ids, write_batch
 from personal_site.content.catalog import PAIRS, target
 from personal_site.content.schemas import MODELS
 from personal_site.content.validation import ContentError
+from personal_site.i18n import schema_text, tr
 
 
 def preview(content, db, record, old, *, key, names, missing, related=False):
@@ -17,7 +18,7 @@ def preview(content, db, record, old, *, key, names, missing, related=False):
             changes.append(
                 {
                     "field": name,
-                    "label": MODELS[record["kind"]].model_fields[name].title,
+                    "label": schema_text(MODELS[record["kind"]].model_fields[name].title),
                     "before": left,
                     "after": right,
                 }
@@ -111,6 +112,6 @@ def prepare(content, operations, versions, missing):
         return {"operations": ops, "versions": versions, "preview": previews}
     except sqlite3.IntegrityError:
         raise ContentError(
-            "Une fiche du même identifiant ou le profil unique existe déjà. Précisez la cible.",
+            tr("errors.targetAmbiguous"),
             status=409,
         ) from None

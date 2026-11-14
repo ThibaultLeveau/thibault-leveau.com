@@ -1,5 +1,12 @@
+import { t } from '../i18n'
 import { useState, type FormEvent } from 'react'
-import { adminRequest, ApiError, errorMessage, type ProviderSettings, type Session } from './api'
+import {
+  adminRequest,
+  ApiError,
+  errorMessage,
+  type ProviderSettings,
+  type Session,
+} from './api'
 import { Icon } from './Icon'
 
 interface SharedProps {
@@ -25,7 +32,7 @@ export function ProviderForm({
 
   async function save(clear = false) {
     if (!clear && provider !== settings.provider && !key.trim()) {
-      setFeedback({ error: 'Saisissez une clé API pour le nouveau fournisseur.', success: '' })
+      setFeedback({ error: t('provider.keyRequired'), success: '' })
       return
     }
     setPending(true)
@@ -45,11 +52,10 @@ export function ProviderForm({
       onSaved(updated)
       setFeedback({
         error: '',
-        success: clear ? 'La clé API a été retirée.' : 'Vos réglages sont enregistrés.',
+        success: clear ? t('provider.keyRemoved') : t('settings.saved'),
       })
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (error instanceof ApiError && error.status === 401) onSessionEnd(t('session.expired'))
       else setFeedback({ error: errorMessage(error), success: '' })
     } finally {
       setPending(false)
@@ -58,11 +64,12 @@ export function ProviderForm({
 
   return (
     <section className="settings-content" aria-labelledby="provider-title">
-      <span className="eyebrow">RÉGLAGES DU SITE</span>
+      <span className="eyebrow">{t('settings.eyebrow')}</span>
       <h1 id="provider-title">
-        AI provider<span className="accent-dot">.</span>
+        {t('provider.title')}
+        <span className="accent-dot">.</span>
       </h1>
-      <p className="settings-lead">Choisissez l’intelligence qui vous accompagne.</p>
+      <p className="settings-lead">{t('provider.subtitle')}</p>
       <form
         className="settings-card"
         onSubmit={(event: FormEvent) => {
@@ -75,12 +82,12 @@ export function ProviderForm({
             <Icon name="sparkles" />
           </span>
           <div>
-            <h2>Votre modèle, vos idées</h2>
-            <p className="muted">Connectez le fournisseur de votre choix.</p>
+            <h2>{t('provider.cardTitle')}</h2>
+            <p className="muted">{t('provider.cardDescription')}</p>
           </div>
         </div>
         <fieldset className="provider-picker" disabled={pending}>
-          <legend>Fournisseur LLM</legend>
+          <legend>{t('provider.label')}</legend>
           <div className="provider-options">
             {settings.providers.map((item) => (
               <label
@@ -94,7 +101,9 @@ export function ProviderForm({
                   checked={item.id === provider}
                   onChange={() => {
                     setProvider(item.id)
-                    setModel(item.id === settings.provider ? settings.model : item.default_model)
+                    setModel(
+                      item.id === settings.provider ? settings.model : item.default_model,
+                    )
                     setKey('')
                     setFeedback({ error: '', success: '' })
                   }}
@@ -111,7 +120,7 @@ export function ProviderForm({
           </div>
         </fieldset>
         <div className="field">
-          <label htmlFor="provider-model">Modèle</label>
+          <label htmlFor="provider-model">{t('provider.model')}</label>
           <input
             id="provider-model"
             value={model}
@@ -123,18 +132,18 @@ export function ProviderForm({
             aria-describedby="model-help"
           />
           <span className="field-help" id="model-help">
-            L’identifiant exact d’un modèle disponible sur votre compte.{' '}
+            {t('provider.modelHint')}{' '}
             <a href={selected.docs_url} target="_blank" rel="noreferrer">
-              Voir les modèles <Icon name="external" size={12} />
+              {t('provider.models')} <Icon name="external" size={12} />
             </a>
           </span>
         </div>
         <div className="field">
-          <label htmlFor="provider-key">Clé API</label>
+          <label htmlFor="provider-key">{t('provider.apiKey')}</label>
           <span className="field-label-note">
             {settings.has_api_key && provider === settings.provider
-              ? 'Une clé est enregistrée'
-              : 'Aucune clé enregistrée'}
+              ? t('provider.hasKey')
+              : t('provider.noKey')}
           </span>
           <input
             id="provider-key"
@@ -144,8 +153,8 @@ export function ProviderForm({
             autoComplete="new-password"
             placeholder={
               settings.has_api_key && provider === settings.provider
-                ? 'Laisser vide pour conserver la clé'
-                : 'Saisissez votre clé API'
+                ? t('provider.keepKey')
+                : t('provider.enterKey')
             }
             maxLength={512}
             disabled={pending}
@@ -153,19 +162,14 @@ export function ProviderForm({
             aria-describedby="key-help"
           />
           <span className="field-help" id="key-help">
-            Votre clé reste confidentielle. Une clé enregistrée n’est jamais réaffichée.
+            {t('provider.keyPrivacy')}
           </span>
         </div>
         <div className="settings-note">
           <Icon name="lock" size={16} />
-          <p>
-            Les messages sont envoyés au fournisseur sélectionné. L’utilisation est facturée sur
-            votre compte selon ses tarifs.
-          </p>
+          <p>{t('provider.billing')}</p>
         </div>
-        <p className="field-help">
-          Changer de fournisseur ou de modèle démarre une nouvelle conversation.
-        </p>
+        <p className="field-help">{t('provider.newConversation')}</p>
         {feedback.error && (
           <p className="form-error" role="alert">
             {feedback.error}
@@ -179,7 +183,7 @@ export function ProviderForm({
         )}
         <div className="form-actions">
           <button className="primary-button" disabled={pending}>
-            {pending ? 'Enregistrement…' : 'Enregistrer les réglages'}
+            {pending ? t('common.saving') : t('settings.save')}
           </button>
           {settings.has_api_key && (
             <button
@@ -188,7 +192,7 @@ export function ProviderForm({
               disabled={pending}
               onClick={() => void save(true)}
             >
-              Retirer la clé
+              {t('provider.removeKey')}
             </button>
           )}
         </div>
@@ -205,7 +209,7 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
     const form = new FormData(event.currentTarget)
     const password = String(form.get('new-password'))
     if (password !== form.get('confirm-password')) {
-      setError('Les deux nouveaux mots de passe ne correspondent pas.')
+      setError(t('account.passwordMismatch'))
       return
     }
     setPending(true)
@@ -220,10 +224,9 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
           ...(password ? { new_password: password } : {}),
         },
       })
-      onSessionEnd('Votre compte est mis à jour. Connectez-vous avec vos nouveaux identifiants.')
+      onSessionEnd(t('account.updated'))
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        onSessionEnd('Votre session a expiré. Reconnectez-vous.')
+      if (error instanceof ApiError && error.status === 401) onSessionEnd(t('session.expired'))
       else setError(errorMessage(error))
     } finally {
       setPending(false)
@@ -231,23 +234,24 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
   }
   return (
     <section className="settings-content" aria-labelledby="account-title">
-      <span className="eyebrow">RÉGLAGES DU SITE</span>
+      <span className="eyebrow">{t('settings.eyebrow')}</span>
       <h1 id="account-title">
-        Admin user<span className="accent-dot">.</span>
+        {t('account.title')}
+        <span className="accent-dot">.</span>
       </h1>
-      <p className="settings-lead">Votre espace commence par vous.</p>
+      <p className="settings-lead">{t('account.subtitle')}</p>
       <form className="settings-card" onSubmit={submit}>
         <div className="card-heading">
           <span className="section-icon">
             <Icon name="user" />
           </span>
           <div>
-            <h2>Compte administrateur</h2>
-            <p className="muted">Gérez vos identifiants de connexion.</p>
+            <h2>{t('account.cardTitle')}</h2>
+            <p className="muted">{t('account.cardDescription')}</p>
           </div>
         </div>
         <div className="field">
-          <label htmlFor="account-username">Nom d’utilisateur</label>
+          <label htmlFor="account-username">{t('account.username')}</label>
           <input
             id="account-username"
             name="username"
@@ -263,11 +267,11 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
             aria-describedby="username-help"
           />
           <span id="username-help" className="field-help">
-            3 à 64 caractères : lettres, chiffres, point, tiret ou tiret bas.
+            {t('account.usernameHint')}
           </span>
         </div>
         <label className="field">
-          Mot de passe actuel
+          {t('account.currentPassword')}
           <input
             name="current-password"
             type="password"
@@ -279,8 +283,8 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
         </label>
         <div className="form-divider" />
         <div className="field">
-          <label htmlFor="account-password">Nouveau mot de passe</label>
-          <span className="field-label-note">Facultatif</span>
+          <label htmlFor="account-password">{t('account.newPassword')}</label>
+          <span className="field-label-note">{t('common.optional')}</span>
           <input
             id="account-password"
             name="new-password"
@@ -292,11 +296,11 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
             aria-describedby="password-help"
           />
           <span className="field-help" id="password-help">
-            12 caractères minimum. Laissez vide pour conserver le mot de passe actuel.
+            {t('account.passwordHint')}
           </span>
         </div>
         <label className="field">
-          Confirmer le nouveau mot de passe
+          {t('account.confirmPassword')}
           <input
             name="confirm-password"
             type="password"
@@ -308,10 +312,7 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
         </label>
         <div className="settings-note">
           <Icon name="lock" size={16} />
-          <p>
-            Après une modification, toutes les sessions sont fermées. Vous pourrez vous reconnecter
-            avec vos nouveaux identifiants.
-          </p>
+          <p>{t('account.sessionsHint')}</p>
         </div>
         {error && (
           <p className="form-error" role="alert">
@@ -320,7 +321,7 @@ export function AccountForm({ session, onSessionEnd }: SharedProps) {
         )}
         <div className="form-actions">
           <button className="primary-button" disabled={pending}>
-            {pending ? 'Enregistrement…' : 'Mettre à jour le compte'}
+            {pending ? t('common.saving') : t('account.save')}
           </button>
         </div>
       </form>

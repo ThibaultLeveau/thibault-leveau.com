@@ -5,6 +5,8 @@ import json
 
 import httpx
 
+from personal_site.i18n import tr
+
 PROVIDERS = [
     {
         "id": "openai",
@@ -67,43 +69,29 @@ class LLMGateway:
                     "POST", ENDPOINTS[provider], headers=headers, json=payload
                 ) as response:
                     if response.status_code in {401, 403}:
-                        raise ProviderError(
-                            "Clé API refusée. Vérifiez les réglages du fournisseur."
-                        )
+                        raise ProviderError(tr("errors.apiKeyRejected"))
                     if response.status_code == 429:
-                        raise ProviderError(
-                            "Quota ou limite du fournisseur atteint. Réessayez plus tard."
-                        )
+                        raise ProviderError(tr("errors.providerQuota"))
                     if response.status_code >= 300:
-                        raise ProviderError(
-                            "Le fournisseur a refusé la demande. Vérifiez le modèle et votre accès."
-                        )
+                        raise ProviderError(tr("errors.providerRejected"))
                     body = bytearray()
                     async for chunk in response.aiter_bytes():
                         body.extend(chunk)
                         if len(body) > 2 * 1024 * 1024:
-                            raise ProviderError("La réponse du fournisseur est trop volumineuse.")
+                            raise ProviderError(tr("errors.providerResponseSize"))
             data = json.loads(body)
             if provider == "anthropic":
                 text = "\n".join(part["text"] for part in data["content"] if part["type"] == "text")
             else:
                 text = data["choices"][0]["message"]["content"]
             if not isinstance(text, str) or not text.strip():
-                raise ProviderError("Le modèle n’a pas renvoyé de texte. Essayez un autre modèle.")
+                raise ProviderError(tr("errors.modelNoText"))
             if len(text) > 20000:
-                raise ProviderError(
-                    "La réponse dépasse la taille acceptée. Demandez une réponse plus courte."
-                )
+                raise ProviderError(tr("errors.replySize"))
             return text
         except (TimeoutError, httpx.TimeoutException) as exc:
-            raise ProviderError(
-                "Le fournisseur met trop de temps à répondre. Réessayez.", 504
-            ) from exc
+            raise ProviderError(tr("errors.providerTimeout"), 504) from exc
         except httpx.HTTPError as exc:
-            raise ProviderError(
-                "Impossible de joindre le fournisseur. Réessayez plus tard."
-            ) from exc
+            raise ProviderError(tr("errors.providerConnection")) from exc
         except (ValueError, KeyError, IndexError, TypeError) as exc:
-            raise ProviderError(
-                "Réponse du fournisseur illisible. Essayez un autre modèle."
-            ) from exc
+            raise ProviderError(tr("errors.providerUnreadable")) from exc

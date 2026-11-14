@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from personal_site.admin.security import SESSION_SECONDS, password_hash, token_hash
 from personal_site.config import Settings
+from personal_site.i18n import tr
 
 
 class AdminStore:
@@ -67,6 +68,33 @@ class AdminStore:
     def account(self):
         with self.connect() as db:
             return dict(db.execute("SELECT * FROM account WHERE id = 1").fetchone())
+
+    def languages(self):
+        with self.connect() as db:
+            return dict(
+                db.execute(
+                    "SELECT public_language, admin_language, version "
+                    "FROM site_languages WHERE id = 1"
+                ).fetchone()
+            )
+
+    def save_languages(self, public_language: str, admin_language: str, version: int):
+        from personal_site.content.validation import ContentError
+
+        with self.connect() as db:
+            changed = db.execute(
+                "UPDATE site_languages SET public_language = ?, admin_language = ?, "
+                "version = version + 1 WHERE id = 1 AND version = ?",
+                (public_language, admin_language, version),
+            ).rowcount
+            if not changed:
+                raise ContentError(tr("errors.settingsConflict"), status=409)
+            return dict(
+                db.execute(
+                    "SELECT public_language, admin_language, version "
+                    "FROM site_languages WHERE id = 1"
+                ).fetchone()
+            )
 
     def session(self, token: str):
         if not token or len(token) > 128:
@@ -139,9 +167,7 @@ class AdminStore:
             db.execute("BEGIN IMMEDIATE")
             old = db.execute("SELECT name, api_key FROM provider WHERE id = 1").fetchone()
             if provider != old["name"] and not api_key and not clear:
-                raise ValueError(
-                    "Saisissez une clé pour ce fournisseur ou retirez la clé actuelle."
-                )
+                raise ValueError(tr("errors.providerKeyRequired"))
             encrypted = (
                 None
                 if clear

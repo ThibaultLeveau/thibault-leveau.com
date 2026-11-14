@@ -1,8 +1,9 @@
+import { t } from '../i18n'
 import { lazy, Suspense } from 'react'
 import { SiteHeader } from '../components/SiteHeader'
 import { Arrow } from './components'
-import { collections, type Kind } from './content'
-import { CollectionPage, sections } from './CollectionPage'
+import { getCollections, type Kind } from './content'
+import { CollectionPage, getSections } from './CollectionPage'
 import '../styles/public.css'
 
 const HomePage = lazy(() => import('./PublicHome'))
@@ -13,7 +14,7 @@ const AboutPage = lazy(() =>
 
 export default function PublicSite() {
   const path = window.location.pathname.replace(/\/$/, '') || '/'
-  const detail = Object.entries(collections)
+  const detail = Object.entries(getCollections())
     .map(([kind, [, prefix]]) => ({
       kind: kind as Kind,
       match: path.match(new RegExp(`^/${prefix}/(\\d+)/[^/]+$`)),
@@ -22,14 +23,14 @@ export default function PublicSite() {
   return (
     <div className="public-site site-shell mx-auto flex min-h-svh w-full max-w-[1600px] flex-col">
       <a className="skip-link" href="#contenu">
-        Aller au contenu
+        {t('navigation.skip')}
       </a>
       <SiteHeader />
       <Suspense
         fallback={
           <main id="contenu" className="public-main" tabIndex={-1}>
             <p className="public-loading" role="status">
-              Ouverture de la page…
+              {t('public.loadingPage')}
             </p>
           </main>
         }
@@ -40,12 +41,12 @@ export default function PublicSite() {
           <DetailPage kind={detail.kind} id={Number(detail.match![1])} />
         ) : path === '/a-propos' ? (
           <AboutPage />
-        ) : sections[path] ? (
+        ) : getSections()[path] ? (
           <CollectionPage path={path} />
         ) : (
           <main id="contenu" className="public-main" tabIndex={-1}>
-            <h1>Page introuvable.</h1>
-            <a href="/explorer">Explorer le site</a>
+            <h1>{t('public.notFound')}</h1>
+            <a href="/explorer">{t('public.exploreSite')}</a>
           </main>
         )}
       </Suspense>
@@ -54,19 +55,19 @@ export default function PublicSite() {
           <a href="/">
             Thibault Leveau<span className="accent">.</span>
           </a>
-          <p>Projets, parcours & idées.</p>
+          <p>{t('public.footerTagline')}</p>
         </div>
-        <nav aria-label="Navigation de pied de page">
+        <nav aria-label={t('navigation.footer')}>
           <a href="/explorer">
-            Explorer
+            {t('navigation.explore')}
             <Arrow diagonal />
           </a>
-          <a href="/a-propos">À propos</a>
-          <a href="/documentation/">Documentation</a>
+          <a href="/a-propos">{t('navigation.about')}</a>
+          <a href="/documentation/">{t('options.documentation')}</a>
         </nav>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Thibault Leveau</span>
-          <a href="#contenu">Revenir en haut ↑</a>
+          <a href="#contenu">{t('navigation.backToTop')}</a>
         </div>
       </footer>
     </div>

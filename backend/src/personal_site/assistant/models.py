@@ -16,6 +16,7 @@ from pydantic import Field
 
 from personal_site.admin.llm import ENDPOINTS as TEXT_ENDPOINTS
 from personal_site.admin.llm import ProviderError
+from personal_site.i18n import tr
 
 ENDPOINTS = {**TEXT_ENDPOINTS, "openai": "https://api.openai.com/v1/responses"}
 
@@ -34,18 +35,14 @@ class Budget:
 
     def use_model(self):
         if self.calls >= MAX_CALLS:
-            raise ProviderError(
-                "La demande atteint la limite d'appels. Traitez moins de fiches à la fois.", 422
-            )
+            raise ProviderError(tr("errors.callBudget"), 422)
         self.calls += 1
 
     def use_tool(self, size=0):
         self.tool_calls += 1
         self.context_chars += size
         if self.tool_calls > 48 or self.context_chars > 250000:
-            raise ProviderError(
-                "Le contexte est trop large. Précisez les fiches ou les champs concernés.", 422
-            )
+            raise ProviderError(tr("errors.contextScope"), 422)
 
 
 def guarded_client(module):
@@ -56,9 +53,9 @@ def guarded_client(module):
 
         async def send(self, request, **kwargs):
             if str(request.url) != self.endpoint or request.method != "POST":
-                raise ProviderError("Destination du fournisseur refusée.")
+                raise ProviderError(tr("errors.providerDestination"))
             if len(request.content) > MAX_INPUT * 4:
-                raise ProviderError("Le contexte est trop volumineux. Ciblez moins de champs.", 422)
+                raise ProviderError(tr("errors.contextSize"), 422)
             self.budget.use_model()
             kwargs["stream"] = True
             kwargs["follow_redirects"] = False
@@ -67,20 +64,17 @@ def guarded_client(module):
                 status = response.status_code
                 if status >= 300:
                     if status in {401, 403}:
-                        message = "Clé API refusée. Vérifiez les réglages AI provider."
+                        message = tr("errors.providerKeyRejected")
                     elif status == 429:
-                        message = "Quota ou limite du fournisseur atteint. Réessayez plus tard."
+                        message = tr("errors.providerQuota")
                     else:
-                        message = (
-                            "Le fournisseur refuse la génération structurée. "
-                            "Vérifiez le modèle et son accès aux outils."
-                        )
+                        message = tr("errors.structuredGeneration")
                     raise ProviderError(message)
                 body = bytearray()
                 async for chunk in response.aiter_bytes():
                     body.extend(chunk)
                     if len(body) > MAX_RESPONSE_BYTES:
-                        raise ProviderError("La réponse du fournisseur est trop volumineuse.")
+                        raise ProviderError(tr("errors.providerResponseSize"))
                 headers = dict(response.headers)
                 headers.pop("content-encoding", None)
                 headers.pop("content-length", None)

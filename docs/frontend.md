@@ -26,6 +26,8 @@ Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le
 
 ## Organisation des composants
 
+`I18nextProvider` enveloppe le thème et `App`. Le module `src/i18n/` initialise la langue fournie par FastAPI, les catalogues français/anglais et les formats `Intl`. `App` s’abonne au changement de langue pour actualiser toute la route en conservant les états React. `admin/LanguageForm.tsx` lit/enregistre les deux préférences avec contrôle de version et garde de navigation. Les métadonnées de formulaires et des propositions existantes sont relues après changement de langue ; les contenus et messages de conversation restent inchangés. Voir le [guide des langues](languages.md) pour les clés, pluriels, limites et contrats.
+
 | Élément | Responsabilité |
 | --- | --- |
 | `App` | Sélection et chargement différé du site public ou de l'administration |

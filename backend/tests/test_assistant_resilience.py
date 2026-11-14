@@ -185,7 +185,8 @@ def test_migration_from_populated_v1_preserves_contents_and_sessions(admin_clien
     with store.connect() as db:
         db.execute("DROP TABLE assistant_proposals")
         db.execute("DROP TABLE assistant_preferences")
-        db.execute("DELETE FROM content_migrations WHERE version=2")
+        db.execute("DROP TABLE site_languages")
+        db.execute("DELETE FROM content_migrations WHERE version>=2")
     migrate(store)
     with store.connect() as db:
         assert (
