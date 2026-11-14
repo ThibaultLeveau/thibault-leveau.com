@@ -10,12 +10,14 @@ import {
 import { Icon } from '../admin/Icon'
 import { ProviderForm, AccountForm } from '../admin/SettingsForms'
 import { ChatPanel } from '../admin/ChatPanel'
+import { PreferencesForm } from '../admin/assistant/PreferencesForm'
 import { ContentStudio } from '../admin/content/ContentStudio'
 import { collectionLabels, type Collection, type DraftMemory } from '../admin/content/types'
 import '../styles/admin.css'
 import '../styles/content.css'
+import '../styles/assistant.css'
 
-type View = 'chat' | 'provider' | 'account' | Collection
+type View = 'chat' | 'provider' | 'account' | 'agents' | Collection
 type Group = 'career' | 'writing' | 'library' | 'settings'
 const groups: Record<Group, { label: string; views: View[] }> = {
   career: { label: 'Parcours', views: ['experiences', 'educations', 'certifications', 'awards'] },
@@ -24,7 +26,7 @@ const groups: Record<Group, { label: string; views: View[] }> = {
     label: 'Référentiels',
     views: ['skills', 'technologies', 'organizations', 'taxonomies'],
   },
-  settings: { label: 'Réglages du site', views: ['provider', 'account'] },
+  settings: { label: 'Réglages du site', views: ['provider', 'agents', 'account'] },
 }
 const viewLabel = (view: View) =>
   view === 'chat'
@@ -33,7 +35,9 @@ const viewLabel = (view: View) =>
       ? 'AI provider'
       : view === 'account'
         ? 'Admin user'
-        : collectionLabels[view]
+        : view === 'agents'
+          ? 'Agents et rédaction'
+          : collectionLabels[view]
 const isContent = (view: View): view is Collection => view in collectionLabels
 
 export default function AdminWorkspace({
@@ -274,7 +278,7 @@ export default function AdminWorkspace({
           <button
             ref={settingsButton}
             type="button"
-            className={`sidebar-link ${view === 'provider' || view === 'account' ? 'active' : ''}`}
+            className={`sidebar-link ${groups.settings.views.includes(view) ? 'active' : ''}`}
             aria-expanded={group === 'settings'}
             aria-controls="settings-navigation"
             aria-label="Réglages du site"
@@ -398,9 +402,7 @@ export default function AdminWorkspace({
             </button>
             <span>Le studio</span>
             <Icon name="chevron" size={12} />
-            <strong>
-              {view === 'provider' || view === 'account' ? 'Réglages' : viewLabel(view)}
-            </strong>
+            <strong>{groups.settings.views.includes(view) ? 'Réglages' : viewLabel(view)}</strong>
           </div>
           <div className="topbar-actions">
             <a
@@ -452,6 +454,7 @@ export default function AdminWorkspace({
               onSettings={openSettings}
               onSessionEnd={onSessionEnd}
               visible={view === 'chat'}
+              onOpen={(kind, id) => navigate(kind, id)}
             />
           )}
           {view === 'provider' && provider && (
@@ -463,6 +466,9 @@ export default function AdminWorkspace({
             />
           )}
           {view === 'account' && <AccountForm session={session} onSessionEnd={onSessionEnd} />}
+          {view === 'agents' && (
+            <PreferencesForm session={session} guardRef={guardRef} onSessionEnd={onSessionEnd} />
+          )}
           {isContent(view) && (
             <ContentStudio
               key={`${view}:${target.serial}`}

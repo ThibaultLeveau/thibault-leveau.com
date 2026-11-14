@@ -12,8 +12,10 @@ from personal_site.admin.llm import LLMGateway
 from personal_site.admin.security import AdminBodyLimit
 from personal_site.admin.store import AdminStore
 from personal_site.api.admin import router as admin_router
+from personal_site.api.assistant import router as assistant_router
 from personal_site.api.content import router as content_router
 from personal_site.api.health import router
+from personal_site.assistant.service import AssistantService
 from personal_site.config import Settings
 from personal_site.content.files import MediaFiles
 from personal_site.content.store import ContentStore
@@ -44,6 +46,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.upload_lock = asyncio.Lock()
     app.state.llm = LLMGateway()
     app.state.chat_lock = asyncio.Lock()
+    app.state.assistant = (
+        AssistantService(app.state.content_store) if settings.admin_enabled else None
+    )
+    app.state.assistant_runs = {}
     app.add_middleware(AdminBodyLimit)
 
     @app.exception_handler(ContentError)
@@ -87,5 +93,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(router)
     app.include_router(admin_router)
     app.include_router(content_router)
+    app.include_router(assistant_router)
     mount_builds(app, settings)
     return app

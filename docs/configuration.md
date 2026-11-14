@@ -94,3 +94,11 @@ Les identifiants d'initialisation et la clé Fernet restent dans l'environnement
 Conserver `SITE_SECRET_KEY` entre les redémarrages. Une clé absente ou invalide empêche le démarrage activé ; une clé valide mais différente empêche le déchiffrement d'un fournisseur déjà enregistré. La désactivation laisse la base intacte. La [procédure d'administration](administration.md) explique l'initialisation, et l'[exploitation](operations.md) couvre récupération et sauvegarde.
 
 Toute nouvelle variable doit être ajoutée au modèle de configuration, à `.env.example`, à cette page et aux tests de validation. Une nouvelle valeur de production doit aussi être intégrée explicitement à Compose.
+
+## Configuration de l'assistant
+
+Aucune nouvelle variable d'environnement n'est nécessaire. L'assistant utilise le fournisseur et le modèle enregistrés dans **AI provider** ; la clé reste chiffrée avec `SITE_SECRET_KEY`. Les préférences globales et par famille sont réglées dans **Agents et rédaction**, validées et versionnées en SQLite. Elles sont incluses dans la sauvegarde du studio.
+
+Les budgets d'exécution sont des constantes serveur dans `assistant/models.py` et des limites de contrats dans `assistant/contracts.py` ; les prompts de `assistant/prompts/` restent versionnés dans le dépôt. Ne pas exposer de prompt système modifiable, d'URL fournisseur libre ou de réglage de permissions dans les préférences éditoriales. Les plafonds effectifs sont décrits dans l'[architecture de l'assistant](assistant-design.md#limites-et-extension-du-code).
+
+Les dépendances LangChain/LangGraph et leurs SDK sont verrouillées dans `uv.lock`. Leur mise à jour exige les tests des trois transports natifs, des sorties structurées, des outils et du graphe. La trace LangSmith est désactivée par le service, même si une variable de traçage est présente dans l'environnement.

@@ -60,7 +60,7 @@ Toutes les routes sont sous `/api/admin`. Administration désactivée : 503. La 
 
 Un nom d'administrateur comporte 3 à 64 lettres ASCII, chiffres, points, tirets ou tirets bas. Le nouveau mot de passe comporte 12 à 128 caractères. Le mot de passe actuel reste obligatoire, même pour renommer le compte ; une demande sans modification répond 400. La création d'une session vérifie à nouveau les identifiants en transaction afin de ne pas accepter une authentification concurrente à leur révocation.
 
-L'historique du chat alterne `user` et `assistant`, commence et termine par `user`, contient au plus 40 messages et 40 000 caractères. Un message utilisateur non vide contient au plus 4 000 caractères, une réponse au plus 20 000. Les corps administratifs sont limités à 256 Kio avant décodage JSON, y compris les transferts sans `Content-Length`. Les champs inconnus sont refusés.
+L'ancienne route `/chat`, conservée pour compatibilité, n'alimente plus l'interface. Son historique alterne `user` et `assistant`, commence et termine par `user`, contient au plus 40 messages et 40 000 caractères. Un message utilisateur non vide contient au plus 4 000 caractères, une réponse au plus 20 000. Les corps administratifs sont limités à 256 Kio avant décodage JSON, y compris les transferts sans `Content-Length`. Les champs inconnus sont refusés.
 
 | Statut | Sens |
 | --- | --- |
@@ -74,6 +74,38 @@ L'historique du chat alterne `user` et `assistant`, commence et termine par `use
 | 503 | Administration non activée |
 
 Les tentatives d'identifiants sont limitées à 5 par adresse et 30 globalement sur 15 minutes ; le chat à 10 par minute. Les compteurs SQLite survivent au redémarrage. Une seule réponse LLM peut être en cours dans l'instance. Les identifiants et les clés ne sont jamais journalisés par le code applicatif ; ne pas activer une capture des corps HTTP dans le proxy ou l'outillage de production.
+
+## API de l'assistant de contenus
+
+Le préfixe `/api/admin/assistant` réutilise session, origine, CSRF et limite de corps de 256 Kio. Aucun agent n'a accès aux routes d'application : ses trois outils (`rechercher_fiches`, `lire_fiche`, `decrire_collection`) sont en lecture seule. Les champs libres et messages sont des données de contexte ; ils ne peuvent définir un rôle système ou un outil.
+
+| Méthode et suffixe | Entrée et résultat |
+| --- | --- |
+| `POST /turn` | `{request_id: UUID, thread_id: UUID, messages: [{role, content}], include_private_notes: false, media_ids: []}` ; 200 : `message`, `questions`, `proposal` ou null, `provider`, `model`, `calls`, `delegations` |
+| `POST /runs/{request_id}/cancel` | Attend l'annulation du tour de la même session ; 200 `{cancelled: true}` même si le tour est déjà terminé |
+| `GET /proposals/{id}` | Proposition opaque appartenant à la session, différences et reçu éventuel |
+| `POST /proposals/{id}/apply` | `{revision: n}` ; revalidation et écriture atomique, retourne le reçu ; un appel répété retourne le même résultat |
+| `POST /proposals/{id}/cancel` | `{revision: n}` ; abandon idempotent d'une proposition non appliquée |
+| `GET /preferences` | `defaults`, `overrides`, `version` |
+| `PUT /preferences` | Même structure, avec version lue ; 200 avec version incrémentée ou 409 en cas de conflit |
+
+Les messages alternent `user`/`assistant`, commencent et terminent par `user`. Maximum : 40 messages, 80 000 caractères cumulés, 16 000 par demande et 20 000 par réponse d'historique. Les dix identifiants de médias maximum sont des entiers positifs relus côté serveur. Le serveur n'accepte ni messages `system`/`tool`, ni opérations arbitraires du navigateur. Les champs inconnus sont refusés.
+
+Une question contient `question`, `reason`, `fields`. Une proposition expose `id`, `revision`, `state`, `expires` (timestamp UTC), `items`, `result`. Chaque item décrit collection, titre, identifiant existant éventuel, différences `{field,label,before,after}`, statuts, libellés des références, informations manquantes et erreurs de complétude. `related=true` désigne une association réciproque également modifiée par le lot. Les opérations internes et références locales `@key` restent côté serveur.
+
+Les états sont `pending`, `superseded` (une précision a remplacé la proposition mais elle peut servir de base au tour suivant), `cancelled`, `applied`. Seul `pending` est applicable ; `applied` retourne son reçu sans réécriture. Un reçu contient les identifiants, titres, collections, versions et statuts réellement enregistrés. Une proposition expire après une heure ; après application son reçu reste valide jusqu'à 24 heures, sous la limite globale de 50 entrées. La prochaine création purge les expirations et les entrées les plus anciennes. La révocation de session supprime ses propositions par clé étrangère.
+
+Les opérations sont validées dans un savepoint annulé avant la relecture. L'application relit toutes les versions de cibles et références sous `BEGIN IMMEDIATE`, résout les nouvelles références dans la même transaction et réutilise `ContentStore.write`. Les associations réciproques sont consolidées sans confondre leurs incréments internes de version avec un conflit externe. Une contradiction, un doublon, un statut invalide ou une référence périmée annule l'ensemble.
+
+En plus des statuts administratifs : 404 pour une proposition absente ou étrangère à la session, 410 pour une expiration, 409 pour proposition obsolète/annulée/appliquée lors d'un abandon, conflit de version ou génération annulée, 422 pour contrat ou budget dépassé, 429 pour fréquence ou génération concurrente, 502 pour refus/réponse fournisseur inutilisable, 504 pour délai total. La déconnexion HTTP annule le traitement (499 si une réponse peut encore être rendue). L'instance partage son verrou avec l'ancienne route texte ; les tours de l'assistant sont limités à dix par minute en SQLite.
+
+### Préférences et modèles
+
+`Style` contient `language` (code `fr`, `en`, `fr-CA`…), `tone` (`neutral`, `warm`, `direct`, `formal`), `technicality` (`accessible`, `balanced`, `expert`), `detail` (`concise`, `balanced`, `detailed`), `voice` (`first_person`, `third_person`, `impersonal`), `audience` (300 caractères) et `instructions` (1 500 caractères). `overrides` accepte uniquement les familles `profile`, `career`, `expertise`, `services`, `editorial`, `library`. Une famille absente hérite du style global ; une personnalisation remplace le style complet de la famille.
+
+Les adaptateurs officiels sont isolés dans `assistant/models.py` : OpenAI Responses, Anthropic Messages, Mistral Chat. URL exactes fermées, POST uniquement, TLS, absence de redirection et de proxy d'environnement, réponse HTTP de 2 Mio maximum, pas de relance automatique SDK. OpenAI utilise `store=false`, `use_previous_response_id=false` et les éléments chiffrés de raisonnement seulement en mémoire pour les appels successifs ; aucun état fournisseur n'est conservé par le site. Les API des modèles choisis doivent supporter les outils structurés.
+
+Le [graphe et ses budgets](assistant-design.md#limites-et-extension-du-code) imposent 240 secondes par tour ; le navigateur attend au plus 250 secondes. Les exceptions fournisseur sont nettoyées, y compris lorsqu'un SDK enveloppe une erreur de transport. Le journal retient identifiant, comptes d'appels/outils, durée et catégorie technique d'échec, sans corps ni clé. La trace LangSmith est désactivée explicitement.
 
 ## API du studio de contenus
 
@@ -109,11 +141,11 @@ Formats : JPEG, PNG, WebP (10 Mio, 20 millions de pixels, image fixe), PDF (20 M
 
 `content/schemas.py` définit les modèles métier ; `catalog.py` contient les correspondances fermées ; `store.py` gère les transactions. `content_entries` porte le socle, une table par collection les champs spécifiques, des tables ordonnées les sous-listes et des clés étrangères les relations. Aucun document JSON indifférencié n'est utilisé comme base métier. Les clés étrangères sont actives à chaque connexion.
 
-`content/migrations/001.sql` est un instantané immuable du premier schéma. Les migrations s'exécutent dans une transaction et leur registre `content_migrations` doit être une suite connue ; une version future bloque le démarrage. La première migration conserve compte, clé chiffrée, sessions et limites existantes. La [sauvegarde cohérente](operations.md#sauvegarde-du-studio-base-et-medias) couvre SQLite et les fichiers.
+`content/migrations/001.sql` est un instantané immuable du premier schéma. Les migrations s'exécutent dans une transaction et leur registre `content_migrations` doit être une suite connue ; une version future bloque le démarrage. La première migration conserve compte, clé chiffrée, sessions et limites existantes. `002.sql` ajoute les préférences et propositions temporaires de l’assistant ; le schéma courant est 2. Une restauration révoque les sessions et supprime leurs propositions, tout en conservant les préférences. La [sauvegarde cohérente](operations.md#sauvegarde-du-studio-base-et-medias) couvre SQLite et les fichiers.
 
-## Adaptateurs LLM
+## Ancien adaptateur de chat texte
 
-`admin/store.py` gère les transactions SQLite et `admin/security.py` le hachage, les jetons et la limite de corps. `admin/llm.py` adapte les messages aux API natives : [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages/create) et [Mistral Chat](https://docs.mistral.ai/api/endpoint/chat).
+Pour la route compatible `/chat`, `admin/store.py` gère les transactions SQLite et `admin/security.py` le hachage, les jetons et la limite de corps. `admin/llm.py` adapte les messages aux API natives : [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages/create) et [Mistral Chat](https://docs.mistral.ai/api/endpoint/chat).
 
 Les URL HTTPS sont fixes ; le client n'accepte pas de redirection et ignore les variables de proxy. Le délai total est de 65 secondes (connexion 10 s, opérations réseau 60 s), la réponse HTTP de 2 Mio maximum, le budget de sortie demandé de 4 096 tokens. OpenAI reçoit `max_completion_tokens` et `store=false`, les deux autres `max_tokens` ; Anthropic reçoit aussi `anthropic-version: 2026-10-21` avec authentification Bearer. Les réponses brutes et erreurs du fournisseur ne sont pas retournées au navigateur.
 

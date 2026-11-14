@@ -1,6 +1,6 @@
 # Administration, contenus et chat LLM
 
-L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un chat texte, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
+L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un assistant de contenus, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
 
 Le [studio de contenus](content-studio.md) organise les projets, le parcours, les services, les publications et leurs références. Aucune donnée biographique ni fiche de démonstration n'est préremplie. Les contenus restent privés, même au statut **Prêt**.
 
@@ -72,7 +72,7 @@ Dans **Médias**, téléverser une image JPEG/PNG/WebP, un PDF ou une vidéo MP4
 
 Limites : images fixes 10 Mio et 20 millions de pixels, PDF 20 Mio, vidéos 100 Mio ; quota cumulé 1 Gio par défaut. Les archives occupent encore du stockage. Les fichiers restent privés et les PDF se téléchargent. Il n'y a ni antivirus ni transcodage ; un contrôle de format n'est pas une garantie sur le contenu d'un document ou d'une vidéo. Voir la [configuration](configuration.md) et les [sauvegardes](operations.md#sauvegarde-du-studio-base-et-medias).
 
-Aucun fournisseur LLM n'est nécessaire pour utiliser ces fonctions. Les contenus ne lui sont pas transmis.
+Les formulaires manuels fonctionnent sans fournisseur LLM et ne lui transmettent aucun contenu. L'assistant ci-dessous transmet seulement le contexte utile à la demande.
 
 ## Configurer AI provider
 
@@ -87,23 +87,46 @@ Après enregistrement, le champ se vide et indique qu'une clé existe. La clé e
 
 L'enregistrement vérifie le format des réglages, sans appel facturé. Le premier message vérifie réellement l'accès à la clé et au modèle. Les erreurs de quota, d'accès ou de délai sont affichées sans exposer la réponse brute du fournisseur.
 
-## Utiliser le chat
+## Utiliser l'assistant de contenus
 
-Saisir un message puis cliquer sur la flèche d'envoi, ou appuyer sur `Entrée`. `Maj+Entrée` insère une ligne. Les suggestions remplissent le champ sans envoyer automatiquement de requête. **Nouvelle conversation** efface les messages de l'onglet.
+Depuis **Chat**, décrire la fiche souhaitée ou la modification à apporter. Exemples : « Prépare un projet à partir de cette réalisation et crée les compétences manquantes », « Complète mon profil avec ces informations », « Ajoute une formule à ce service en conservant les autres », « Rédige cet article et associe le média choisi ». Les quinze collections et tous leurs champs sont accessibles, y compris les listes, dates, tarifs, SEO et références. La création de fichiers passe par le téléversement décrit ci-dessous.
 
-Le chat accepte du texte et affiche les réponses comme du texte, y compris tout HTML éventuel. Il ne lance pas de code, ne charge pas de fichier et ne navigue pas sur le Web. Une demande est traitée à la fois ; la réponse complète apparaît après génération. En cas d'erreur, le brouillon est restauré pour permettre de réessayer.
+1. Envoyer avec la flèche ou `Entrée` (`Maj+Entrée` insère une ligne). Les suggestions remplissent le champ sans envoi automatique.
+2. Répondre dans la conversation aux questions de l'assistant : cible ambiguë, fait nécessaire manquant ou choix de référence. Les champs facultatifs peuvent rester vides. L'assistant prépare un brouillon et ne doit inventer ni chiffre, diplôme, citation, consentement ou licence.
+3. Ouvrir chaque fiche de la **proposition de contenu**. Comparer les valeurs actuelles et proposées, les listes, références, changements de statut et éléments à compléter. Les effets réciproques d'une association figurent aussi dans la relecture.
+4. Pour corriger, préciser la demande dans la conversation. La nouvelle proposition remplace l'ancienne. **Abandonner la proposition** empêche son application, sans supprimer les messages.
+5. **Enregistrer la fiche / les fiches** applique le lot entier. Aucun contenu métier n'est enregistré avant cette action. Le résultat donne des liens vers les éditeurs. Les nouvelles fiches sont des brouillons ; les contenus restent privés et « Prêt » ne publie rien.
+
+Une fiche ou une référence modifiée depuis la proposition entraîne un conflit : demander une nouvelle proposition. Le lot est alors intégralement annulé. Un clic répété ne crée pas de doublon. Après une interruption réseau lors de l'application, **Vérifier l'enregistrement** relit le reçu serveur avant de réessayer.
+
+**Médias de la demande** permet de sélectionner une fiche de la médiathèque ou de téléverser un fichier réel. Le téléversement enregistre immédiatement ce média privé avec les contrôles habituels ; l'assistant ne reçoit que ses métadonnées. Décrire le contenu utile dans le message : il ne lit pas le PDF, n'analyse pas la vidéo et ne télécharge pas une URL. Les alternatives, légendes et transcriptions reposent sur les informations fournies.
+
+Les notes privées et notes d'autorisation sont exclues du contexte par défaut. Cocher **Inclure les notes privées dans cette demande** pour autoriser leur lecture ou leur modification. Le texte que vous saisissez vous-même dans le message est toujours envoyé au fournisseur.
+
+**Annuler la génération** attend l'arrêt de l'exécution serveur. L'assistant n'enregistre aucune fiche pendant la génération. L'édition manuelle reste disponible même si le fournisseur est indisponible. Le chat affiche les textes sans interpréter le HTML et n'exécute ni code ni navigation web.
 
 | Limite | Valeur |
 | --- | --- |
-| Message utilisateur | 4 000 caractères |
-| Historique envoyé | 40 messages et 40 000 caractères au maximum |
-| Réponse affichable | 20 000 caractères, budget demandé de 4 096 tokens |
-| Fréquence du compte | 10 tentatives d'envoi par minute |
-| Attente maximale côté serveur | 65 secondes |
+| Message utilisateur | 16 000 caractères |
+| Historique envoyé | 40 messages et 80 000 caractères au maximum ; corps HTTP de 256 Kio |
+| Médias joints à une demande | 10 fiches de la médiathèque |
+| Lot planifié | 12 fiches ; les associations réciproques peuvent affecter d'autres fiches relues |
+| Génération | Une à la fois, jusqu'à 24 appels fournisseur et 240 secondes |
+| Fréquence | 10 tentatives de tour par minute |
+| Validité d'une proposition | Une heure, liée à la session |
+| Reçu d'application | Jusqu'à 24 heures, dans la limite globale de 50 propositions/reçus |
 
-Ouvrir une nouvelle conversation lorsque l'historique atteint la limite. Le serveur ne sauvegarde pas les conversations : recharger l'onglet, se déconnecter ou changer de modèle les efface. Les réglages et la clé persistent en revanche après un redémarrage.
+**Nouvelle conversation** efface les messages de l'onglet. Recharger, se déconnecter ou changer de modèle les efface aussi ; aucun historique n'est conservé en base. Préférences et fiches persistent. Les propositions temporaires expirées sont inapplicables, puis purgées lors d'une prochaine création ou de la révocation de leur session.
 
-Chaque envoi transmet l'historique visible au fournisseur sélectionné, selon ses conditions de conservation et de facturation. OpenAI reçoit `store=false` ; cela ne constitue pas une garantie générale d'absence de conservation par un fournisseur. Aucun abonnement ni crédit API n'est fourni par ce site.
+Chaque envoi transmet l'historique et les fiches pertinentes au fournisseur choisi. Une demande complexe mobilise plusieurs spécialistes et peut coûter plusieurs appels. OpenAI reçoit `store=false` ; les conditions de conservation et de facturation du fournisseur restent applicables. Aucune clé n'est exposée au navigateur et aucune trace LangSmith n'est envoyée.
+
+## Personnaliser les agents et la rédaction
+
+Ouvrir **Réglages du site → Agents et rédaction**. Choisir le ton, la technicité, le niveau de détail, la personne narrative, la langue, le public visé et les consignes de rédaction. **Tous les contenus** définit le style global. Chaque famille peut hériter de ce style ou utiliser sa personnalisation : Profil, Parcours, Projets et expertise, Services, Rédaction et publications, Bibliothèque.
+
+Modifier une famille crée une personnalisation complète de son style. **Revenir au style global** retire cette personnalisation ; **Réinitialiser le style global** rétablit les valeurs initiales. Enregistrer pour que les prochains tours et leurs spécialistes utilisent les choix. La demande ponctuelle de style reste prioritaire ; les préférences ne peuvent pas modifier les droits des agents ou autoriser l'invention de faits.
+
+La navigation avertit d'une saisie non enregistrée. Si un autre onglet a modifié les préférences, recharger leur version enregistrée puis reprendre les changements nécessaires. Aucun bouton ne force un écrasement concurrent.
 
 ## Modifier Admin user
 

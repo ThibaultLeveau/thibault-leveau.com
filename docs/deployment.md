@@ -163,3 +163,9 @@ openssl s_client -connect new.thibault-leveau.com:443 -servername new.thibault-l
 Un changement purement applicatif ne nécessite aucune modification du DNS ou de Caddy. Conserver l'image précédente, construire un nouveau tag depuis le commit validé, puis recréer uniquement le service `site` avec ce tag. Refaire les contrôles publics.
 
 Le tag `local` convient aux essais. Pour une version publiée, utiliser un tag de commit et conserver son identifiant avec le résultat des vérifications. La procédure de retour à l'image précédente figure dans [Exploitation et retour arrière](operations.md).
+
+## Livraison de l'assistant de contenus
+
+Cette version passe le schéma SQLite de 1 à 2. Avant de remplacer le service, suivre la [sauvegarde et la compatibilité de retour arrière](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image actuellement exécutée. Ne modifier ni Caddy, ni DNS, ni réseau pour cette évolution.
+
+Après démarrage, vérifier le schéma, la conservation des comptes/contenus/médias, le chat et **Agents et rédaction** avec une session autorisée, puis les réponses HTTPS et le rendu bureau/mobile dans les deux thèmes. La CI et les parcours isolés prouvent les écritures ; les contrôles de production n'y créent pas de fiches de démonstration. Consigner le résultat, le commit et l'image réellement exécutée dans l'issue #12.

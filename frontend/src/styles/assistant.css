@@ -1,0 +1,216 @@
+.assistant-proposal {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(16px, 3vw, 28px);
+  margin-top: 24px;
+  background: var(--canvas);
+  min-width: 0;
+}
+.proposal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.proposal-heading h2 {
+  font-size: 1.2rem;
+  margin: 6px 0 12px;
+}
+.proposal-state {
+  color: var(--ink);
+  background: var(--hover);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+.proposal-item {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+.proposal-item summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.proposal-item summary > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-right: 12px;
+}
+.proposal-item summary strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.proposal-field {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.proposal-field h3 {
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+.proposal-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 20px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.proposal-comparison > div {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.comparison-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.proposal-rows {
+  padding-left: 20px;
+  margin: 0;
+}
+.proposal-rows dl {
+  margin: 0 0 12px;
+}
+.proposal-rows dl > div {
+  margin: 4px 0;
+}
+.proposal-rows dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.proposal-rows dd {
+  margin: 0;
+}
+.proposal-missing {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  padding: 16px 0;
+}
+.proposal-status {
+  font-size: 0.8rem;
+}
+.proposal-result {
+  margin-top: 20px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+.assistant-questions {
+  border-left: 2px solid var(--accent);
+  margin-top: 16px;
+  padding: 4px 0 4px 18px;
+}
+.assistant-questions ol {
+  padding-left: 20px;
+}
+.assistant-questions li + li {
+  margin-top: 12px;
+}
+.assistant-questions p {
+  margin: 0 0 4px;
+}
+.assistant-questions .muted {
+  font-size: 0.85rem;
+}
+.assistant-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.assistant-private {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+  min-height: 32px;
+}
+.assistant-private input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.assistant-preferences fieldset {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  min-width: 0;
+}
+.assistant-style-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+.assistant-preferences select,
+.assistant-preferences textarea {
+  font: inherit;
+  width: 100%;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px;
+}
+.assistant-preferences textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.assistant-proposal button {
+  white-space: normal;
+}
+.assistant-proposal .form-actions {
+  flex-wrap: wrap;
+}
+.assistant-attachments {
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+.assistant-attachments summary {
+  cursor: pointer;
+  color: var(--muted);
+  min-height: 32px;
+  padding: 6px 0;
+}
+.assistant-attachments fieldset {
+  border: 0;
+  padding: 0;
+  margin: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+.assistant-attachments li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.proposal-item summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .assistant-style-grid {
+    grid-template-columns: 1fr;
+  }
+  .assistant-proposal {
+    margin-left: -12px;
+    margin-right: -4px;
+  }
+  .proposal-item summary > span {
+    display: block;
+    margin-bottom: 5px;
+  }
+}

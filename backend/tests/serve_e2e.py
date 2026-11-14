@@ -5,9 +5,11 @@ from tempfile import TemporaryDirectory
 
 import httpx
 import uvicorn
+from assistant_e2e import provider
 from cryptography.fernet import Fernet
 
 from personal_site.admin.llm import LLMGateway
+from personal_site.assistant.models import ModelFactory
 from personal_site.config import Settings
 from personal_site.main import create_app
 
@@ -39,6 +41,7 @@ def main():
                 )
             )
         )
+        app.state.assistant.models = ModelFactory(httpx.MockTransport(provider()))
         uvicorn.run(app, host="127.0.0.1", port=8765)
 
 

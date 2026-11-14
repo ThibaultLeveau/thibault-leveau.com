@@ -98,3 +98,13 @@ Le proxy de développement transmet `/api` au backend local. Ne pas remplacer le
 ## Faire évoluer l'accueil
 
 Conserver une hiérarchie sémantique avec un seul titre principal, des liens réels pour la navigation et des boutons pour les actions. Un nouveau contenu ne doit pas dépendre d'un survol pour être accessible au tactile. Les paramètres visuels et critères de vérification figurent dans le [guide de design](design-system.md).
+
+## Assistant et préférences de rédaction
+
+`ChatPanel` conserve en mémoire l'historique, un UUID de conversation, l'UUID du tour en cours et les médias joints. Il envoie uniquement des messages `user`/`assistant` à `/api/admin/assistant/turn`, attend au plus 250 secondes et affiche les questions regroupées ou la proposition. L'annulation appelle le serveur et attend sa confirmation. Les notes privées sont exclues par défaut ; le contrôle explicite s'applique au tour suivant.
+
+Les composants de `admin/assistant/` isolent la relecture (`ProposalCard`), les médias (`Attachments`), les préférences (`PreferencesForm`) et leurs types. `ProposalCard` s'appuie sur le catalogue pour afficher libellés, options, listes et références ; le texte reste échappé. Il applique seulement l'identifiant et la révision serveur, affiche le reçu et ouvre les éditeurs. Une interruption réseau demande de vérifier le reçu avant de réessayer. Les propositions antérieures sont désactivées lorsqu'une demande les remplace.
+
+`Attachments` réutilise `ReferencePicker` et `content/upload.ts`, partagé avec le studio. Son libellé accessible distingue le téléversement pour la demande de celui de la médiathèque. Un fichier envoyé devient immédiatement une fiche média privée ; seules ses métadonnées rejoignent le contexte des agents.
+
+`PreferencesForm` réutilise la garde de navigation et le dialogue du studio. Les réglages globaux et familiaux sont enregistrés avec leur version ; un conflit propose de recharger sans écraser silencieusement la saisie. `styles/assistant.css` réutilise les variables existantes pour les comparaisons, détails repliables, questions, contrôles et mises en page mobiles, dans les deux thèmes.

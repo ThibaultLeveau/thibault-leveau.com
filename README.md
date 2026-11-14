@@ -1,6 +1,6 @@
 # Thibault Leveau
 
-Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et un studio privé pour les projets, le parcours, les services, les articles et les médias, avec chat LLM et gestion du compte, en thèmes clair et sombre.
+Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et un studio privé pour les projets, le parcours, les services, les articles et les médias, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
 
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)

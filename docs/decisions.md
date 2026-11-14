@@ -2,6 +2,16 @@
 
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
+## Agents de contenus — issue #12
+
+**Accord.** Thibault a répondu « J'accepte » à la demande explicite de validation de la [conception des agents](assistant-design.md), [accord consigné](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679) avant implémentation.
+
+**Décision.** Ajouter LangChain et LangGraph dans FastAPI, avec adaptateurs fournisseurs, contrats typés, spécialistes et outils de lecture. Conserver la logique métier dans `content/`. Les agents préparent des propositions ; leur application relue utilise les validations existantes dans une transaction atomique et idempotente. Étendre SQLite par migration pour les préférences et propositions temporaires et ajouter les contrats privés sous `/api/admin/assistant/*`. L'historique reste dans l'onglet.
+
+**Raison.** La génération doit couvrir tous les champs du studio et permettre la clarification et la délégation sans coupler les prompts aux routes, au stockage ou aux règles métier.
+
+**Conséquence.** Dépendances supplémentaires, appels facturables et latence variables, transmission du contexte pertinent au fournisseur, limites d'exécution et nouvelle migration à sauvegarder. Les anciennes images refusent un schéma futur : vérifier le retour arrière avec la sauvegarde cohérente correspondante. Aucun service supplémentaire ni télémétrie externe activée. Cette décision étend celle du chat texte ci-dessous.
+
 ## Studio de contenus — issue #8
 
 **Accord.** Thibault a répondu « Ok » à la demande explicite de validation le 14 novembre 2026, accord consigné dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8#issuecomment-6878880881).

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { assistantWorkflow } from './assistant-workflow'
 
 test.skip(
   !!process.env.PLAYWRIGHT_BASE_URL,
@@ -64,12 +65,13 @@ async function mockAdmin(page: Page, { authenticated = true, configured = true }
         }
       return respond(configuration)
     }
-    if (path.endsWith('/chat'))
+    if (path.endsWith('/assistant/turn'))
       return respond({
-        message: {
-          role: 'assistant',
-          content: 'Voici une première piste pour votre idée. <script>unsafe()</script>',
-        },
+        message: 'Voici une première piste pour votre idée. <script>unsafe()</script>',
+        questions: [],
+        proposal: null,
+        calls: 1,
+        delegations: 0,
         provider: configuration.provider,
         model: configuration.model,
       })
@@ -176,18 +178,20 @@ test('compte administrateur, confirmation et retour à la connexion', async ({ p
 test('chat, nouvelle conversation, erreur réseau et texte sûr', async ({ page }) => {
   const writes = await mockAdmin(page)
   await page.goto('/admin')
-  await page.getByRole('button', { name: 'Structurer une idée' }).click()
-  await expect(page.getByLabel('Votre message')).toHaveValue('Structurer une idée')
+  await page.getByRole('button', { name: 'Créer un projet' }).click()
+  await expect(page.getByLabel('Votre message')).toHaveValue('Créer un projet')
   await page.getByRole('button', { name: 'Envoyer le message' }).click()
   await expect(page.getByRole('log')).toContainText('Voici une première piste')
   await expect(page.getByRole('log')).toContainText('<script>unsafe()</script>')
   expect(await page.locator('.messages script').count()).toBe(0)
-  expect(writes.at(-1)?.body).toEqual({
-    messages: [{ role: 'user', content: 'Structurer une idée' }],
+  expect(writes.at(-1)?.body).toMatchObject({
+    messages: [{ role: 'user', content: 'Créer un projet' }],
+    include_private_notes: false,
+    media_ids: [],
   })
   await page.getByRole('button', { name: 'Nouvelle conversation' }).click()
-  await expect(page.getByRole('heading', { name: /explorer aujourd’hui/ })).toBeVisible()
-  await page.route('**/api/admin/chat', (route) =>
+  await expect(page.getByRole('heading', { name: /créer aujourd’hui/ })).toBeVisible()
+  await page.route('**/api/admin/assistant/turn', (route) =>
     route.fulfill({
       status: 504,
       json: { detail: 'Le fournisseur met trop de temps à répondre.' },
@@ -240,7 +244,8 @@ test('session expirée et administration désactivée', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('n’est pas activée')
 })
 
-test('parcours réel React → FastAPI → SQLite → adaptateur LLM', async ({ page }, testInfo) => {
+test('parcours réel React → FastAPI → SQLite → agents LangChain', async ({ page }, testInfo) => {
+  test.setTimeout(150_000)
   test.skip(
     testInfo.project.name !== 'desktop',
     'Un seul parcours modifie le compte de test partagé ; les vues mobiles sont couvertes ci-dessus.',
@@ -254,10 +259,11 @@ test('parcours réel React → FastAPI → SQLite → adaptateur LLM', async ({ 
   await page.getByRole('button', { name: 'Enregistrer les réglages' }).click()
   await expect(page.getByRole('status')).toHaveText('Vos réglages sont enregistrés.')
   await page.reload()
-  await expect(page.getByRole('heading', { name: /explorer aujourd’hui/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /créer aujourd’hui/ })).toBeVisible()
   await page.getByLabel('Votre message').fill('Bonjour, ceci est un test isolé.')
   await page.getByRole('button', { name: 'Envoyer le message' }).click()
   await expect(page.getByRole('log')).toContainText('Bonjour depuis le fournisseur de test.')
+  await assistantWorkflow(page, testInfo)
   const cookies = await page.context().cookies()
   const cookie = cookies.find((item) => item.name === 'site_admin_session')!
   expect(cookie.httpOnly).toBe(true)
