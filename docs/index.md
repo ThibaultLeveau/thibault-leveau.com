@@ -2,7 +2,7 @@
 
 Ce guide décrit le fonctionnement et l'exploitation de **new.thibault-leveau.com**, le site personnel de Thibault Leveau. Il accompagne les sources du dépôt : les procédures, paramètres et contrats HTTP évoluent avec le code.
 
-Le périmètre initial est volontairement réduit : une navigation portant le nom du propriétaire, un sélecteur de thème et le titre « Bienvenue. ». La documentation est publique, accessible sous `/documentation/`. Aucun compte, formulaire, stockage métier ni service de statistiques n'est nécessaire.
+L'accueil public conserve une navigation portant le nom du propriétaire, un sélecteur de thème et le titre « Bienvenue. ». L'administration privée sous `/admin` ajoute un chat LLM, les réglages du fournisseur et la gestion d'un compte unique. La documentation reste publique sous `/documentation/`.
 
 ## Choisir son parcours
 
@@ -11,6 +11,7 @@ Le périmètre initial est volontairement réduit : une navigation portant le no
 | Exécuter le projet localement | [Installation et développement](getting-started.md) |
 | Comprendre les services et les fichiers | [Architecture](architecture.md) |
 | Modifier un paramètre | [Configuration](configuration.md) |
+| Activer l'administration et utiliser le chat | [Administration et chat LLM](administration.md) |
 | Faire évoluer une route | [Backend et contrat HTTP](backend.md) |
 | Modifier le rendu ou le thème | [Frontend](frontend.md) et [design](design-system.md) |
 | Vérifier une contribution | [Tests et intégration continue](testing.md) |

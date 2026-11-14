@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
-import path from 'node:path'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const externalURL = process.env.PLAYWRIGHT_BASE_URL
@@ -22,10 +21,9 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
   ],
   webServer: externalURL ? undefined : {
-    command: 'uv run uvicorn personal_site.main:create_app --factory --host 127.0.0.1 --port 8765',
+    command: 'uv run python backend/tests/serve_e2e.py',
     cwd: root,
     url: 'http://127.0.0.1:8765/api/health',
-    env: { SITE_ENVIRONMENT: 'production', SITE_STATIC_DIR: path.join(root, 'build') },
     reuseExistingServer: false,
     timeout: 30_000,
   },

@@ -34,6 +34,7 @@ La première valeur est le nom de l'image avec son tag ; la deuxième est son id
 ## Mettre à jour
 
 1. Vérifier que la version actuelle est saine et enregistrer son image.
+   Si l'administration est active, sauvegarder sa base et vérifier la disponibilité de sa clé de chiffrement.
 2. Placer le dépôt sur le commit à publier, sans perdre de modifications locales.
 3. Exécuter les contrôles du [guide de tests](testing.md).
 4. Construire avec un nouveau tag de commit.
@@ -70,7 +71,7 @@ bash scripts/smoke-test.sh
 
 Dans une nouvelle session, reprendre le tag enregistré dans le compte rendu. `docker image ls local/thibault-personal-site` permet de retrouver les images disponibles, mais le choix de la version saine doit reposer sur son historique de validation.
 
-Ne pas reconstruire le même tag pour revenir en arrière : cela remplacerait son contenu. Aucune migration de données n'est nécessaire dans le périmètre actuel. Si Compose a également changé, restaurer sa configuration compatible avec l'ancienne image avant de relancer le service.
+Ne pas reconstruire le même tag pour revenir en arrière : cela remplacerait son contenu. L'ajout initial de l'administration crée son schéma sans modifier les données publiques. Revenir à une image antérieure à l'administration conserve le volume, mais ne fournit plus `/admin`. Pour toute évolution ultérieure du schéma, vérifier sa compatibilité ou restaurer la sauvegarde adaptée avant de relancer l'ancienne image. Si Compose a également changé, restaurer sa configuration compatible sans supprimer le volume.
 
 Si la régression concerne Caddy, rétablir uniquement le bloc du domaine concerné et son import depuis la sauvegarde, puis valider et recharger le proxy. Un retour d'image applicative ne répare pas un changement de configuration du proxy ou du DNS.
 
@@ -94,6 +95,64 @@ Le socle fournit une route de santé, un contrôle Docker, des journaux et un sc
 
 ## Sauvegardes et nettoyage
 
-Les sources et fichiers de verrouillage sont conservés dans Git. Les éléments d'exploitation à préserver sont la configuration effective de la plateforme Caddy, ses données TLS selon les procédures de la plateforme, les images des versions récentes et le compte rendu des déploiements. Le site ne stocke actuellement aucune donnée utilisateur côté serveur.
+Les sources et fichiers de verrouillage sont conservés dans Git. Préserver aussi la configuration Caddy, ses données TLS selon les procédures de la plateforme, les images récentes et les comptes rendus. Avec l'administration, sauvegarder le volume `admin_data` et `SITE_SECRET_KEY` séparément. Une copie de SQLite seule ne permet pas de retrouver la clé API. Les messages du chat ne sont pas stockés dans cette base.
+
+Le volume réel se nomme normalement `thibault-personal-site_admin_data`. Vérifier les montages du conteneur si le nom du projet Compose a été modifié. Ne pas exécuter `docker compose down -v` : cette option supprime les données persistantes.
+
+### Sauvegarder SQLite pendant le fonctionnement
+
+Utiliser l'API de sauvegarde SQLite pour obtenir une copie cohérente pendant les écritures. Ces commandes créent un fichier privé hors du dépôt :
+
+```bash
+umask 077
+mkdir -p /home/deploy/backups/thibault-personal-site
+admin_backup="/home/deploy/backups/thibault-personal-site/admin-$(date -u +%Y%m%dT%H%M%SZ).sqlite3"
+docker compose exec -T site python -c 'import sqlite3; source=sqlite3.connect("file:/app/data/admin.sqlite3?mode=ro", uri=True); target=sqlite3.connect("/tmp/admin-backup.sqlite3"); source.backup(target); target.close(); source.close()'
+docker compose cp site:/tmp/admin-backup.sqlite3 "$admin_backup"
+chmod 600 "$admin_backup"
+docker compose exec -T site python -c 'from pathlib import Path; Path("/tmp/admin-backup.sqlite3").unlink()'
+```
+
+Vérifier la copie avec `PRAGMA integrity_check` et la transférer dans le stockage de sauvegarde prévu. Conserver la clé de chiffrement dans un emplacement protégé distinct et noter le commit de l'image avec la sauvegarde. Ne pas envoyer ces fichiers dans une issue ou une PR.
+
+### Restaurer une sauvegarde
+
+Choisir une copie vérifiée et une image compatible, conserver la base actuelle avant écrasement, puis arrêter le service. Dans la même session où `admin_backup` désigne la copie à restaurer :
+
+```bash
+test -f "$admin_backup"
+docker compose stop site
+docker compose run --rm -T --no-deps --entrypoint python site -c 'import sys, sqlite3; from pathlib import Path; p=Path("/app/data/admin.sqlite3"); p.write_bytes(sys.stdin.buffer.read()); p.chmod(0o600); db=sqlite3.connect(p); db.execute("DELETE FROM sessions"); db.commit(); db.close()' < "$admin_backup"
+docker compose up -d --no-build --wait --wait-timeout 120
+bash scripts/smoke-test.sh
+```
+
+Le conteneur de restauration utilise le même utilisateur `10001:10001` et le même volume. Avant le redémarrage, `SITE_SECRET_KEY` doit correspondre à la copie. La suppression des sessions restaurées impose une nouvelle connexion. Vérifier ensuite le compte et la présence de la clé dans l'interface, sans l'afficher.
+
+## Récupérer le compte administrateur
+
+Avec un accès local autorisé au serveur, utiliser la commande interactive :
+
+```bash
+docker compose exec site python -m personal_site.admin.reset
+```
+
+En développement : `uv run python -m personal_site.admin.reset`. Saisir le nom et le nouveau mot de passe, puis sa confirmation. Le mot de passe n'est pas affiché ni passé en argument de commande. La commande préserve les réglages fournisseur et révoque toutes les sessions. Les limites de tentatives restent actives jusqu'à leur expiration (15 minutes maximum).
+
+Changer le mot de passe initial dans `.env` ne réinitialise pas un compte déjà créé. Ne pas supprimer SQLite pour récupérer l'accès. La commande exige l'administration activée et la clé de chiffrement existante.
+
+## Clé de chiffrement perdue ou rotation
+
+Pour changer `SITE_SECRET_KEY` volontairement, retirer d'abord la clé fournisseur dans l'interface, remplacer la clé Fernet dans la configuration et sa sauvegarde, recréer le service, puis saisir à nouveau la clé fournisseur. Ne pas remplacer la clé Fernet alors qu'un secret chiffré subsiste en base : le démarrage refuserait cette incohérence.
+
+Si la clé est perdue, chercher sa sauvegarde en priorité. Sans elle, le secret fournisseur est irrécupérable depuis SQLite. Après sauvegarde de la base et arrêt du service, l'opérateur peut retirer seulement ce secret avec :
+
+```bash
+docker compose run --rm -T --no-deps --entrypoint python site -c 'import sqlite3; db=sqlite3.connect("/app/data/admin.sqlite3"); db.execute("UPDATE provider SET api_key = NULL WHERE id = 1"); db.execute("DELETE FROM sessions"); db.commit(); db.close()'
+```
+
+Générer ensuite une nouvelle clé Fernet, la configurer et la sauvegarder, recréer le service et saisir une nouvelle clé fournisseur depuis l'interface. Cette opération préserve le compte et le modèle mais supprime définitivement le secret fournisseur enregistré.
+
+## Nettoyage ciblé
 
 Sur un serveur partagé, éviter les commandes globales comme `docker system prune -a` ou l'arrêt du projet de plateforme. Examiner d'abord les images de cette application et ne supprimer que les versions devenues inutiles, après conservation d'un retour arrière valide.

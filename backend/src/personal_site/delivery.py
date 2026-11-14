@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from fastapi import FastAPI
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import FileResponse, RedirectResponse, Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
@@ -46,4 +46,13 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
     if documentation.is_dir():
         app.mount("/documentation", BuildFiles(documentation), name="documentation")
     if web.is_dir():
+
+        @app.api_route("/admin/", methods=["GET", "HEAD"], include_in_schema=False)
+        async def admin_redirect():
+            return RedirectResponse("/admin", status_code=308)
+
+        @app.api_route("/admin", methods=["GET", "HEAD"], include_in_schema=False)
+        async def admin_page():
+            return FileResponse(web / "index.html", headers={"Cache-Control": "no-store"})
+
         app.mount("/", BuildFiles(web, hashed_assets=True), name="website")
