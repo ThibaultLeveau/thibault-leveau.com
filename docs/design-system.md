@@ -12,9 +12,9 @@ La page conserve une composition lisible en clair et en sombre. Le point final b
 
 ## Palette
 
-L'administration reprend Inter, les thèmes existants et l'accent bleu. `styles/admin.css` ajoute des variables locales à `.admin-shell`, `.admin-login` et `.admin-unavailable` pour les surfaces, textes secondaires et ombres ; elles ne modifient pas l'accueil. Les cartes se limitent aux formulaires et à la zone de saisie.
+L'administration reprend Inter, les thèmes existants et l'accent bleu. `styles/admin.css` ajoute des variables locales à `.admin-shell`, `.admin-login` et `.admin-unavailable` pour les surfaces, textes secondaires et ombres ; elles ne modifient pas l'accueil. Les cartes se limitent aux formulaires et à la zone de saisie. Le texte secondaire clair utilise `#606a64`, afin de conserver un contraste supérieur à 4,5:1 jusque sur le fond de la sidebar.
 
-Le menu principal reste à gauche avec le chat et les réglages en bas. Le second menu est directement accolé, sans espace intermédiaire. Sur mobile, le principal devient une barre d'icônes et les réglages recouvrent le contenu. Vérifier toutes les vues jusqu'à 320 pixels, le focus à l'ouverture et à la fermeture, les libellés des icônes et l'absence de débordement horizontal.
+Le menu principal reste à gauche avec les groupes de contenus, le chat et les réglages en bas. Le second menu est directement accolé, sans espace intermédiaire. Sur tablette, un rail et Menu donnent accès aux libellés ; sous 600 pixels, Menu ouvre la navigation et le formulaire occupe toute la largeur. Le contenu derrière le panneau est inerte. Les listes de fiches utilisent des lignes, et les éditeurs des sections locales. `styles/content.css` réutilise les mêmes variables dans toutes les collections. Vérifier toutes les vues jusqu'à 320 pixels, le focus à l'ouverture et à la fermeture, les libellés des icônes et l'absence de débordement horizontal.
 
 Les formulaires séparent le nom accessible du champ de son aide reliée par `aria-describedby`. Les erreurs utilisent `role=alert`, les succès et attentes `role=status`, et la conversation une zone `role=log`. Les réponses restent du texte échappé. Le thème, les menus et tous les boutons doivent être utilisables au clavier sans dépendre du survol.
 

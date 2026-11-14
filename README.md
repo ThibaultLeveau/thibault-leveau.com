@@ -1,6 +1,6 @@
 # Thibault Leveau
 
-Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et une administration privée avec chat LLM, réglages du fournisseur et gestion du compte, en thèmes clair et sombre.
+Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et un studio privé pour les projets, le parcours, les services, les articles et les médias, avec chat LLM et gestion du compte, en thèmes clair et sombre.
 
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)
@@ -42,13 +42,13 @@ Avant le premier test navigateur, installer Chromium et ses dépendances systèm
 Navigateur → Caddy (HTTPS) → FastAPI :8000
                               ├── /                  React compilé
                               ├── /admin             Administration React
-                              ├── /api/admin/*       Sessions, réglages et chat
+                              ├── /api/admin/*       Sessions, contenus, médias, réglages et chat
                               ├── /assets/           CSS / JavaScript
                               ├── /api/health        JSON de santé
                               └── /documentation/    MkDocs compilé
 ```
 
-Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. L'administration activée conserve son compte, ses sessions et ses réglages dans SQLite sur le volume `admin_data`. FastAPI chiffre la clé API et contacte le fournisseur LLM ; les conversations restent en mémoire dans le navigateur.
+Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. L'administration activée conserve son compte, ses sessions, ses réglages et ses contenus dans SQLite sur le volume `admin_data`. FastAPI chiffre la clé API et contacte le fournisseur LLM ; les conversations restent en mémoire dans le navigateur.
 
 ```text
 backend/src/personal_site/  Application et contrat HTTP

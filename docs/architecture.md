@@ -16,8 +16,9 @@ Caddy · plateforme existante
 thibault-personal-site:8000 · FastAPI / Uvicorn
    ├── /                      build/web/index.html
    ├── /admin                 même HTML, interface React chargée à la demande
-   ├── /api/admin/*           authentification, réglages et chat
+   ├── /api/admin/*           authentification, contenus, médias, réglages et chat
    │      ├── SQLite          /app/data/admin.sqlite3 · volume admin_data
+   │      ├── Médias privés    /app/data/media · même volume
    │      └── HTTPS sortant    OpenAI, Anthropic ou Mistral
    ├── /assets/                build/web/assets/
    ├── /fonts/                 build/web/fonts/
@@ -43,7 +44,7 @@ Le réseau partagé `multisite_proxy` est interne : il transporte les requêtes 
 
 L'évolution administrative a été explicitement approuvée par Thibault (« Je valide »), accord consigné dans l'[issue #3](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/3). Elle ajoute stockage, authentification, routes et appels LLM dans le service existant, sans nouveau framework ni service. Le périmètre est un seul administrateur et une seule instance Uvicorn.
 
-SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
+SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée, ainsi que les fiches typées et leurs relations. Les médias binaires vivent à côté de la base, dans `media/`. Leur accès passe exclusivement par les API privées. Les migrations de contenu sont versionnées et transactionnelles ; les sauvegardes associent base et fichiers avec un manifeste. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
 
 Les messages ne sont pas enregistrés en base. React les garde en mémoire et transmet l'historique nécessaire au backend à chaque envoi ; FastAPI l'envoie au fournisseur choisi. La politique de conservation de ce fournisseur s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage` ; seule la préférence de thème y est conservée.
 
@@ -78,7 +79,9 @@ backend/
 │   ├── delivery.py        distribution et cache
 │   ├── api/health.py      contrat de santé
 │   ├── api/admin.py       authentification, validation et contrats privés
-│   └── admin/             stockage, sécurité, adaptateurs LLM, récupération locale
+│   ├── admin/             stockage, sécurité, adaptateurs LLM, récupération locale
+│   ├── api/content.py     contrats privés des contenus et médias
+│   └── content/           modèles métier, migrations, transactions, fichiers et sauvegardes
 └── tests/                 tests HTTP et démarrage
 frontend/
 ├── public/                fichiers copiés tels quels
@@ -100,10 +103,12 @@ Les paramètres Python, groupes de dépendances et outils de qualité sont centr
 
 En développement, Vite et FastAPI sont séparés pour conserver leur rechargement respectif. Le proxy de Vite traite `/api` ; MkDocs possède son propre serveur de prévisualisation. En production, les trois sorties partagent un seul domaine et un seul processus applicatif.
 
-L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` sont explicitement distribués par FastAPI, `/admin/` redirige vers `/admin`. React choisit la page depuis ce chemin ; les vues de réglages sont un état local, sans URL supplémentaire. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
+L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` sont explicitement distribués par FastAPI, `/admin/` redirige vers `/admin`. React choisit la page depuis ce chemin ; les vues de réglages et de contenus sont un état local, sans URL supplémentaire. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
 
 ## Ajouter une fonctionnalité
 
 Une future route API doit être définie dans `api/`, enregistrée dans la fabrique et documentée avec son contrat HTTP. Une nouvelle page nécessite de décider explicitement son routage côté serveur et côté navigateur ; ne pas ajouter un repli global vers `index.html` pour contourner cette décision.
 
 Toute extension au-delà de ce périmètre (plusieurs comptes, service supplémentaire, nouveau stockage ou routage) exige un nouvel accord d'architecture explicite selon `AGENTS.md`. Les raisons des choix actuels sont consignées dans les [décisions techniques](decisions.md).
+
+L'architecture du [studio de contenus](content-studio.md#architecture-proposee-et-impacts) a été explicitement approuvée par Thibault le 14 novembre 2026 (« Ok » en réponse à la demande de validation), accord consigné dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8#issuecomment-6878880881). Elle étend SQLite avec des tables métier et des migrations versionnées, ajoute les API privées de contenus et de médias et conserve les fichiers dans `/app/data/media`, dans le volume existant. Les sauvegardes couvrent ensemble base et médias. L'implémentation est suivie dans la PR #9 ; aucun nouveau framework, service ou routeur de pages n'est ajouté.

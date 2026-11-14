@@ -12,8 +12,12 @@ from personal_site.admin.llm import LLMGateway
 from personal_site.admin.security import AdminBodyLimit
 from personal_site.admin.store import AdminStore
 from personal_site.api.admin import router as admin_router
+from personal_site.api.content import router as content_router
 from personal_site.api.health import router
 from personal_site.config import Settings
+from personal_site.content.files import MediaFiles
+from personal_site.content.store import ContentStore
+from personal_site.content.validation import ContentError
 from personal_site.delivery import mount_builds
 
 
@@ -29,9 +33,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.admin_store = AdminStore(settings) if settings.admin_enabled else None
+    app.state.content_store = (
+        ContentStore(app.state.admin_store) if settings.admin_enabled else None
+    )
+    app.state.media_files = (
+        MediaFiles(app.state.content_store, settings.media_quota_bytes)
+        if settings.admin_enabled
+        else None
+    )
+    app.state.upload_lock = asyncio.Lock()
     app.state.llm = LLMGateway()
     app.state.chat_lock = asyncio.Lock()
     app.add_middleware(AdminBodyLimit)
+
+    @app.exception_handler(ContentError)
+    async def content_error(request: Request, exc: ContentError):
+        return JSONResponse(
+            {"detail": exc.message, "errors": exc.errors, "usages": exc.usages},
+            status_code=exc.status,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
@@ -66,5 +86,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(router)
     app.include_router(admin_router)
+    app.include_router(content_router)
     mount_builds(app, settings)
     return app

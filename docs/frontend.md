@@ -20,7 +20,7 @@ index.html
 
 L'accueil ne charge pas de contenu distant et ne dépend pas de l'API de santé pour s'afficher. Il ne contient ni routeur client, ni gestionnaire d'état global supplémentaire, ni texte biographique.
 
-Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le même `ThemeProvider`. Le bundle administratif est distinct de celui de l'accueil. Les vues `chat`, `provider` et `account` sont gérées par état React, sans bibliothèque de routage supplémentaire.
+Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le même `ThemeProvider`. Le bundle administratif est distinct de celui de l'accueil. Le chat, les réglages et les quinze collections du studio sont gérés par état React, sans bibliothèque de routage supplémentaire.
 
 ## Organisation des composants
 
@@ -33,7 +33,10 @@ Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le
 | `ThemeProvider` | État React, préférence système et persistance |
 | `theme.ts` | Type `Theme`, clé de stockage, validation et accès au contexte |
 | `app.css` | Palette, police locale, typographie, espacements et variantes responsive |
-| `pages/AdminPage.tsx` | Session, navigation à deux menus latéraux, thème et changement de vue |
+| `pages/AdminPage.tsx` | Session et conservation temporaire du brouillon pendant une reconnexion |
+| `pages/AdminWorkspace.tsx` | Navigation latérale, thème, réglages et composition du studio |
+| `admin/content/` | Collections, éditeurs, références, dialogues, médias et aperçu Markdown |
+| `styles/content.css` | Studio responsive, formulaires et états dans les deux thèmes |
 | `admin/LoginForm.tsx` | Connexion et état d'erreur |
 | `admin/SettingsForms.tsx` | Fournisseur, modèle, clé et modification du compte |
 | `admin/ChatPanel.tsx` | Conversation temporaire, envoi, attente, erreurs et limites |
@@ -48,9 +51,15 @@ Au montage, `/api/admin/session` détermine si l'écran doit afficher la connexi
 
 Les formulaires affichent leurs erreurs, désactivent leurs commandes pendant l'enregistrement et annoncent les succès. Le champ de clé est vide après sauvegarde ; il n'est jamais initialisé avec une clé reçue. Le formulaire du compte exige le mot de passe actuel et vérifie la confirmation du nouveau. Une mise à jour réussie ferme l'espace courant.
 
-Le chat reste monté mais masqué pendant les réglages afin de conserver la conversation lors d'une navigation interne. Un changement de fournisseur ou de modèle change sa clé React et réinitialise son état. Les textes sont rendus avec l'échappement React, sans HTML ni Markdown exécutable. En cas d'échec, le message non abouti redevient un brouillon. Un rechargement efface l'historique ; aucun message, identifiant ou secret n'est enregistré dans `localStorage`.
+Le chat reste monté mais masqué pendant les réglages et la consultation des contenus afin de conserver la conversation lors d'une navigation interne. Un changement de fournisseur ou de modèle change sa clé React et réinitialise son état. Les textes sont rendus avec l'échappement React, sans HTML ni Markdown exécutable. En cas d'échec, le message non abouti redevient un brouillon. Un rechargement efface l'historique ; aucun message, identifiant ou secret n'est enregistré dans `localStorage`.
 
-Sur petit écran, le second menu se superpose au contenu devenu `inert`. À l'ouverture, le focus va à sa première commande ; `Échap` ferme le menu et revient au bouton des réglages. Chaque icône interactive conserve un nom accessible, même lorsque son texte est masqué.
+Les modèles fermés du backend fournissent les champs, limites, options et sections via `/content/catalog`. `Fields.tsx` rend les contrôles partagés ; les modèles métier restent définis dans le code, sans constructeur de schémas ni saisie JSON. Les formulaires ont un état local et une sauvegarde explicite. Les tableaux ordonnés disposent de commandes clavier ; les sélecteurs de référence montrent des noms et proposent une recherche.
+
+`Editor.tsx` conserve les champs après erreur et place le focus sur une erreur serveur. Un garde de navigation présente trois choix pour une saisie modifiée. Le brouillon de l'onglet est conservé par `AdminPage` pendant une reconnexion et n'est pas rendu sur l'écran de connexion. Il est abandonné explicitement lors d'une sortie confirmée. Les réponses versionnées évitent l'écrasement concurrent.
+
+[react-markdown](https://github.com/remarkjs/react-markdown) rend l'aperçu avec `skipHtml`, URL HTTP/HTTPS contrôlées et images distantes remplacées par leur alternative. Aucun plugin HTML brut n'est installé. Les médias locaux sont lus par l'API sous session ; les références confidentielles et preuves privées sont exclues de l'aperçu. Le téléversement binaire utilise XMLHttpRequest pour la progression et l'annulation, sans dépendance multipart ni `blob:` dans la CSP.
+
+Sur tablette, le rail se complète par Menu ; sur téléphone, ce bouton ouvre la navigation et le formulaire occupe toute la largeur. Le panneau rend le contenu derrière lui `inert`, conserve le clavier dans la navigation, se ferme par `Échap` et rend le focus à une commande visible. Les dialogues utilisent `<dialog>.showModal()` et le comportement modal natif du navigateur.
 
 ## Cycle du thème
 

@@ -27,16 +27,22 @@ export interface ChatReply {
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  errors: { path: string; message: string; code: string }[]
+  constructor(
+    status: number,
+    message: string,
+    errors: { path: string; message: string; code: string }[] = [],
+  ) {
     super(message)
     this.status = status
+    this.errors = errors
   }
 }
 
 export async function adminRequest<T>(
   path: string,
   options: {
-    method?: 'GET' | 'POST' | 'PUT'
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     body?: unknown
     csrf?: string
     signal?: AbortSignal
@@ -66,6 +72,7 @@ export async function adminRequest<T>(
       typeof data?.detail === 'string'
         ? data.detail
         : 'Une erreur est survenue. Réessayez dans un instant.',
+      Array.isArray(data?.errors) ? data.errors : [],
     )
   }
   if (data === null) throw new ApiError(0, 'Réponse du serveur illisible. Rechargez la page.')

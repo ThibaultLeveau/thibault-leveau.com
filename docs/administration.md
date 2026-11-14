@@ -1,6 +1,8 @@
-# Administration et chat LLM
+# Administration, contenus et chat LLM
 
-L'espace privé est accessible à **`/admin`**. Il contient un chat texte, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
+L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un chat texte, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
+
+Le [studio de contenus](content-studio.md) organise les projets, le parcours, les services, les publications et leurs références. Aucune donnée biographique ni fiche de démonstration n'est préremplie. Les contenus restent privés, même au statut **Prêt**.
 
 ## Première activation
 
@@ -37,9 +39,40 @@ Sans activation, `/admin` présente un message de configuration et l'API privée
 
 ## Naviguer dans l'espace
 
-Le premier menu latéral contient **Chat**. Le bouton **Réglages du site**, placé en bas, ouvre un second menu accolé au premier, avec **AI provider** et **Admin user**. Sur petit écran, le premier menu devient une barre d'icônes ; le second se superpose au contenu tout en restant accolé. La touche `Échap` referme ce menu et rend le focus au bouton des réglages.
+La sidebar regroupe **Chat**, **Projets**, **Parcours** (expériences, formations, certifications, distinctions), **Services**, **Publications** (articles et interventions), **Témoignages**, **Référentiels** (compétences, technologies, organisations, catégories et tags), **Médias** et **Mon profil**. Les groupes et les réglages du bas utilisent un second menu accolé, un seul à la fois.
 
-Le sélecteur de thème en haut bascule entre clair et sombre et partage la préférence de l'accueil. Le lien « Voir le site » retourne à l'accueil. La déconnexion efface la session courante et la conversation en mémoire.
+Sur tablette, un rail et la commande **Menu** donnent accès à la navigation complète. Sous 600 pixels, le formulaire dispose de toute la largeur et Menu ouvre un panneau. Le contenu derrière ce panneau est inerte. `Échap` le ferme et rend le focus à une commande visible ; la navigation peut défiler indépendamment sur un écran bas.
+
+Le thème partage la préférence de l'accueil. Le lien « Voir le site » revient à l'accueil. La déconnexion révoque la session et efface la conversation. Une saisie de contenu non enregistrée demande d'abord de rester, d'enregistrer ou de l'abandonner.
+
+## Renseigner une fiche
+
+1. Ouvrir la collection et **Nouvelle fiche**. Un titre suffit pour créer un brouillon ; les valeurs fournies doivent être valides.
+2. Utiliser les sections locales. Un projet sépare **Essentiel**, **Contexte et dates**, **Contribution et résultats**, **Compétences et stack**, **Liens et médias**, **Relecture**. Les autres fiches ne montrent que les sections utiles à leur modèle.
+3. Choisir les références existantes avec recherche. Une organisation peut être créée rapidement depuis son sélecteur ; le projet conserve sa saisie. Les noms proches sont suggérés avant de créer un doublon.
+4. Ajouter les lignes structurées et utiliser Monter, Descendre ou Retirer. Retirer une association ne supprime jamais la fiche associée.
+5. **Enregistrer le brouillon** sauvegarde toutes les sections. **Vérifier la fiche** contrôle la saisie sans l'enregistrer ; le récapitulatif conduit au champ concerné, y compris dans une autre section.
+6. Dans Relecture, **Enregistrer et marquer prêt** applique le minimum éditorial propre à ce type. Prêt ne publie rien sur le site. Une fiche prête devenue incomplète peut être **enregistrée en brouillon**.
+
+Une date peut être `2024`, `2024-06` ou `2024-06-15`. « En cours » exclut une fin ; une absence motivée distingue une date inconnue. Un projet professionnel peut exister sans emploi associé, et un projet personnel sans organisation. Responsabilités, actions et résultats sont distincts. Le prix « sur devis » laisse le montant vide ; un montant `0.00` est un prix nul explicite, conservé exactement.
+
+Le statut et la diffusion envisagée sont indépendants. L'aperçu exclut les notes privées, les justificatifs et les références confidentielles. Pour voir une image associée dans cet aperçu, renseigner sa diffusion envisagée comme publique dans sa fiche média, son rôle et son alternative dans la fiche qui l'utilise. Le fichier reste protégé par la session. Le corps des articles accepte le Markdown, avec aperçu sûr ; les images distantes ne sont pas chargées automatiquement.
+
+Les collections permettent recherche sans accents, filtre d'état, de nature, de référence et tri. Le profil est unique. Les usages sont consultables en bas de fiche. **Dupliquer** crée un brouillon avec un nouveau slug et réutilise les références ; médias et profil ne se dupliquent pas. **Archiver** conserve les données ; restaurer repasse en brouillon. La suppression définitive exige une archive sans usages et une confirmation explicite.
+
+## Saisie non enregistrée et conflits
+
+Il n'y a pas d'enregistrement automatique. Une navigation, une sortie vers l'accueil, une déconnexion ou un rechargement avertit d'une saisie modifiée. Les erreurs réseau conservent les champs. Une expiration de session masque la fiche, puis restaure sa saisie après reconnexion dans le même onglet. Aucune copie n'est placée dans `localStorage` ; fermer l'onglet peut perdre les modifications.
+
+Deux onglets ne s'écrasent pas silencieusement : l'API compare la version lue, y compris après une modification d'association réciproque. Un conflit conserve la saisie et propose de recharger la version enregistrée avec confirmation. Copier auparavant les passages à conserver si nécessaire ; aucun bouton ne force un écrasement.
+
+## Ajouter des médias
+
+Dans **Médias**, téléverser une image JPEG/PNG/WebP, un PDF ou une vidéo MP4/WebM ; l'envoi montre sa progression et peut être annulé. Renseigner ensuite crédits, origine/licence et notes. **Ajouter un lien** crée un média externe, sans téléchargement serveur. Les fichiers sont réutilisables ; alternative, légende, rôle et transcription appartiennent à chaque usage dans une fiche.
+
+Limites : images fixes 10 Mio et 20 millions de pixels, PDF 20 Mio, vidéos 100 Mio ; quota cumulé 1 Gio par défaut. Les archives occupent encore du stockage. Les fichiers restent privés et les PDF se téléchargent. Il n'y a ni antivirus ni transcodage ; un contrôle de format n'est pas une garantie sur le contenu d'un document ou d'une vidéo. Voir la [configuration](configuration.md) et les [sauvegardes](operations.md#sauvegarde-du-studio-base-et-medias).
+
+Aucun fournisseur LLM n'est nécessaire pour utiliser ces fonctions. Les contenus ne lui sont pas transmis.
 
 ## Configurer AI provider
 

@@ -81,6 +81,7 @@ nav:
       - Installation et développement: getting-started.md
       - Configuration: configuration.md
       - Administration et chat LLM: administration.md
+      - Studio de contenus (proposition): content-studio.md
   - Architecture et code:
       - Vue d'ensemble: architecture.md
       - Backend et contrat HTTP: backend.md

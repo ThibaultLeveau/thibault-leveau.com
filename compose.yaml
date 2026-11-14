@@ -17,6 +17,7 @@ services:
       SITE_SECRET_KEY: ${SITE_SECRET_KEY:-}
       SITE_ADMIN_ORIGIN: ${SITE_ADMIN_ORIGIN:-https://new.thibault-leveau.com}
       SITE_ADMIN_DB_PATH: /app/data/admin.sqlite3
+      SITE_MEDIA_QUOTA_BYTES: ${SITE_MEDIA_QUOTA_BYTES:-1073741824}
       FORWARDED_ALLOW_IPS: 172.19.0.0/16
     read_only: true
     volumes:
