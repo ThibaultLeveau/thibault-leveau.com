@@ -44,7 +44,7 @@ Le réseau partagé `multisite_proxy` est interne : il transporte les requêtes 
 
 L'évolution administrative a été explicitement approuvée par Thibault (« Je valide »), accord consigné dans l'[issue #3](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/3). Elle ajoute stockage, authentification, routes et appels LLM dans le service existant, sans nouveau framework ni service. Le périmètre est un seul administrateur et une seule instance Uvicorn.
 
-SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée, ainsi que les fiches typées et leurs relations. Les médias binaires vivent à côté de la base, dans `media/`. Leur accès passe exclusivement par les API privées. Les migrations de contenu sont versionnées et transactionnelles ; les sauvegardes associent base et fichiers avec un manifeste. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
+SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée, ainsi que les fiches typées et leurs relations. Les médias binaires vivent à côté de la base, dans `media/`. Leur accès administratif passe par les API privées ; les fichiers publiables ont une route publique qui recontrôle leur visibilité et leurs usages à chaque requête. Les migrations de contenu sont versionnées et transactionnelles ; les sauvegardes associent base et fichiers avec un manifeste. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
 
 Les messages ne sont pas enregistrés en base. React les garde en mémoire et transmet l'historique nécessaire au backend à chaque envoi ; FastAPI l'envoie au fournisseur choisi. La politique de conservation de ce fournisseur s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage` ; seule la préférence de thème y est conservée.
 
@@ -81,6 +81,8 @@ backend/
 │   ├── api/admin.py       authentification, validation et contrats privés
 │   ├── admin/             stockage, sécurité, adaptateurs LLM, récupération locale
 │   ├── api/content.py     contrats privés des contenus et médias
+│   ├── api/public.py      lecture publique et médias autorisés
+│   ├── content/public.py  projection publique, éligibilité et relations filtrées
 │   ├── assistant/         agents, graphe, outils de lecture, propositions et préférences
 │   └── content/           modèles métier, migrations, transactions, fichiers et sauvegardes
 └── tests/                 tests HTTP et démarrage
@@ -88,7 +90,8 @@ frontend/
 ├── public/                fichiers copiés tels quels
 ├── src/
 │   ├── components/        navigation et sélecteur de thème
-│   ├── pages/             accueil et composition de l'administration
+│   ├── pages/             composition de l'administration
+│   ├── public/            site, collections, fiches, lecture et client public
 │   ├── admin/             client API, connexion, formulaires et chat
 │   ├── theme/             état du thème React
 │   └── styles/            police, couleurs et composition
@@ -104,7 +107,7 @@ Les paramètres Python, groupes de dépendances et outils de qualité sont centr
 
 En développement, Vite et FastAPI sont séparés pour conserver leur rechargement respectif. Le proxy de Vite traite `/api` ; MkDocs possède son propre serveur de prévisualisation. En production, les trois sorties partagent un seul domaine et un seul processus applicatif.
 
-L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` sont explicitement distribués par FastAPI, `/admin/` redirige vers `/admin`. React choisit la page depuis ce chemin ; les vues de réglages et de contenus sont un état local, sans URL supplémentaire. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
+L'application n'utilise pas de routeur client supplémentaire. FastAPI distribue explicitement `/`, `/projets`, `/parcours`, `/expertise`, `/services`, `/journal`, `/a-propos`, `/explorer`, leurs fiches et `/admin`. Les liens HTML gèrent navigation, historique et rechargement ; les filtres sont des paramètres d'URL. Le serveur vérifie la visibilité avant de servir une fiche et redirige un ancien slug vers son URL actuelle. Les vues internes du studio restent un état local. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
 
 ## Ajouter une fonctionnalité
 
@@ -119,3 +122,7 @@ Une future route API doit être définie dans `api/`, enregistrée dans la fabri
 Toute extension au-delà de ce périmètre (plusieurs comptes, service supplémentaire, nouveau stockage ou routage) exige un nouvel accord d'architecture explicite selon `AGENTS.md`. Les raisons des choix actuels sont consignées dans les [décisions techniques](decisions.md).
 
 L'architecture du [studio de contenus](content-studio.md#architecture-proposee-et-impacts) a été explicitement approuvée par Thibault le 14 novembre 2026 (« Ok » en réponse à la demande de validation), accord consigné dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8#issuecomment-6878880881). Elle étend SQLite avec des tables métier et des migrations versionnées, ajoute les API privées de contenus et de médias et conserve les fichiers dans `/app/data/media`, dans le volume existant. Les sauvegardes couvrent ensemble base et médias. L'implémentation est suivie dans la PR #9 ; aucun nouveau framework, service ou routeur de pages n'est ajouté.
+
+## Présentation publique des collections — issue #14
+
+L'[accord explicite](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/14#issuecomment-6881977535) étend les routes et l'accès aux données selon la [conception publique](public-site-design.md). `content/public.py` possède la sélection et les projections ; `api/public.py` valide les entrées et distribue les réponses/fichiers. La liste utilise des résumés SQL paginés ; les corps longs sont chargés sur les fiches. Chaque accès média recontrôle la visibilité avant le cache de miniatures. Les dérivés sont éphémères en mémoire, sans migration ni modification du volume. Quand le studio est désactivé, les pages restent disponibles avec des collections vides, sans créer de stockage.

@@ -109,7 +109,7 @@ Le [graphe et ses budgets](assistant-design.md#limites-et-extension-du-code) imp
 
 ## API du studio de contenus
 
-Le préfixe `/api/admin/content` réutilise la session, l'origine et le jeton CSRF ci-dessus. Le statut « prêt » et la diffusion envisagée « public » n'ouvrent aucun accès public. Collections fermées : `projects`, `experiences`, `skills`, `technologies`, `educations`, `certifications`, `services`, `posts`, `publications`, `testimonials`, `awards`, `profiles`, `organizations`, `taxonomies`, `media`.
+Le préfixe `/api/admin/content` réutilise la session, l'origine et le jeton CSRF ci-dessus. Ce contrat administratif reste privé. Le contrat public séparé sélectionne désormais les fiches « prêt » et « public » selon les règles ci-dessous. Collections fermées : `projects`, `experiences`, `skills`, `technologies`, `educations`, `certifications`, `services`, `posts`, `publications`, `testimonials`, `awards`, `profiles`, `organizations`, `taxonomies`, `media`.
 
 | Méthode et suffixe | Entrée / résultat |
 | --- | --- |
@@ -162,7 +162,8 @@ Ne pas créer de route `/{path:path}` qui retourne systématiquement `index.html
 | Ressource | `Cache-Control` | Intention |
 | --- | --- | --- |
 | Assets Vite avec empreinte dans leur nom | `public, max-age=31536000, immutable` | Réutilisation longue d'une version dont le nom change avec le contenu |
-| HTML, police, icône, script initial et documentation | `no-cache` | Revalidation avant réutilisation |
+| Police, icône, script initial et documentation | `no-cache` | Revalidation avant réutilisation |
+| Pages publiques et fichiers de contenus | `no-store` | Recontrôler la publication à chaque accès |
 | API et réponses en erreur | `no-store` | Ne pas conserver les résultats |
 | HTML `/admin` et redirection `/admin/` | `no-store` | Ne pas conserver la page administrative |
 
@@ -181,3 +182,19 @@ Caddy gère HTTPS en amont. Uvicorn accepte les en-têtes de proxy uniquement de
 Créer un routeur sous `api/`, l'enregistrer dans `create_app()`, définir une réponse JSON stable et ajouter un test HTTP du résultat et de ses erreurs. Les appels du frontend doivent utiliser le préfixe `/api`. Mettre à jour cette page dans la même modification que le contrat.
 
 Conserver les tests indépendants des variables de la machine en construisant `Settings` explicitement. La fixture d'intégration utilise les véritables sorties de construction pour détecter un problème de chemin, de montage ou de cache que des fichiers fictifs pourraient masquer.
+
+## API publique et routes de présentation
+
+Les huit pages sont `/`, `/projets`, `/parcours`, `/expertise`, `/services`, `/journal`, `/a-propos` et `/explorer`. Le registre fermé `content/public.py:PATHS` définit les fiches : `/<préfixe>/<id>/<slug>` (ex. `/projets/12/mon-projet`, `/journal/articles/20/mon-article`). Identifiant stable, ancien slug redirigé 308 après autorisation, fiche privée/inconnue 404. Les titres et descriptions SEO sont échappés dans le HTML, sans rendu serveur du corps React.
+
+| Route de lecture | Contrat |
+| --- | --- |
+| `/api/public/home` | Profil public éventuel, trois projets/articles/services et six compétences |
+| `/api/public/entries` | Résumés, `total`, `page`, `limit` ; paramètres `kind`, `q` (160 caractères), `sort` (`selection`, `recent`, `title`), `page` (1–100000), `limit` (1–48, défaut 12), `related` (ID public) |
+| `/api/public/entries/{kind}/{id}` | Projection publique des champs, références autorisées, jusqu'à douze usages publics, expiration et métadonnées de fichier autorisées |
+| `/api/public/media/{id}/file` | GET/HEAD du fichier autorisé ; PDF en téléchargement, nom de fichier public, support des plages de FileResponse |
+| `/api/public/media/{id}/image?width=960` | GET/HEAD WebP optimisé ; largeurs fermées 480, 960 et 1600, sans agrandissement, cache mémoire borné |
+
+Seuls Prêt + Public sont sélectionnés ; les témoignages exigent le consentement. Notes privées, contraintes confidentielles, chemins de stockage, justificatifs privés et état interne sont exclus. Les identités masquées sont remplacées dans le titre, le slug, la recherche et les métadonnées ; leurs champs et associations identifiants sont retirés. La recherche est insensible aux accents/casse et porte sur les titres/résumés projetés, sans utiliser l'index privé. Le tri récent utilise les dates éditoriales/de parcours.
+
+Un média doit aussi avoir un usage autorisé par une fiche publique ; un usage `private_proof` seul ne suffit jamais. Le retrait d'une fiche retire ses liens et peut retirer le dernier usage public d'un média. Le cache mémoire des images ne contourne pas l'autorisation. Toutes les réponses API, fichiers publics et pages dynamiques sont `no-store` ; les assets Vite gardent leur cache immuable. Sans studio actif, accueil et listes sont vides, détails/fichiers 404. Une collection inconnue répond 404 ; des paramètres invalides répondent 422.

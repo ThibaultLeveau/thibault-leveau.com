@@ -215,8 +215,8 @@ export function ContentStudio({
         </button>
       </header>
       <p className="collection-privacy">
-        <span aria-hidden="true">◌</span> Espace privé · « Prêt » prépare une présentation, sans
-        publier sur le site.
+        <span aria-hidden="true">◌</span> Publication · Une fiche « Prêt » avec la visibilité « Public » apparaît sur le site.
+        Les brouillons et les fiches confidentielles restent privés.
       </p>
       {error && (
         <div className="error-summary" role="alert">

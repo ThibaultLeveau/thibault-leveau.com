@@ -117,7 +117,7 @@ export function Preview({
   return (
     <Dialog title="Aperçu de présentation" onClose={onClose}>
       <p className="muted">
-        Prévisualisation privée · aucune publication. Notes privées, justificatifs et références
+        Prévisualisation privée · cet aperçu ne change pas la publication. Notes privées, justificatifs et références
         confidentielles exclus.
       </p>
       <article className="entry-preview">

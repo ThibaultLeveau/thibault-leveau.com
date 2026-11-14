@@ -1,6 +1,6 @@
 # Thibault Leveau
 
-Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et un studio privé pour les projets, le parcours, les services, les articles et les médias, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
+Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Huit pages publiques pour explorer les quinze collections et un studio privé pour les administrer, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
 
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)
@@ -40,10 +40,11 @@ Avant le premier test navigateur, installer Chromium et ses dépendances systèm
 
 ```text
 Navigateur → Caddy (HTTPS) → FastAPI :8000
-                              ├── /                  React compilé
+                              ├── / et rubriques     Pages publiques React, routes explicites
                               ├── /admin             Administration React
                               ├── /api/admin/*       Sessions, contenus, médias, réglages et chat
                               ├── /assets/           CSS / JavaScript
+                              ├── /api/public/*      Lecture des contenus publiés et médias autorisés
                               ├── /api/health        JSON de santé
                               └── /documentation/    MkDocs compilé
 ```

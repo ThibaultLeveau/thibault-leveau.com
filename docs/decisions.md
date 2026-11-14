@@ -2,6 +2,14 @@
 
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
+## Présentation publique — issue #14
+
+**Accord.** Thibault a répondu « Je valide cette architecture et cette règle de publication », [accord consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/14#issuecomment-6881977535).
+
+**Décision.** Ajouter huit pages et leurs fiches sur des routes explicites FastAPI, une API de lecture `/api/public/*` et une projection fermée dans `content/public.py`. React conserve les liens natifs et les paramètres d'URL, sans bibliothèque de routage supplémentaire. Publier seulement Prêt + Public, filtrer les relations et les données privées côté serveur, respecter anonymat et consentement. Autoriser un média prêt/public seulement lorsqu'une fiche publique l'utilise hors justificatif privé.
+
+**Conséquence.** Les fiches déjà Prêt + Public deviennent visibles au déploiement. Les changements de visibilité prennent effet sur les requêtes suivantes, avec `no-store` sur les données et fichiers dynamiques. Les miniatures WebP de 480, 960 et 1600 px utilisent Pillow déjà installé et un cache mémoire limité à 24 dérivés ; aucune écriture durable supplémentaire. Les métadonnées HTML sont échappées, l'indexation reste désactivée par défaut. Aucun nouveau service, stockage, dépendance ou migration.
+
 ## Agents de contenus — issue #12
 
 **Accord.** Thibault a répondu « J'accepte » à la demande explicite de validation de la [conception des agents](assistant-design.md), [accord consigné](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679) avant implémentation.
@@ -20,7 +28,7 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 **Raison.** Des fiches typées et des références partagées permettent une saisie complète sans dupliquer compétences, organisations ou médias. Le service et les outils actuels suffisent.
 
-**Conséquence.** Les migrations, la cohérence base/fichiers et les quotas deviennent des responsabilités de FastAPI. Le contenu reste privé, même au statut « Prêt ». Le rendu public et ses routes restent hors périmètre. L'implémentation et ses vérifications sont consignées dans la [PR #9](https://github.com/ThibaultLeveau/thibault-leveau.com/pull/9).
+**Conséquence.** Les migrations, la cohérence base/fichiers et les quotas deviennent des responsabilités de FastAPI. Dans cette première livraison, le contenu restait privé, même au statut « Prêt ». La présentation publique est ensuite approuvée dans l'issue #14, décrite ci-dessus. L'implémentation et ses vérifications sont consignées dans la [PR #9](https://github.com/ThibaultLeveau/thibault-leveau.com/pull/9).
 
 ## Un dépôt et une image applicative
 

@@ -10,15 +10,17 @@ index.html
 └── main.tsx
     └── ThemeProvider
         └── App
-            ├── lien d'évitement « Aller au contenu »
-            ├── SiteHeader
-            │   ├── nom et monogramme
-            │   └── ThemeToggle
-            └── HomePage
-                └── h1 « Bienvenue. »
+            ├── PublicSite (chargé à la demande)
+            │   ├── lien d'évitement « Aller au contenu »
+            │   ├── SiteHeader : navigation, menu mobile, ThemeToggle
+            │   ├── PublicHome
+            │   ├── CollectionPage
+            │   ├── DetailPage / AboutPage
+            │   └── pied de page
+            └── AdminPage (chargé à la demande)
 ```
 
-L'accueil ne charge pas de contenu distant et ne dépend pas de l'API de santé pour s'afficher. Il ne contient ni routeur client, ni gestionnaire d'état global supplémentaire, ni texte biographique.
+L'accueil charge les contenus publiés via `/api/public/home`. Son enveloppe reste lisible pendant le chargement, en cas d'erreur ou sans contenu. La biographie provient uniquement du profil publié. Aucun routeur client ni gestionnaire d'état global supplémentaire n'est ajouté.
 
 Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le même `ThemeProvider`. Le bundle administratif est distinct de celui de l'accueil. Le chat, les réglages et les quinze collections du studio sont gérés par état React, sans bibliothèque de routage supplémentaire.
 
@@ -26,10 +28,15 @@ Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le
 
 | Élément | Responsabilité |
 | --- | --- |
-| `App` | Structure générale et point d'accès au contenu principal |
+| `App` | Sélection et chargement différé du site public ou de l'administration |
 | `SiteHeader` | Navigation principale, lien vers `/` et commande de thème |
 | `ThemeToggle` | Bouton accessible et icône correspondant à l'action proposée |
-| `HomePage` | Titre d'accueil et détails graphiques décoratifs |
+| `public/PublicHome.tsx` | Profil publié, sélections et accès aux rubriques |
+| `public/CollectionPage.tsx` | Listes, onglets, recherche, filtres et pagination partageables |
+| `public/DetailPage.tsx` | Fiches adaptées aux collections, médias, relations et présentation personnelle |
+| `public/Reading.tsx` | Markdown échappé, liens contrôlés et titres de sommaire |
+| `public/content.ts` | Contrat public, chargement annulable, dates partielles, liens et prix exacts |
+| `styles/public.css` | Composition éditoriale, thèmes et responsive publics |
 | `ThemeProvider` | État React, préférence système et persistance |
 | `theme.ts` | Type `Theme`, clé de stockage, validation et accès au contexte |
 | `app.css` | Palette, police locale, typographie, espacements et variantes responsive |
@@ -108,3 +115,13 @@ Les composants de `admin/assistant/` isolent la relecture (`ProposalCard`), les 
 `Attachments` réutilise `ReferencePicker` et `content/upload.ts`, partagé avec le studio. Son libellé accessible distingue le téléversement pour la demande de celui de la médiathèque. Un fichier envoyé devient immédiatement une fiche média privée ; seules ses métadonnées rejoignent le contexte des agents.
 
 `PreferencesForm` réutilise la garde de navigation et le dialogue du studio. Les réglages globaux et familiaux sont enregistrés avec leur version ; un conflit propose de recharger sans écraser silencieusement la saisie. `styles/assistant.css` réutilise les variables existantes pour les comparaisons, détails repliables, questions, contrôles et mises en page mobiles, dans les deux thèmes.
+
+## Pages publiques et lecture
+
+`PublicSite` sélectionne la page dans le registre des chemins explicites. Le menu desktop, le dialogue mobile natif et le pied de page assurent les accès ; `dialog.showModal()` rend l'arrière-plan inerte et le focus revient à Menu à sa fermeture. Les liens et formulaires GET natifs gardent un historique fiable et des recherches partageables, sans routeur additionnel.
+
+Les familles de Parcours, Expertise et Journal sont des onglets avec `collection` dans l'URL. Explorer couvre les quinze types. `q`, `related`, `sort` et `page` sont transmis aux listes bornées ; le changement de filtre repart en page 1. Les catégories et technologies publiques alimentent une sélection de sujets (48 résultats de chaque type) ; toutes les catégories restent accessibles par Explorer et leurs fiches.
+
+Les projets utilisent une grille de couvertures, le parcours une chronologie et le journal des lignes éditoriales. Les compétences affichent le domaine disponible. Les fiches rendent récit, informations, résultats, formules, FAQ, langues, références et médias selon leur type. Les prix sont formatés depuis la chaîne décimale, les dates conservent leur précision. Le Markdown n'exécute aucun HTML ; les images distantes restent des alternatives textuelles et les liens sont contrôlés. Le sommaire reprend les sections et les titres du corps.
+
+Les images locales disposent de dérivés WebP et de `srcset`, dimensions connues et chargement différé en liste ; les vidéos ne se lancent pas automatiquement. Le bundle administratif reste séparé ; Markdown est chargé pour les détails. Les requêtes annulables n'utilisent ni cookie ni stockage de contenu local. Les états vide, chargement, absence de résultat, erreur avec reprise et détail indisponible restent accessibles.

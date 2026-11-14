@@ -169,3 +169,9 @@ Le tag `local` convient aux essais. Pour une version publiée, utiliser un tag d
 Cette version passe le schéma SQLite de 1 à 2. Avant de remplacer le service, suivre la [sauvegarde et la compatibilité de retour arrière](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image actuellement exécutée. Ne modifier ni Caddy, ni DNS, ni réseau pour cette évolution.
 
 Après démarrage, vérifier le schéma, la conservation des comptes/contenus/médias, le chat et **Agents et rédaction** avec une session autorisée, puis les réponses HTTPS et le rendu bureau/mobile dans les deux thèmes. La CI et les parcours isolés prouvent les écritures ; les contrôles de production n'y créent pas de fiches de démonstration. Consigner le résultat, le commit et l'image réellement exécutée dans l'issue #12.
+
+## Livraison des pages publiques
+
+La version publique ne change pas le schéma 2 ni les volumes. Avant déploiement, sauvegarder et vérifier le couple base/médias et conserver l'image précédente. L'accord de l'issue #14 inclut la publication des fiches déjà Prêt + Public ; vérifier leur nombre par collection sans exporter leur texte dans les journaux. Les API administratives et l'indexation gardent leurs règles.
+
+Après remplacement du seul service `site`, contrôler les huit pages, `/api/public/home`, une liste et les 404. Vérifier un contenu réellement publié s'il existe, ainsi que les états vides sinon ; ne pas créer de données fictives en production. Vérifier le navigateur aux largeurs desktop/mobile, les deux thèmes, Menu et le focus. En cas de régression, l'image précédente utilise le même schéma : retour au tag conservé sans restauration des données, sauf incident distinct sur celles-ci.

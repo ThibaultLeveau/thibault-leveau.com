@@ -12,7 +12,7 @@ def test_built_home_and_its_assets(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "Thibault Leveau" in response.text
-    assert response.headers["cache-control"] == "no-cache"
+    assert response.headers["cache-control"] == "no-store"
     assets = re.findall(r'(?:src|href)="(/assets/[^\"]+)"', response.text)
     assert assets, "Le test doit vérifier les véritables assets du build Vite"
     for asset in assets:

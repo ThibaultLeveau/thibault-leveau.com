@@ -2,7 +2,7 @@
 
 L'espace privé est accessible à **`/admin`**. Il contient le studio de contenus, un assistant de contenus, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
 
-Le [studio de contenus](content-studio.md) organise les projets, le parcours, les services, les publications et leurs références. Aucune donnée biographique ni fiche de démonstration n'est préremplie. Les contenus restent privés, même au statut **Prêt**.
+Le [studio de contenus](content-studio.md) organise les projets, le parcours, les services, les publications et leurs références. Aucune donnée biographique ni fiche de démonstration n'est préremplie. Une fiche **Prêt** dont la **Visibilité sur le site** est **Public** est publiée ; le brouillon et la visibilité confidentielle la conservent privée.
 
 ## Première activation
 
@@ -52,11 +52,11 @@ Le thème partage la préférence de l'accueil. Le lien « Voir le site » revie
 3. Choisir les références existantes avec recherche. Une organisation peut être créée rapidement depuis son sélecteur ; le projet conserve sa saisie. Les noms proches sont suggérés avant de créer un doublon.
 4. Ajouter les lignes structurées et utiliser Monter, Descendre ou Retirer. Retirer une association ne supprime jamais la fiche associée.
 5. **Enregistrer le brouillon** sauvegarde toutes les sections. **Vérifier la fiche** contrôle la saisie sans l'enregistrer ; le récapitulatif conduit au champ concerné, y compris dans une autre section.
-6. Dans Relecture, **Enregistrer et marquer prêt** applique le minimum éditorial propre à ce type. Prêt ne publie rien sur le site. Une fiche prête devenue incomplète peut être **enregistrée en brouillon**.
+6. Dans Relecture, **Enregistrer et marquer prêt** applique le minimum éditorial propre à ce type. Prêt publie la fiche uniquement si sa visibilité est Public. Une fiche prête devenue incomplète peut être **enregistrée en brouillon**.
 
 Une date peut être `2024`, `2024-06` ou `2024-06-15`. « En cours » exclut une fin ; une absence motivée distingue une date inconnue. Un projet professionnel peut exister sans emploi associé, et un projet personnel sans organisation. Responsabilités, actions et résultats sont distincts. Le prix « sur devis » laisse le montant vide ; un montant `0.00` est un prix nul explicite, conservé exactement.
 
-Le statut et la diffusion envisagée sont indépendants. L'aperçu exclut les notes privées, les justificatifs et les références confidentielles. Pour voir une image associée dans cet aperçu, renseigner sa diffusion envisagée comme publique dans sa fiche média, son rôle et son alternative dans la fiche qui l'utilise. Le fichier reste protégé par la session. Le corps des articles accepte le Markdown, avec aperçu sûr ; les images distantes ne sont pas chargées automatiquement.
+Le statut et la visibilité sont complémentaires : seuls **Prêt + Public** rendent une fiche accessible aux visiteurs. L'aperçu exclut les notes privées, les justificatifs et les références confidentielles. Pour publier une image, rendre sa fiche média Prêt + Public et l'associer à une fiche elle-même Prêt + Public, avec un rôle public et une alternative. Un usage de justificatif privé ne permet jamais sa publication. L'aperçu administratif utilise la session ; le public emploie une route dédiée avec contrôle de visibilité. Le corps des articles accepte le Markdown, avec aperçu sûr ; les images distantes ne sont pas chargées automatiquement.
 
 Les collections permettent recherche sans accents, filtre d'état, de nature, de référence et tri. Le profil est unique. Les usages sont consultables en bas de fiche. **Dupliquer** crée un brouillon avec un nouveau slug et réutilise les références ; médias et profil ne se dupliquent pas. **Archiver** conserve les données ; restaurer repasse en brouillon. La suppression définitive exige une archive sans usages et une confirmation explicite.
 
@@ -70,7 +70,7 @@ Deux onglets ne s'écrasent pas silencieusement : l'API compare la version lue, 
 
 Dans **Médias**, téléverser une image JPEG/PNG/WebP, un PDF ou une vidéo MP4/WebM ; l'envoi montre sa progression et peut être annulé. Renseigner ensuite crédits, origine/licence et notes. **Ajouter un lien** crée un média externe, sans téléchargement serveur. Les fichiers sont réutilisables ; alternative, légende, rôle et transcription appartiennent à chaque usage dans une fiche.
 
-Limites : images fixes 10 Mio et 20 millions de pixels, PDF 20 Mio, vidéos 100 Mio ; quota cumulé 1 Gio par défaut. Les archives occupent encore du stockage. Les fichiers restent privés et les PDF se téléchargent. Il n'y a ni antivirus ni transcodage ; un contrôle de format n'est pas une garantie sur le contenu d'un document ou d'une vidéo. Voir la [configuration](configuration.md) et les [sauvegardes](operations.md#sauvegarde-du-studio-base-et-medias).
+Limites : images fixes 10 Mio et 20 millions de pixels, PDF 20 Mio, vidéos 100 Mio ; quota cumulé 1 Gio par défaut. Les archives occupent encore du stockage. Les fichiers restent privés tant que les conditions de publication ne sont pas réunies ; les PDF se téléchargent. Il n'y a ni antivirus ni transcodage ; un contrôle de format n'est pas une garantie sur le contenu d'un document ou d'une vidéo. Voir la [configuration](configuration.md) et les [sauvegardes](operations.md#sauvegarde-du-studio-base-et-medias).
 
 Les formulaires manuels fonctionnent sans fournisseur LLM et ne lui transmettent aucun contenu. L'assistant ci-dessous transmet seulement le contexte utile à la demande.
 
@@ -95,7 +95,7 @@ Depuis **Chat**, décrire la fiche souhaitée ou la modification à apporter. Ex
 2. Répondre dans la conversation aux questions de l'assistant : cible ambiguë, fait nécessaire manquant ou choix de référence. Les champs facultatifs peuvent rester vides. L'assistant prépare un brouillon et ne doit inventer ni chiffre, diplôme, citation, consentement ou licence.
 3. Ouvrir chaque fiche de la **proposition de contenu**. Comparer les valeurs actuelles et proposées, les listes, références, changements de statut et éléments à compléter. Les effets réciproques d'une association figurent aussi dans la relecture.
 4. Pour corriger, préciser la demande dans la conversation. La nouvelle proposition remplace l'ancienne. **Abandonner la proposition** empêche son application, sans supprimer les messages.
-5. **Enregistrer la fiche / les fiches** applique le lot entier. Aucun contenu métier n'est enregistré avant cette action. Le résultat donne des liens vers les éditeurs. Les nouvelles fiches sont des brouillons ; les contenus restent privés et « Prêt » ne publie rien.
+5. **Enregistrer la fiche / les fiches** applique le lot entier. Aucun contenu métier n'est enregistré avant cette action. Le résultat donne des liens vers les éditeurs. Les nouvelles fiches sont des brouillons ; le passage manuel à Prêt publie les fiches dont la visibilité est Public.
 
 Une fiche ou une référence modifiée depuis la proposition entraîne un conflit : demander une nouvelle proposition. Le lot est alors intégralement annulé. Un clic répété ne crée pas de doublon. Après une interruption réseau lors de l'application, **Vérifier l'enregistrement** relit le reçu serveur avant de réessayer.
 
@@ -135,3 +135,13 @@ Ouvrir **Réglages du site → Admin user**, modifier le nom et/ou saisir un nou
 Après modification, toutes les sessions sont révoquées et l'écran de connexion réapparaît. Utiliser les nouveaux identifiants dans tous les onglets. La session expire aussi au bout de 12 heures, sans prolongation automatique. Les tentatives de connexion et de vérification du mot de passe sont limitées à 5 par adresse et 30 globalement sur 15 minutes, y compris les tentatives réussies.
 
 En cas d'oubli, utiliser la [récupération locale du compte](operations.md#recuperer-le-compte-administrateur). La base ne doit pas être supprimée : elle contient aussi les réglages du fournisseur. Les problèmes d'origine, de clé et de démarrage sont détaillés dans le [dépannage](troubleshooting.md#administration-et-fournisseurs-llm).
+
+## Publier sur le site
+
+Dans **Relecture**, sélectionner **Visibilité sur le site → Public**, puis **Enregistrer et marquer prêt**. Vérifier les liens et le texte avant cette action : les fiches déjà Prêt + Public sont immédiatement actualisées lorsqu'elles sont enregistrées. Repasser en brouillon, archiver ou choisir Confidentiel les retire du public à la requête suivante.
+
+Publier séparément les références que l'on souhaite montrer : une compétence ou une organisation confidentielle n'apparaît pas parce qu'un projet public la cite. Les témoignages exigent une autorisation de diffusion accordée. L'anonymat et l'alias masquent les champs identifiants de leurs fiches. Relire aussi le texte libre : l'application ne peut pas anonymiser automatiquement un nom que vous recopiez dans une description publique.
+
+Pour les médias, **Prêt + Public** est nécessaire sur le média et sur au moins une fiche qui l'utilise avec un rôle public (couverture, galerie, vidéo, pièce jointe ou partage). Un justificatif privé ne constitue pas cet usage. Les notes privées, notes d'autorisation et contraintes confidentielles ne sont jamais envoyées par l'API publique. Un téléchargement déjà effectué par un visiteur ne peut pas être rappelé.
+
+Les pages utilisent les champs déjà renseignés : mise en avant et ordre pour la sélection, dates pour le tri récent, titre/résumé pour la recherche. Les identifiants restent stables dans les URL ; changer le slug redirige vers son adresse actuelle. La recherche générale se trouve dans **Explorer**. L'indexation par les moteurs reste désactivée par défaut, indépendamment de la publication.
