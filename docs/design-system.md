@@ -2,6 +2,10 @@
 
 ## Intention
 
+Toutes les interfaces du site, publiques comme administratives, doivent offrir un design très moderne, soigné et épuré. Les thèmes clair et sombre sont une exigence permanente : une nouvelle vue et ses états de chargement, d’erreur, de succès et de focus doivent être lisibles dans les deux palettes.
+
+La hiérarchie typographique, l’alignement et les espaces structurent les contenus. Les contrôles doivent avoir une utilité identifiable, des libellés explicites et des cibles tactiles confortables. Les nouvelles fonctionnalités doivent réutiliser les variables de couleur et le mécanisme de thème existants.
+
 L'accueil repose sur la typographie, l'espace et quelques traits. Le nom de Thibault Leveau identifie le site ; « Bienvenue. » constitue son seul message principal. La première version ne comporte pas de cartes, de statistiques, de témoignages ou de contenu de présentation inventé.
 
 La page conserve une composition lisible en clair et en sombre. Le point final bleu, le monogramme et les détails du cadre forment les accents visuels. Ils n'ajoutent aucun sens indispensable à la compréhension du contenu.
