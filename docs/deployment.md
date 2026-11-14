@@ -1,5 +1,11 @@
 # Déploiement
 
+## Livraison obligatoire après fusion
+
+Selon `AGENTS.md`, l’agent poursuit chaque demande jusqu’au déploiement en production et à sa vérification, sauf instruction explicite contraire de Thibault. La fusion et le déploiement sont autorisés dès que les tests, la CI et la revue requis sont satisfaits ; aucune confirmation supplémentaire n’est nécessaire pour appliquer cette procédure dans l’architecture approuvée. Les changements documentaires intégrés à l’image sont également publiés.
+
+La CI contrôle la version mais ne lance pas le déploiement. L’agent déploie `main` validé depuis un arbre propre, sauvegarde les données selon le [guide d’exploitation](operations.md#sauvegardes-et-nettoyage), conserve l’image précédente, puis contrôle le site réellement servi. Le compte rendu dans l’issue et à Thibault indique commit, image, URL et résultats. Une clôture automatique de l’issue à la fusion ne dispense pas de cette dernière étape. Si le déploiement est bloqué ou annulé par un retour arrière, indiquer précisément l’état réel et la cause.
+
 ## Cible et prérequis
 
 Le site est déployé depuis le serveur actuel, dans `/home/deploy/projects/new.thibault-leveau.com`. Le service Docker rejoint le réseau existant `multisite_proxy` ; Caddy est géré par la plateforme sous le nom `multisite-platform-caddy-1`.

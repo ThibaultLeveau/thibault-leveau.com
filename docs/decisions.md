@@ -104,10 +104,10 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 **Conséquence.** Compose 2.33.1 ou ultérieur est nécessaire. Ce réseau autorise les sorties Internet générales ; ce n'est pas une liste blanche réseau des fournisseurs. Le code conserve ses URL fixes et refuse les redirections. Le réseau partagé et les autres sites restent inchangés. Les contrôles de déploiement distinguent connectivité, authentification et quota fournisseur.
 
-## Déploiement manuel, contrôles automatisés
+## Déploiement par l’agent après fusion, contrôles automatisés
 
-**Décision.** GitHub Actions vérifie le code, les sorties, les parcours et l'image. Le démarrage en production reste une opération manuelle documentée, avec un tag de commit.
+**Décision.** GitHub Actions vérifie le code, les sorties, les parcours et l'image. Après fusion de la version validée, l’agent exécute la procédure de déploiement avec un tag de commit et vérifie le site en production. Thibault a explicitement demandé cette obligation dans l’[issue #10](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/10) ; `AGENTS.md` l’intègre au workflow, sans confirmation supplémentaire sauf nouvelle évolution d’architecture.
 
-**Raison.** Le volume et le périmètre initiaux ne nécessitent pas d'automatiser des écritures sur un serveur partagé ou sa zone DNS.
+**Raison.** Une fonctionnalité fusionnée doit être disponible sur le site pour constituer une livraison terminée. La procédure existante suffit, sans ajouter de pipeline de déploiement ni modifier les responsabilités des services.
 
-**Conséquence.** Un push sur `main` ne publie pas le site. L'opérateur choisit un commit validé, conserve l'image précédente et effectue les contrôles publics après remplacement. Le service unique peut connaître une courte interruption pendant sa recréation.
+**Conséquence.** Un push sur `main` ne déclenche toujours pas un déploiement par GitHub Actions : l’agent poursuit le travail après fusion, sauvegarde les données, conserve l’image précédente et vérifie les parcours et l’image réellement exécutée après remplacement. Cette obligation couvre aussi la documentation intégrée à l’image, sauf instruction explicite contraire de Thibault. Un blocage ou un retour arrière doit être consigné ; une CI verte ne prouve pas une mise en production. Le service unique peut connaître une courte interruption pendant sa recréation.
