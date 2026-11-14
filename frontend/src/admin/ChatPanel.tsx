@@ -4,11 +4,16 @@ import {
   ApiError,
   errorMessage,
   type ChatMessage,
-  type ChatReply,
   type ProviderSettings,
   type Session,
 } from './api'
 import { Icon } from './Icon'
+import { ProposalCard } from './assistant/ProposalCard'
+import { Attachments } from './assistant/Attachments'
+import type { AssistantReply } from './assistant/types'
+import type { Catalog, Collection, Item } from './content/types'
+
+type ConversationMessage = ChatMessage & { reply?: AssistantReply }
 
 export function ChatPanel({
   settings,
@@ -16,23 +21,38 @@ export function ChatPanel({
   onSettings,
   onSessionEnd,
   visible,
+  onOpen,
 }: {
   settings: ProviderSettings
   session: Session
   visible: boolean
   onSettings: () => void
   onSessionEnd: (message: string) => void
+  onOpen: (kind: Collection, id: number) => void
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const bottom = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const controller = useRef<AbortController | null>(null)
+  const thread = useRef(crypto.randomUUID())
+  const requestId = useRef('')
+  const [includePrivate, setIncludePrivate] = useState(false)
+  const [catalog, setCatalog] = useState<Catalog | null>(null)
+  const [media, setMedia] = useState<Item[]>([])
+  const [uploading, setUploading] = useState(false)
   const provider = settings.providers.find((item) => item.id === settings.provider)!
 
   useEffect(() => () => controller.current?.abort(), [])
+  useEffect(() => {
+    const abort = new AbortController()
+    adminRequest<Catalog>('/content/catalog', { signal: abort.signal })
+      .then(setCatalog)
+      .catch(() => {})
+    return () => abort.abort()
+  }, [])
   useEffect(() => {
     if (visible) bottom.current?.scrollIntoView({ block: 'end', behavior: 'instant' })
   }, [messages, pending, visible])
@@ -40,11 +60,11 @@ export function ChatPanel({
   async function submit(event: FormEvent) {
     event.preventDefault()
     const text = draft.trim()
-    if (!text || pending || !settings.has_api_key) return
-    const next: ChatMessage[] = [...messages, { role: 'user', content: text }]
+    if (!text || pending || uploading || !settings.has_api_key) return
+    const next: ConversationMessage[] = [...messages, { role: 'user', content: text }]
     if (
       next.length > 40 ||
-      next.reduce((total, message) => total + message.content.length, 0) > 40000
+      next.reduce((total, message) => total + message.content.length, 0) > 80000
     ) {
       setError(
         'Cette conversation a atteint sa limite. Démarrez une nouvelle conversation pour continuer.',
@@ -56,14 +76,25 @@ export function ChatPanel({
     setDraft('')
     setPending(true)
     controller.current = new AbortController()
+    requestId.current = crypto.randomUUID()
     try {
-      const reply = await adminRequest<ChatReply>('/chat', {
+      const reply = await adminRequest<AssistantReply>('/assistant/turn', {
         method: 'POST',
         csrf: session.csrf_token,
-        body: { messages: next.map(({ role, content }) => ({ role, content })) },
-        signal: AbortSignal.any([controller.current.signal, AbortSignal.timeout(70_000)]),
+        body: {
+          messages: next.map(({ role, content }) => ({ role, content })),
+          request_id: requestId.current,
+          thread_id: thread.current,
+          include_private_notes: includePrivate,
+          media_ids: media.map((m) => m.id),
+        },
+        signal: AbortSignal.any([controller.current.signal, AbortSignal.timeout(250_000)]),
       })
-      setMessages([...next, { ...reply.message, source: `${reply.provider} · ${reply.model}` }])
+      const content = [reply.message, ...reply.questions.map((q) => q.question)].join('\n')
+      setMessages([
+        ...next,
+        { role: 'assistant', content, reply, source: `${reply.provider} · ${reply.model}` },
+      ])
     } catch (error) {
       if (error instanceof ApiError && error.status === 401)
         onSessionEnd('Votre session a expiré. Reconnectez-vous.')
@@ -77,7 +108,18 @@ export function ChatPanel({
     }
   }
 
-  const suggestions = ['Structurer une idée', 'Écrire un premier jet', 'Explorer une question']
+  async function cancel() {
+    try {
+      await adminRequest(`/assistant/runs/${requestId.current}/cancel`, {
+        method: 'POST',
+        csrf: session.csrf_token,
+      })
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  const suggestions = ['Créer un projet', 'Compléter mon profil', 'Rédiger un article']
   return (
     <section className="chat-panel" aria-label="Chat avec le LLM" hidden={!visible}>
       <div className="chat-toolbar">
@@ -89,11 +131,13 @@ export function ChatPanel({
         <button
           className="text-button new-chat"
           type="button"
-          disabled={pending || !messages.length}
+          disabled={pending || uploading || !messages.length}
           onClick={() => {
             setMessages([])
             setDraft('')
             setError('')
+            thread.current = crypto.randomUUID()
+            setMedia([])
             input.current?.focus()
           }}
         >
@@ -107,15 +151,16 @@ export function ChatPanel({
             <span className="chat-emblem">
               <Icon name="sparkles" size={32} />
             </span>
-            <span className="eyebrow">UNE PAGE BLANCHE, MILLE POSSIBILITÉS</span>
+            <span className="eyebrow">VOS IDÉES PRENNENT FORME</span>
             <h1>
               Que voulez-vous
               <br />
-              explorer aujourd’hui<span className="accent-dot"> ?</span>
+              créer aujourd’hui<span className="accent-dot"> ?</span>
             </h1>
             <p>
-              Une idée à préciser, un texte à écrire,
-              <br className="desktop-break" /> une question à creuser. La conversation commence ici.
+              Décrivez votre parcours, une réalisation ou une offre.
+              <br className="desktop-break" /> Je prépare vos fiches et vous demande les précisions
+              utiles.
             </p>
             <div className="prompt-suggestions">
               {suggestions.map((suggestion) => (
@@ -156,14 +201,58 @@ export function ChatPanel({
                     {message.role === 'user' ? 'Vous' : 'Assistant'}
                     {message.source && <span>{message.source}</span>}
                   </span>
-                  <p>{message.content}</p>
+                  <p>{message.reply?.message ?? message.content}</p>
+                  {message.reply && message.reply.questions.length > 0 && (
+                    <div className="assistant-questions">
+                      <strong>Quelques précisions</strong>
+                      <ol>
+                        {message.reply.questions.map((q, i) => (
+                          <li key={i}>
+                            <p>{q.question}</p>
+                            {q.reason && <span className="muted">{q.reason}</span>}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {message.reply?.proposal && (
+                    <ProposalCard
+                      proposal={message.reply.proposal}
+                      session={session}
+                      catalog={catalog}
+                      disabled={pending || index !== messages.length - 1}
+                      onOpen={onOpen}
+                      onSessionEnd={onSessionEnd}
+                      onChanged={(proposal) =>
+                        setMessages((current) =>
+                          current.map((m, i) =>
+                            i === index && m.reply
+                              ? {
+                                  ...m,
+                                  content:
+                                    proposal.state === 'applied'
+                                      ? `${m.content}\nFiches enregistrées : ${proposal.result?.map((r) => `${r.kind} #${r.id} : ${r.title}`).join(', ')}`
+                                      : m.content,
+                                  reply: { ...m.reply, proposal },
+                                }
+                              : m,
+                          ),
+                        )
+                      }
+                    />
+                  )}
                 </div>
               </article>
             ))}
             {pending && (
-              <div className="thinking" role="status">
-                <span className="thinking-dot" />
-                Le modèle prépare sa réponse…
+              <div className="assistant-pending">
+                <div className="thinking" role="status">
+                  <span className="thinking-dot" />
+                  L’assistant prépare votre contenu…
+                </div>
+                <button type="button" className="text-button" onClick={() => void cancel()}>
+                  Annuler la génération
+                </button>
               </div>
             )}
           </div>
@@ -186,7 +275,7 @@ export function ChatPanel({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Écrivez votre message…"
-            maxLength={4000}
+            maxLength={16000}
             rows={3}
             disabled={pending}
             onKeyDown={(event) => {
@@ -205,16 +294,35 @@ export function ChatPanel({
             <button
               type="submit"
               className="send-button"
-              disabled={pending || !draft.trim() || !settings.has_api_key}
+              disabled={pending || uploading || !draft.trim() || !settings.has_api_key}
               aria-label={pending ? 'Réponse en cours' : 'Envoyer le message'}
             >
               <Icon name="arrow" size={20} />
             </button>
           </div>
         </form>
+        <Attachments
+          items={media}
+          onChange={setMedia}
+          session={session}
+          disabled={pending}
+          onBusy={setUploading}
+          onOpen={onOpen}
+          onSessionEnd={onSessionEnd}
+        />
+        <label className="assistant-private">
+          <input
+            type="checkbox"
+            checked={includePrivate}
+            disabled={pending}
+            onChange={(e) => setIncludePrivate(e.target.checked)}
+          />
+          Inclure les notes privées dans cette demande
+        </label>
         <p className="composer-footnote">
-          L’IA peut se tromper. Votre conversation reste temporaire et disparaît à la fermeture de
-          la page.
+          Les fiches utiles sont transmises au fournisseur. Relisez les propositions avant
+          enregistrement. La conversation reste temporaire ; une demande complexe peut nécessiter
+          plusieurs appels.
         </p>
       </div>
     </section>

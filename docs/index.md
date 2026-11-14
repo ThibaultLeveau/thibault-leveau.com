@@ -2,7 +2,7 @@
 
 Ce guide décrit le fonctionnement et l'exploitation de **new.thibault-leveau.com**, le site personnel de Thibault Leveau. Il accompagne les sources du dépôt : les procédures, paramètres et contrats HTTP évoluent avec le code.
 
-L'accueil public conserve une navigation portant le nom du propriétaire, un sélecteur de thème et le titre « Bienvenue. ». L'administration privée sous `/admin` ajoute un chat LLM, les réglages du fournisseur et la gestion d'un compte unique. La documentation reste publique sous `/documentation/`.
+L'accueil public conserve une navigation portant le nom du propriétaire, un sélecteur de thème et le titre « Bienvenue. ». L'administration privée sous `/admin` réunit le studio de contenus, un assistant LangChain/LangGraph, les préférences de rédaction, les réglages du fournisseur et un compte unique. La documentation reste publique sous `/documentation/`.
 
 ## Choisir son parcours
 
@@ -11,7 +11,7 @@ L'accueil public conserve une navigation portant le nom du propriétaire, un sé
 | Exécuter le projet localement | [Installation et développement](getting-started.md) |
 | Comprendre les services et les fichiers | [Architecture](architecture.md) |
 | Modifier un paramètre | [Configuration](configuration.md) |
-| Activer l'administration et utiliser le chat | [Administration et chat LLM](administration.md) |
+| Activer l'administration et utiliser l'assistant | [Administration et chat LLM](administration.md) |
 | Faire évoluer une route | [Backend et contrat HTTP](backend.md) |
 | Modifier le rendu ou le thème | [Frontend](frontend.md) et [design](design-system.md) |
 | Vérifier une contribution | [Tests et intégration continue](testing.md) |
@@ -40,3 +40,5 @@ Les commandes s'exécutent depuis la racine du dépôt, sauf indication contrair
 `build/`, `.venv/` et `frontend/node_modules/` sont des résultats locaux, non des sources à modifier. Une correction doit porter sur le code ou la configuration qui les génère, puis être reconstruite.
 
 L'en-tête `X-Robots-Tag: noindex, nofollow` demande aux moteurs de ne pas indexer le site. Le contenu demeure public : ne placer aucun secret dans les pages, les exemples, le frontend ou les fichiers de configuration suivis par Git.
+
+L’[assistant de contenus](assistant-design.md) prépare les quinze collections, pose les questions utiles et présente les changements avant leur enregistrement. Les modèles métier et les transactions restent communs aux agents et aux formulaires manuels.

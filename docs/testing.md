@@ -61,6 +61,14 @@ Les contrôles métier couvrent dates réelles et partielles, fin/en cours, cert
 
 Commande ciblée : `uv run --frozen pytest backend/tests/test_content.py`. Elle ne touche aucun volume ni identifiant de production.
 
+### Assistant : contrats, graphe et résilience
+
+`test_assistant.py`, `test_assistant_contracts.py` et `test_assistant_resilience.py` couvrent création/édition des 15 collections, les valeurs des 403 champs et leurs sous-champs, listes conservées, références nouvelles/cycliques, associations réciproques, versions concurrentes, prix exacts et champs nullables. Les propositions sont contrôlées sans mutation métier, puis appliquées atomiquement et de façon idempotente. Les tests couvrent expiration, abandon, remplacement après clarification, révocation de session et rejet d'opérations fournies par le client.
+
+Les tests traversent les véritables agents LangChain, le StateGraph LangGraph et les adaptateurs natifs HTTP (OpenAI Responses, Anthropic et Mistral) avec des transports simulés. Ils vérifient clarification/reprise, délégation par sections, préférences familiales, contexte privé exclu, outils uniquement en lecture, sorties invalides bornées, refus fournisseur nettoyés, délais et annulation serveur avec libération du verrou. Une base peuplée en schéma 1 est migrée ; l'export/restauration préserve préférences et contenus tout en révoquant les propositions.
+
+Commande ciblée : `uv run --frozen pytest backend/tests/test_assistant*.py`. Construire auparavant avec `make build` ; ne pas reconstruire les artefacts pendant ces tests HTTP.
+
 ## Tests navigateur
 
 ### Parcours du studio
@@ -75,7 +83,7 @@ Deux projets Chromium couvrent un bureau de 1440 pixels et un viewport mobile. U
 
 Le test d'initialisation du thème bloque le JavaScript compilé de React. Le thème attendu doit malgré tout être appliqué par `theme-init.js`. La documentation est testée via une page imbriquée, ses liens et la recherche interactive.
 
-Les parcours administratifs couvrent connexion et déconnexion, menus accolés, choix du fournisseur, confidentialité de la clé, modification du compte, chat, erreurs, clavier et thèmes jusqu'à 320 pixels. La plupart contrôlent l'interface avec des routes simulées. Un parcours bureau traverse réellement React, FastAPI, SQLite et l'adaptateur LLM ; seul le HTTP externe est simulé. Sa variante mobile est volontairement ignorée pour éviter deux écritures concurrentes sur les réglages du serveur partagé.
+Les parcours administratifs couvrent connexion et déconnexion, menus accolés, choix du fournisseur, confidentialité de la clé, modification du compte, chat, erreurs, clavier et thèmes jusqu'à 320 pixels. La plupart contrôlent l'interface avec des routes simulées. Un parcours bureau traverse réellement React, FastAPI, SQLite, LangChain et LangGraph ; seul le HTTP externe est simulé. Sa variante mobile est volontairement ignorée pour éviter deux écritures concurrentes sur les réglages du serveur partagé.
 
 Par défaut, Playwright démarre `backend/tests/serve_e2e.py` sur `127.0.0.1:8765`, avec les fichiers de production, une base temporaire et un compte de test fixe. Ce script reste hors du paquet et de l'image de production. Construire les sorties avant une exécution isolée :
 
@@ -108,3 +116,9 @@ Si un test de navigation documentaire échoue alors que MkDocs construit sans er
 Le workflow est déclenché par les pushes sur `main` et les pull requests. Il installe Node.js et uv, restaure les dépendances verrouillées, lance les contrôles et tests navigateur, puis construit l'image Docker. En cas d'échec, le rapport Playwright est publié comme artefact temporaire de la CI.
 
 La CI ne publie pas d'image dans un registre et ne déploie pas le serveur. Un résultat vert valide le commit testé ; la procédure de [déploiement](deployment.md) doit ensuite utiliser ce même commit. Les commandes de vérification publique restent nécessaires après démarrage derrière Caddy.
+
+### Parcours de l'assistant et essai fournisseur
+
+`assistant-workflow.ts`, appelé par le parcours réel administratif, vérifie les préférences (garde de saisie, héritage, réinitialisation, rechargement), un projet avec nouvelle compétence, correction avant application, liens vers les éditeurs, clarification d'un profil délégué, service à tarifs exacts et FAQ, puis article avec fichier téléversé. Les captures concernent les vues réelles, en clair/sombre à 1440, 390 et 320 pixels ; contrôler aussi le focus clavier, les contrastes et l'absence de débordement. Les scénarios partagent volontairement le seul parcours qui configure la clé de test, pour éviter une course avec son retrait.
+
+Les simulations garantissent des scénarios reproductibles, pas la qualité d'un fournisseur réel. Lors d'un changement d'adaptateur, effectuer également un essai borné du modèle configuré avec des données synthétiques et un stockage temporaire. Aucun contenu de démonstration n'est appliqué en production. Consigner modèle, nombre d'appels, délégations, présence de questions/proposition et résultat, sans clé ni contenu privé. L'essai de l'issue #12 a notamment détecté le besoin de Responses pour les outils avec raisonnement de GPT-6 Luna ; le contrôle a été relancé après correction.

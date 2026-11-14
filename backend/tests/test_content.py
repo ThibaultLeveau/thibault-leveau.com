@@ -12,6 +12,7 @@ from test_admin import admin_settings as admin_settings
 from personal_site.admin.store import AdminStore
 from personal_site.config import Settings
 from personal_site.content import backup
+from personal_site.content.migrate import SCHEMA_VERSION
 from personal_site.content.schemas import MODELS
 from personal_site.main import create_app
 
@@ -256,7 +257,7 @@ def test_api_is_private_and_json_limit_remains(admin_client):
 def test_future_migration_fails_closed(admin_settings):
     app = create_app(admin_settings)
     with app.state.admin_store.connect() as db:
-        db.execute("INSERT INTO content_migrations VALUES (2)")
+        db.execute("INSERT INTO content_migrations VALUES (?)", (SCHEMA_VERSION + 1,))
     with pytest.raises(ValueError, match="Version du schéma"):
         create_app(admin_settings)
     with sqlite3.connect(admin_settings.admin_db_path) as db:
@@ -335,7 +336,7 @@ def test_backup_restore_database_files_manifest_and_revoked_sessions(
     )
     directory = tmp_path / "backup"
     manifest = backup.export(admin_settings.admin_db_path, directory, "abcdef123456")
-    assert manifest["schema_version"] == 1 and len(manifest["files"]) == 1
+    assert manifest["schema_version"] == SCHEMA_VERSION and len(manifest["files"]) == 1
     assert backup.verify(directory) == manifest
     restored = tmp_path / "restored"
     backup.restore(directory, restored)

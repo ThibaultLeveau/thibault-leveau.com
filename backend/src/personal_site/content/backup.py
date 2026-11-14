@@ -148,6 +148,7 @@ def restore(source: Path, destination: Path):
             name = file["storage_name"]
             copy_private(source / "media" / name, stage / "media" / name)
         with sqlite3.connect(stage / "admin.sqlite3") as db:
+            db.execute("PRAGMA foreign_keys = ON")
             db.execute("DELETE FROM sessions")
             integrity(db)
         stage.rename(destination)

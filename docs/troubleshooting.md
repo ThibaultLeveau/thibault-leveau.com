@@ -150,3 +150,18 @@ make test-e2e
 ```
 
 Vérifier que le port 8765 est libre. Si une cible externe est volontairement utilisée, définir `PLAYWRIGHT_BASE_URL` ; sinon enlever cette variable pour retrouver le serveur local automatique. Consulter le rapport HTML et les traces en cas d'échec d'un parcours, sans augmenter arbitrairement tous les délais.
+
+## Assistant de contenus
+
+| Symptôme | Contrôle et résolution |
+| --- | --- |
+| Questions au lieu d'une fiche | Préciser la cible, les faits manquants ou demander de conserver un brouillon incomplet. Aucun contenu n'est enregistré pendant la génération. |
+| Modèle incompatible avec les outils | Vérifier l'accès au modèle et ses capacités d'outils structurés dans AI provider. OpenAI utilise Responses pour conserver les outils avec raisonnement ; ne pas forcer Chat Completions sur GPT-6. |
+| Limite de budget ou délai | Réduire le nombre de fiches/champs ou ouvrir une nouvelle conversation. Le tour est borné à 24 appels et 240 secondes. |
+| Une génération est déjà en cours | Attendre ou utiliser Annuler la génération dans l'onglet concerné. L'annulation attend l'arrêt serveur ; un redémarrage n'est pas le premier recours. |
+| Proposition périmée, abandonnée ou expirée | Demander une nouvelle proposition. Le serveur refuse les écritures sur une version obsolète et ne permet aucun écrasement forcé. |
+| Connexion perdue pendant l'enregistrement | Utiliser Vérifier l'enregistrement. Une application répétée de la même proposition est idempotente. Vérifier les fiches dans leurs éditeurs si la session a expiré. |
+| Notes privées absentes | Activer explicitement leur inclusion pour la demande concernée. Les notes d'autorisation suivent la même règle. |
+| Le contenu d'un fichier n'est pas compris | Fournir sa description/transcription dans le message. Seules les métadonnées du média sont transmises, pas le binaire. |
+| Préférences modifiées dans un autre onglet | Recharger leur version enregistrée, puis reprendre les modifications souhaitées. |
+| Ancienne image refusée après déploiement | Suivre le [retour au schéma 1](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image et la sauvegarde correspondantes. |

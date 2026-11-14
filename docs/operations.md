@@ -167,6 +167,22 @@ docker compose exec -T site python -c 'from pathlib import Path; Path("/tmp/admi
 
 L'export binaire utilise `exec -T` car `docker compose cp` ne retrouve pas toujours les fichiers tmpfs sur cette plateforme. Cette procédure SQLite seule est réservée à la base antérieure au studio. Le premier schéma de contenu est additif : revenir à l'ancienne image conserve ses tables et fichiers, mais les rend indisponibles jusqu'au retour à une image compatible.
 
+### Migration de l'assistant : schéma 1 vers 2
+
+Avant de publier l'image de l'assistant, exporter et vérifier base et médias avec **l'image précédente de schéma 1**, puis vérifier sa restauration dans un répertoire isolé. Conserver cette image, sa sauvegarde cohérente et la clé Fernet. La migration `002.sql` ajoute uniquement les préférences et propositions temporaires et préserve compte, clé fournisseur, sessions, contenus et médias.
+
+L'image précédente refuse le schéma 2 : **un changement de tag seul ne suffit pas pour revenir au schéma 1**. Si un retour arrière est nécessaire, sauvegarder d'abord l'état courant avec l'image de schéma 2, arrêter uniquement `site`, restaurer le couple base/médias antérieur avec l'image de schéma 1 et la clé correspondante, puis relancer cette image et effectuer les contrôles. Les écritures postérieures à la sauvegarde ne sont pas présentes dans la restauration ; conserver leur export et les réconcilier avant toute reprise. Ne jamais supprimer manuellement la ligne de migration pour faire démarrer l'ancienne image.
+
+La commande `verify` exige la version de schéma de son image : utiliser l'ancienne image pour vérifier/restaurer une sauvegarde v1 et la nouvelle pour une sauvegarde v2. La restauration révoque les sessions et, par cascade, leurs propositions ; les préférences de rédaction persistent en schéma 2. Un redémarrage ordinaire conserve les propositions tant que leur session et leur expiration le permettent, mais la conversation du navigateur n'est pas restaurée.
+
+### Exploiter l'assistant
+
+Les journaux `assistant_turn` indiquent identifiant, appels, lectures/outils et durée. `assistant_failure` indique uniquement la catégorie d'exception. Ne pas activer de journal des corps des SDK ou de traçage externe : les générations peuvent contenir des données de fiches privées. Les prompts système, historiques et éléments internes de raisonnement ne sont pas stockés dans SQLite.
+
+Le stockage est borné à 50 propositions/reçus de 2 Mio maximum chacun. Une proposition expirée est toujours refusée ; le nettoyage physique intervient à la prochaine création, ou à la suppression de sa session. Les propositions et reçus sont inclus dans les exports privés. Les préférences globales et familiales sont durables. Aucun processus de maintenance supplémentaire n'est requis.
+
+Après déploiement, vérifier le schéma 2, les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+
 ## Récupérer le compte administrateur
 
 Avec un accès local autorisé au serveur, utiliser la commande interactive :

@@ -81,6 +81,7 @@ backend/
 │   ├── api/admin.py       authentification, validation et contrats privés
 │   ├── admin/             stockage, sécurité, adaptateurs LLM, récupération locale
 │   ├── api/content.py     contrats privés des contenus et médias
+│   ├── assistant/         agents, graphe, outils de lecture, propositions et préférences
 │   └── content/           modèles métier, migrations, transactions, fichiers et sauvegardes
 └── tests/                 tests HTTP et démarrage
 frontend/
@@ -106,6 +107,12 @@ En développement, Vite et FastAPI sont séparés pour conserver leur rechargeme
 L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` sont explicitement distribués par FastAPI, `/admin/` redirige vers `/admin`. React choisit la page depuis ce chemin ; les vues de réglages et de contenus sont un état local, sans URL supplémentaire. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
 
 ## Ajouter une fonctionnalité
+
+### Assistant de contenus — issue #12
+
+Thibault a explicitement approuvé la [conception des agents](assistant-design.md) (« J'accepte »), [accord consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679). LangChain et LangGraph s'exécutent dans FastAPI. Le domaine `assistant/` sépare contrats, modèles, outils de lecture, orchestration, propositions et préférences. `content/` reste responsable des validations et écritures métier. Les sous-agents préparent des données structurées ; seule l'application explicite d'une proposition autorise une transaction métier.
+
+Les préférences et propositions temporaires sont conservées dans la même base SQLite, avec migrations et sauvegardes existantes. Les API sont privées sous `/api/admin/assistant/*`, avec session et CSRF. React présente les questions, les différences et les réglages dans `/admin`. Le fournisseur reçoit le contexte utile à la demande ; la conversation reste en mémoire dans l'onglet. Aucun nouveau service, routeur, réseau ou mécanisme d'authentification n'est ajouté.
 
 Une future route API doit être définie dans `api/`, enregistrée dans la fabrique et documentée avec son contrat HTTP. Une nouvelle page nécessite de décider explicitement son routage côté serveur et côté navigateur ; ne pas ajouter un repli global vers `index.html` pour contourner cette décision.
 
