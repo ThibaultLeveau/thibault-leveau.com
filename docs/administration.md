@@ -2,6 +2,8 @@
 
 L'espace privé est accessible à **`/admin`**. Il contient un chat texte, le choix du fournisseur LLM et la gestion d'un compte administrateur unique. L'accueil public et la documentation restent accessibles sans connexion.
 
+La gestion du portfolio, du parcours, des services et des articles fait l'objet de la [proposition de studio de contenus](content-studio.md), en attente d'accord d'architecture. Ces écrans ne sont pas encore disponibles.
+
 ## Première activation
 
 Après installation des dépendances, créer un fichier local `.env` depuis `.env.example` s'il n'existe pas, puis limiter ses permissions :

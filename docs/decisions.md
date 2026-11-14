@@ -2,6 +2,10 @@
 
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
+## Proposition en attente — studio de contenus, issue #8
+
+La [conception du studio de contenus](content-studio.md) propose un modèle relationnel pour le portfolio, le parcours, les services et les publications, des API privées et une médiathèque dans le volume existant. **Aucun accord d'architecture n'est encore consigné.** Cette entrée assure la traçabilité de la proposition ; elle ne remplace pas les décisions en vigueur ci-dessous. L'implémentation attend l'accord explicite de Thibault dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8).
+
 ## Un dépôt et une image applicative
 
 **Décision.** Le backend, le frontend, les pages documentaires et les configurations de construction vivent dans le même dépôt. Ils sont publiés ensemble dans une image applicative.

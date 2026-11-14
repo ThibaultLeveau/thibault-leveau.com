@@ -107,3 +107,5 @@ L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` 
 Une future route API doit être définie dans `api/`, enregistrée dans la fabrique et documentée avec son contrat HTTP. Une nouvelle page nécessite de décider explicitement son routage côté serveur et côté navigateur ; ne pas ajouter un repli global vers `index.html` pour contourner cette décision.
 
 Toute extension au-delà de ce périmètre (plusieurs comptes, service supplémentaire, nouveau stockage ou routage) exige un nouvel accord d'architecture explicite selon `AGENTS.md`. Les raisons des choix actuels sont consignées dans les [décisions techniques](decisions.md).
+
+La [proposition de studio de contenus](content-studio.md#architecture-proposee-et-impacts), suivie dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8), décrit une extension de SQLite, des API privées et du stockage de médias sur le volume existant. Elle est en attente d'accord : le schéma, les routes et les responsabilités décrits sur cette page restent ceux de l'application actuelle.
