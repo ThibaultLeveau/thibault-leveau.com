@@ -104,16 +104,20 @@ Le volume réel se nomme normalement `thibault-personal-site_admin_data`. Vérif
 Utiliser l'API de sauvegarde SQLite pour obtenir une copie cohérente pendant les écritures. Ces commandes créent un fichier privé hors du dépôt :
 
 ```bash
+set -e
 umask 077
 mkdir -p /home/deploy/backups/thibault-personal-site
 admin_backup="/home/deploy/backups/thibault-personal-site/admin-$(date -u +%Y%m%dT%H%M%SZ).sqlite3"
 docker compose exec -T site python -c 'import sqlite3; source=sqlite3.connect("file:/app/data/admin.sqlite3?mode=ro", uri=True); target=sqlite3.connect("/tmp/admin-backup.sqlite3"); source.backup(target); target.close(); source.close()'
-docker compose cp site:/tmp/admin-backup.sqlite3 "$admin_backup"
+docker compose exec -T site python -c 'import sys; from pathlib import Path; sys.stdout.buffer.write(Path("/tmp/admin-backup.sqlite3").read_bytes())' > "$admin_backup"
 chmod 600 "$admin_backup"
+uv run python -c 'import sqlite3,sys; db=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro", uri=True); assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"; assert db.execute("SELECT count(*) FROM account").fetchone()[0]==1; db.close()' "$admin_backup"
 docker compose exec -T site python -c 'from pathlib import Path; Path("/tmp/admin-backup.sqlite3").unlink()'
 ```
 
-Vérifier la copie avec `PRAGMA integrity_check` et la transférer dans le stockage de sauvegarde prévu. Conserver la clé de chiffrement dans un emplacement protégé distinct et noter le commit de l'image avec la sauvegarde. Ne pas envoyer ces fichiers dans une issue ou une PR.
+L'export passe par `exec -T` et une redirection binaire vers le fichier privé : `docker compose cp` ne retrouve pas toujours les fichiers du montage tmpfs `/tmp` sur cette plateforme. Conserver `-T` pour ne pas altérer le flux avec un terminal. Les vérifications contrôlent l'intégrité et la présence du compte avant de supprimer la copie temporaire.
+
+Transférer la copie validée dans le stockage de sauvegarde prévu. Conserver la clé de chiffrement dans un emplacement protégé distinct et noter le commit de l'image avec la sauvegarde. Ne pas envoyer ces fichiers dans une issue ou une PR, ni laisser leur contenu binaire s'afficher dans le terminal.
 
 ### Restaurer une sauvegarde
 
