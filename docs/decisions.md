@@ -84,6 +84,16 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 **Conséquence.** Le déploiement dépend du réseau et de Caddy existants. Une intervention doit préserver les autres sites, leurs routes et les données du proxy.
 
+## Accès sortant dédié aux fournisseurs — issue #6
+
+**Accord.** Thibault a autorisé explicitement le réseau sortant dédié (« Oui j’autorise »), accord consigné dans l'[issue #6](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/6).
+
+**Décision.** Conserver `multisite_proxy` interne pour Caddy et ajouter au seul service `site` un bridge Compose `egress` non interne. Sa `gw_priority: 1` sélectionne la passerelle sortante. Aucun port hôte ni service supplémentaire n'est ajouté.
+
+**Raison.** Le réseau interne empêchait la résolution DNS et les connexions Internet avant même la validation de la clé par le fournisseur. L'accès HTTPS prévu pour le chat exige une route sortante effective.
+
+**Conséquence.** Compose 2.33.1 ou ultérieur est nécessaire. Ce réseau autorise les sorties Internet générales ; ce n'est pas une liste blanche réseau des fournisseurs. Le code conserve ses URL fixes et refuse les redirections. Le réseau partagé et les autres sites restent inchangés. Les contrôles de déploiement distinguent connectivité, authentification et quota fournisseur.
+
 ## Déploiement manuel, contrôles automatisés
 
 **Décision.** GitHub Actions vérifie le code, les sorties, les parcours et l'image. Le démarrage en production reste une opération manuelle documentée, avec un tag de commit.

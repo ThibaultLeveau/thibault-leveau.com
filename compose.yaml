@@ -28,6 +28,8 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
+      egress:
+        gw_priority: 1
       proxy:
         aliases:
           - thibault-personal-site
@@ -38,6 +40,9 @@ services:
         max-file: "3"
 
 networks:
+  egress:
+    driver: bridge
+    internal: false
   proxy:
     external: true
     name: multisite_proxy

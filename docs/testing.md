@@ -30,6 +30,7 @@ cd ..
 | pytest | Contrats HTTP, configuration et fichiers construits | `uv run --frozen pytest` |
 | Playwright | Comportement réel dans Chromium | `make test-e2e` |
 | Docker build | Cohérence de toutes les étapes de l'image | `docker build --tag personal-site:check .` |
+| Docker Compose | Syntaxe et compatibilité de la configuration, sans afficher les secrets | `docker compose config --quiet` |
 | Smoke test | Réponses principales d'un service lancé | `bash scripts/smoke-test.sh` |
 
 Les commandes de contrôle ne réécrivent pas le code source. Pour appliquer volontairement le format Python, utiliser `uv run ruff format backend`, puis inspecter le diff et relancer les contrôles.

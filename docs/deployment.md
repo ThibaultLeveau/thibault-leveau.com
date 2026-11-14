@@ -42,6 +42,8 @@ docker network inspect multisite_proxy
 
 Le réseau doit déjà exister et contenir Caddy. Vérifier son sous-réseau contre `FORWARDED_ALLOW_IPS` dans Compose. Ne pas recréer un réseau partagé pour résoudre une erreur de nom.
 
+Utiliser Compose **2.33.1 ou ultérieur** pour `gw_priority`. Le réseau partagé est interne ; Compose crée aussi le bridge non interne `thibault-personal-site_egress`, propre à cette application, pour la route Internet sortante. Ne pas désactiver l’isolation du réseau partagé.
+
 ## 2. Construire et démarrer l'application
 
 Pour activer l'administration, préparer les variables selon le [guide dédié](administration.md#premiere-activation), avec `SITE_ADMIN_ORIGIN=https://new.thibault-leveau.com`. Garder `.env` privé (`0600`) et sauvegarder `SITE_SECRET_KEY`. Laisser `SITE_ADMIN_ENABLED=false` conserve un déploiement public sans compte. Une configuration d'administration invalide empêche tout le processus de démarrer : la vérifier avant le remplacement du service.
@@ -67,6 +69,15 @@ docker exec multisite-platform-caddy-1 wget -qO- http://thibault-personal-site:8
 ```
 
 Résultat attendu : `{"status":"ok"}`. Cette vérification précède la modification du DNS et permet de distinguer les problèmes applicatifs des problèmes de domaine.
+
+Vérifier également la sortie Internet sans envoyer de clé ni déclencher de génération :
+
+```bash
+docker network inspect thibault-personal-site_egress --format '{{.Internal}}'
+docker compose exec -T site python -c 'import httpx; r=httpx.get("https://api.openai.com/v1/models", timeout=15, trust_env=False, follow_redirects=False); print(r.status_code); assert r.status_code == 401'
+```
+
+Résultats attendus : `false`, puis `401` (authentification absente). Ce refus confirme DNS, connexion et TLS vers OpenAI, mais pas la validité d’une clé, le crédit ou l’accès au modèle. Le contrôle de santé local ne vérifie pas cette connectivité.
 
 ## 3. Installer le bloc Caddy
 
