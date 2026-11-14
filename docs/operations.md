@@ -73,6 +73,8 @@ Dans une nouvelle session, reprendre le tag enregistré dans le compte rendu. `d
 
 Ne pas reconstruire le même tag pour revenir en arrière : cela remplacerait son contenu. L'ajout initial de l'administration crée son schéma sans modifier les données publiques. Revenir à une image antérieure à l'administration conserve le volume, mais ne fournit plus `/admin`. Pour toute évolution ultérieure du schéma, vérifier sa compatibilité ou restaurer la sauvegarde adaptée avant de relancer l'ancienne image. Si Compose a également changé, restaurer sa configuration compatible sans supprimer le volume.
 
+Le réseau `egress` appartient au projet Compose. Restaurer un Compose antérieur à l’issue #6 retire la route Internet du service et rend les appels LLM indisponibles. Ne pas modifier `multisite_proxy` pour compenser et refaire le contrôle HTTPS sortant du [déploiement](deployment.md) après toute modification réseau.
+
 Si la régression concerne Caddy, rétablir uniquement le bloc du domaine concerné et son import depuis la sauvegarde, puis valider et recharger le proxy. Un retour d'image applicative ne répare pas un changement de configuration du proxy ou du DNS.
 
 ## Redémarrer sans changer de version

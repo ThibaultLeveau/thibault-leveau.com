@@ -27,6 +27,8 @@ thibault-personal-site:8000 · FastAPI / Uvicorn
 
 Le DNS de `new.thibault-leveau.com` pointe vers `168.231.82.6`. Le port 8000 du conteneur n'est pas publié sur l'hôte. Le visiteur accède uniquement au proxy sur les ports HTTP et HTTPS.
 
+Le réseau partagé `multisite_proxy` est interne : il transporte les requêtes de Caddy mais ne permet pas les appels Internet. Le service rejoint aussi le bridge dédié `thibault-personal-site_egress`, créé par Compose, dont la passerelle est prioritaire pour les sorties DNS et HTTPS. Cette correction de routage a été explicitement autorisée par Thibault (« Oui j’autorise ») dans l'[issue #6](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/6). Le réseau partagé reste inchangé. Le bridge sortant n'est pas un filtrage par domaine : les destinations LLM fixes sont imposées par le code applicatif.
+
 ## Frontières de responsabilité
 
 | Sous-système | Responsabilités | Ne prend pas en charge |

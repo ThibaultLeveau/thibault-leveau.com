@@ -66,6 +66,6 @@ Les paramètres applicatifs sont préfixés par `SITE_`. L'exemple `.env.example
 
 L'administration est désactivée par défaut. Définir son origine exacte, une clé de chiffrement et les identifiants d'initialisation avant de l'activer. Une fois créé, le compte se gère dans **Réglages du site → Admin user** ; changer les variables d'initialisation ne le réinitialise pas. Les clés LLM se renseignent dans **Réglages du site → AI provider** et ne sont jamais intégrées au frontend.
 
-Le service Compose rejoint le réseau externe `multisite_proxy` sous l'alias `thibault-personal-site`, sans publier de port hôte. Caddy dessert `new.thibault-leveau.com` et gère HTTPS. Les images de production sont identifiées par le commit Git. Le déploiement est manuel ; la CI effectue les contrôles.
+Le service Compose rejoint le réseau externe `multisite_proxy` sous l'alias `thibault-personal-site`, sans publier de port hôte. Un bridge dédié `egress` assure les sorties Internet nécessaires aux fournisseurs LLM ; Compose 2.33.1 ou ultérieur est requis. Caddy dessert `new.thibault-leveau.com` et gère HTTPS. Les images de production sont identifiées par le commit Git. Le déploiement est manuel ; la CI effectue les contrôles.
 
 Consulter les procédures de [déploiement](docs/deployment.md), [retour arrière](docs/operations.md) et [dépannage](docs/troubleshooting.md) avant toute intervention sur le serveur.

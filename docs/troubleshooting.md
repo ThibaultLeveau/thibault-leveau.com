@@ -114,6 +114,7 @@ L'accueil doit porter `Cache-Control: no-cache`. Une image reconstruite avec le 
 | Origine refusée, 403 | L'adresse du navigateur doit correspondre exactement à `SITE_ADMIN_ORIGIN`, schéma et port compris, sans slash final ; ne pas conserver l'origine Vite en production |
 | Jeton de formulaire refusé, 403 | Recharger la page puis se reconnecter si nécessaire ; ne pas désactiver CSRF |
 | Trop de tentatives, 429 | Attendre le délai `Retry-After` : jusqu'à 15 minutes pour les identifiants, une minute pour le chat ; redémarrer ne remet pas les compteurs à zéro |
+| Impossible de joindre le fournisseur, 502 | Vérifier le réseau sortant avec les commandes ci-dessous avant de remplacer la clé |
 | Clé absente, 409 | Enregistrer une clé dans Réglages du site → AI provider |
 | Clé refusée, modèle refusé ou quota atteint, 502 | Vérifier fournisseur, modèle, droits, crédit et validité de la clé dans le compte fournisseur ; utiliser une clé de workspace pour Anthropic |
 | Fournisseur trop lent, 504 | Réessayer plus tard ou choisir un modèle plus rapide ; le délai serveur est limité à 65 secondes |
@@ -121,6 +122,18 @@ L'accueil doit porter `Cache-Control: no-cache`. Une image reconstruite avec le 
 | SQLite en lecture seule ou permission refusée | Le volume doit être inscriptible par `10001:10001`, répertoire `0700`, base `0600` ; conserver la racine en lecture seule |
 
 Le mot de passe oublié se récupère avec la [commande locale](operations.md#recuperer-le-compte-administrateur). Une clé fournisseur ne peut pas être relue depuis l'interface : le champ vide après enregistrement est normal. Les conversations disparaissent au rechargement ; seuls le compte et les réglages sont durables.
+
+### Vérifier la connexion sortante
+
+```bash
+docker network inspect multisite_proxy --format '{{.Internal}}'
+docker network inspect thibault-personal-site_egress --format '{{.Internal}}'
+docker compose exec -T site python -c 'import httpx; r=httpx.get("https://api.openai.com/v1/models", timeout=15, trust_env=False, follow_redirects=False); print(r.status_code); assert r.status_code == 401'
+```
+
+Les résultats attendus sont `true`, `false`, puis `401` : la requête n’envoie aucune clé et vérifie uniquement DNS, réseau et TLS. `Temporary failure in name resolution` ou `Network is unreachable` avant une réponse HTTP indique un problème réseau, pas une clé refusée. Le service doit rejoindre les deux réseaux décrits dans l’[architecture](architecture.md), avec la passerelle prioritaire sur `egress`. Recréer le service depuis le Compose validé si ce rattachement manque ; ne pas modifier le réseau partagé, publier de port ou désactiver TLS pour contourner la panne.
+
+Après rétablissement du réseau, vérifier le chat dans l’administration : une erreur d’authentification, de modèle ou de quota peut encore nécessiter une action dans le compte fournisseur. Ne jamais copier les clés dans les issues, les journaux ou les captures ; remplacer toute clé divulguée dans l’interface prévue.
 
 ## La construction stricte MkDocs échoue
 
