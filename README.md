@@ -1,9 +1,10 @@
 # Thibault Leveau
 
-Socle du site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Une page d'accueil sobre, un thème clair ou sombre et une documentation technique intégrée.
+Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Un accueil sobre et une administration privée avec chat LLM, réglages du fournisseur et gestion du compte, en thèmes clair et sombre.
 
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)
+- Administration : [/admin](https://new.thibault-leveau.com/admin), à activer selon le [guide d'administration](docs/administration.md)
 - Sources : [ThibaultLeveau/thibault-leveau.com](https://github.com/ThibaultLeveau/thibault-leveau.com)
 
 ## Démarrer
@@ -40,12 +41,14 @@ Avant le premier test navigateur, installer Chromium et ses dépendances systèm
 ```text
 Navigateur → Caddy (HTTPS) → FastAPI :8000
                               ├── /                  React compilé
+                              ├── /admin             Administration React
+                              ├── /api/admin/*       Sessions, réglages et chat
                               ├── /assets/           CSS / JavaScript
                               ├── /api/health        JSON de santé
                               └── /documentation/    MkDocs compilé
 ```
 
-Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. Aucune base de données n'est nécessaire.
+Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. L'administration activée conserve son compte, ses sessions et ses réglages dans SQLite sur le volume `admin_data`. FastAPI chiffre la clé API et contacte le fournisseur LLM ; les conversations restent en mémoire dans le navigateur.
 
 ```text
 backend/src/personal_site/  Application et contrat HTTP
@@ -60,6 +63,8 @@ scripts/                   Construction, contrôles et vérification publique
 ## Configuration et production
 
 Les paramètres applicatifs sont préfixés par `SITE_`. L'exemple `.env.example` et le [guide de configuration](docs/configuration.md) décrivent leur sens. L'indexation est désactivée par défaut pour toutes les réponses ; cela ne protège pas l'accès au site.
+
+L'administration est désactivée par défaut. Définir son origine exacte, une clé de chiffrement et les identifiants d'initialisation avant de l'activer. Une fois créé, le compte se gère dans **Réglages du site → Admin user** ; changer les variables d'initialisation ne le réinitialise pas. Les clés LLM se renseignent dans **Réglages du site → AI provider** et ne sont jamais intégrées au frontend.
 
 Le service Compose rejoint le réseau externe `multisite_proxy` sous l'alias `thibault-personal-site`, sans publier de port hôte. Caddy dessert `new.thibault-leveau.com` et gère HTTPS. Les images de production sont identifiées par le commit Git. Le déploiement est manuel ; la CI effectue les contrôles.
 

@@ -30,7 +30,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
     SITE_STATIC_DIR=/app/build \
     SITE_INDEXABLE=false
 WORKDIR /app
-RUN groupadd --gid 10001 site && useradd --uid 10001 --gid site --no-create-home site
+RUN groupadd --gid 10001 site && useradd --uid 10001 --gid site --no-create-home site \
+    && mkdir /app/data && chown site:site /app/data && chmod 700 /app/data
 COPY --from=python-build /app/.venv /app/.venv
 COPY --from=frontend /app/build/web /app/build/web
 COPY --from=documentation /app/build/documentation /app/build/documentation

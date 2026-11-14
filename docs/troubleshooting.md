@@ -38,7 +38,7 @@ Vérifier ensuite que `SITE_STATIC_DIR` désigne le répertoire parent absolu `b
 
 En développement, le backend peut démarrer sans fichiers statiques. Ouvrir le serveur Vite sur le port 5173 pour le développement frontend, ou exécuter `make build` puis redémarrer FastAPI pour tester la distribution de production.
 
-Une URL arbitraire qui renvoie 404 est normale : seule la page d'accueil est définie. Ne pas corriger ce comportement avec un repli global vers `index.html`.
+Une URL arbitraire qui renvoie 404 est normale : seules les pages `/` et `/admin` sont définies hors documentation. Ne pas corriger ce comportement avec un repli global vers `index.html`.
 
 ## Caddy renvoie 502
 
@@ -101,6 +101,26 @@ curl --silent --show-error --output /dev/null --dump-header - https://new.thibau
 ```
 
 L'accueil doit porter `Cache-Control: no-cache`. Une image reconstruite avec le même tag sans recréation du conteneur ne remplace pas automatiquement le processus en cours. Utiliser des tags de commit et la procédure de mise à jour documentée.
+
+## Administration et fournisseurs LLM
+
+| Symptôme | Vérification / correction |
+| --- | --- |
+| Message « administration non activée », API 503 | Configurer `SITE_ADMIN_ENABLED`, les identifiants initiaux, l'origine et la clé Fernet selon le [guide](administration.md), puis recréer le service |
+| Démarrage refusé pour mot de passe initial absent | Une base neuve exige `SITE_ADMIN_PASSWORD` ; une base existante ne doit pas être remplacée par erreur |
+| Démarrage refusé sur `SITE_SECRET_KEY` | Vérifier le format Fernet et retrouver la clé correspondant à la base ; voir la [récupération](operations.md#cle-de-chiffrement-perdue-ou-rotation) |
+| Connexion 401 | Vérifier les identifiants actuels ; les variables d'initialisation ne remplacent pas le compte existant |
+| Session 401 après modification du compte | Comportement attendu : toutes les sessions ont été révoquées ; se reconnecter |
+| Origine refusée, 403 | L'adresse du navigateur doit correspondre exactement à `SITE_ADMIN_ORIGIN`, schéma et port compris, sans slash final ; ne pas conserver l'origine Vite en production |
+| Jeton de formulaire refusé, 403 | Recharger la page puis se reconnecter si nécessaire ; ne pas désactiver CSRF |
+| Trop de tentatives, 429 | Attendre le délai `Retry-After` : jusqu'à 15 minutes pour les identifiants, une minute pour le chat ; redémarrer ne remet pas les compteurs à zéro |
+| Clé absente, 409 | Enregistrer une clé dans Réglages du site → AI provider |
+| Clé refusée, modèle refusé ou quota atteint, 502 | Vérifier fournisseur, modèle, droits, crédit et validité de la clé dans le compte fournisseur ; utiliser une clé de workspace pour Anthropic |
+| Fournisseur trop lent, 504 | Réessayer plus tard ou choisir un modèle plus rapide ; le délai serveur est limité à 65 secondes |
+| Réglages perdus après recréation | Vérifier le montage `admin_data:/app/data`, le projet Compose et le chemin de base ; ne pas créer une nouvelle base pour masquer le problème |
+| SQLite en lecture seule ou permission refusée | Le volume doit être inscriptible par `10001:10001`, répertoire `0700`, base `0600` ; conserver la racine en lecture seule |
+
+Le mot de passe oublié se récupère avec la [commande locale](operations.md#recuperer-le-compte-administrateur). Une clé fournisseur ne peut pas être relue depuis l'interface : le champ vide après enregistrement est normal. Les conversations disparaissent au rechargement ; seuls le compte et les réglages sont durables.
 
 ## La construction stricte MkDocs échoue
 

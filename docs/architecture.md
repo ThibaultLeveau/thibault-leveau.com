@@ -15,6 +15,10 @@ Caddy · plateforme existante
    ▼
 thibault-personal-site:8000 · FastAPI / Uvicorn
    ├── /                      build/web/index.html
+   ├── /admin                 même HTML, interface React chargée à la demande
+   ├── /api/admin/*           authentification, réglages et chat
+   │      ├── SQLite          /app/data/admin.sqlite3 · volume admin_data
+   │      └── HTTPS sortant    OpenAI, Anthropic ou Mistral
    ├── /assets/                build/web/assets/
    ├── /fonts/                 build/web/fonts/
    ├── /api/health             réponse JSON
@@ -27,15 +31,19 @@ Le DNS de `new.thibault-leveau.com` pointe vers `168.231.82.6`. Le port 8000 du 
 
 | Sous-système | Responsabilités | Ne prend pas en charge |
 | --- | --- | --- |
-| React | Composition de l'accueil et état du thème | Routage serveur, certificat TLS |
+| React | Accueil, administration, formulaires, conversation en mémoire et thème | Secrets persistants, authentification serveur, appel direct aux LLM |
 | Vite / Tailwind | Compilation TypeScript, CSS et assets | Service HTTP de production |
-| FastAPI | API, fichiers statiques, erreurs HTTP, politique d'indexation et cache | Construction à la volée du frontend |
+| FastAPI | API, sessions, SQLite, chiffrement, appels LLM, fichiers et politiques HTTP | Construction à la volée du frontend |
 | MkDocs Material | HTML documentaire, navigation, index de recherche | Processus permanent en production |
 | Docker Compose | Image, paramètres, redémarrage et réseau applicatif | Gestion du DNS |
 | Caddy | HTTPS, compression et reverse proxy | Logique métier |
 | Hostinger DNS | Résolution du sous-domaine | Exécution de l'application |
 
-L'absence de base de données est intentionnelle. Le seul état propre à l'interface est la préférence de thème enregistrée dans le navigateur. Aucune migration de données ni sauvegarde de données métier n'est nécessaire pour cette version.
+L'évolution administrative a été explicitement approuvée par Thibault (« Je valide »), accord consigné dans l'[issue #3](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/3). Elle ajoute stockage, authentification, routes et appels LLM dans le service existant, sans nouveau framework ni service. Le périmètre est un seul administrateur et une seule instance Uvicorn.
+
+SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
+
+Les messages ne sont pas enregistrés en base. React les garde en mémoire et transmet l'historique nécessaire au backend à chaque envoi ; FastAPI l'envoie au fournisseur choisi. La politique de conservation de ce fournisseur s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage` ; seule la préférence de thème y est conservée.
 
 ## Chaîne de construction
 
@@ -66,13 +74,16 @@ backend/
 │   ├── main.py            fabrique et assemblage
 │   ├── config.py          paramètres validés
 │   ├── delivery.py        distribution et cache
-│   └── api/health.py      contrat de santé
+│   ├── api/health.py      contrat de santé
+│   ├── api/admin.py       authentification, validation et contrats privés
+│   └── admin/             stockage, sécurité, adaptateurs LLM, récupération locale
 └── tests/                 tests HTTP et démarrage
 frontend/
 ├── public/                fichiers copiés tels quels
 ├── src/
 │   ├── components/        navigation et sélecteur de thème
-│   ├── pages/             accueil
+│   ├── pages/             accueil et composition de l'administration
+│   ├── admin/             client API, connexion, formulaires et chat
 │   ├── theme/             état du thème React
 │   └── styles/            police, couleurs et composition
 └── tests/e2e/             parcours navigateur
@@ -87,10 +98,10 @@ Les paramètres Python, groupes de dépendances et outils de qualité sont centr
 
 En développement, Vite et FastAPI sont séparés pour conserver leur rechargement respectif. Le proxy de Vite traite `/api` ; MkDocs possède son propre serveur de prévisualisation. En production, les trois sorties partagent un seul domaine et un seul processus applicatif.
 
-L'application n'utilise pas de routeur client : `/` est l'unique page du site. Un chemin inconnu renvoie une erreur 404. Cette règle évite de masquer une erreur de lien ou un asset manquant en retournant par erreur le document de l'accueil.
+L'application n'utilise pas de routeur client supplémentaire : `/` et `/admin` sont explicitement distribués par FastAPI, `/admin/` redirige vers `/admin`. React choisit la page depuis ce chemin ; les vues de réglages sont un état local, sans URL supplémentaire. Un chemin inconnu, y compris `/admin/inconnu`, renvoie 404.
 
 ## Ajouter une fonctionnalité
 
 Une future route API doit être définie dans `api/`, enregistrée dans la fabrique et documentée avec son contrat HTTP. Une nouvelle page nécessite de décider explicitement son routage côté serveur et côté navigateur ; ne pas ajouter un repli global vers `index.html` pour contourner cette décision.
 
-L'ajout d'un formulaire, d'une base de données, d'une authentification ou de services externes modifie les contraintes d'exploitation. Ces évolutions demandent leurs propres paramètres, tests et procédures. Le socle n'en préinstalle aucune. Les raisons des choix actuels sont consignées dans les [décisions techniques](decisions.md).
+Toute extension au-delà de ce périmètre (plusieurs comptes, service supplémentaire, nouveau stockage ou routage) exige un nouvel accord d'architecture explicite selon `AGENTS.md`. Les raisons des choix actuels sont consignées dans les [décisions techniques](decisions.md).

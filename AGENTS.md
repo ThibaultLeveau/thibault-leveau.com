@@ -2,6 +2,14 @@
 
 Ces règles s’appliquent à l’ensemble du dépôt et à chaque demande de travail.
 
+## Design et documentation obligatoires
+
+- Maintenir un design très moderne, soigné et épuré sur toutes les interfaces, y compris l’administration.
+- Prévoir systématiquement des thèmes clair et sombre cohérents avec le [guide de design](docs/design-system.md) et les variables visuelles existantes.
+- Vérifier la lisibilité, les contrastes, la navigation clavier, les états de focus et le rendu responsive dans les deux thèmes, sur ordinateur et mobile.
+- Conserver une hiérarchie visuelle claire, des espacements généreux et des interactions simples ; éviter les ornements et informations sans utilité.
+- Documenter chaque fonctionnalité et toute évolution de configuration, d’API, de sécurité ou d’exploitation dans les pages MkDocs concernées.
+
 ## Architecture obligatoire
 
 - Lire les documents pertinents avant toute modification : [README](README.md), [architecture](docs/architecture.md), [décisions techniques](docs/decisions.md) et [tests](docs/testing.md).

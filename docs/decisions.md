@@ -22,7 +22,7 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 **Décision.** Les fichiers absents et routes inconnues répondent 404. Aucun repli universel vers l'accueil n'est configuré.
 
-**Raison.** Il n'existe qu'une page du site et aucun routage client à préserver. Une erreur de ressource doit rester visible dans les tests et les outils réseau.
+**Raison.** L'accueil et l'administration ont chacun une route explicite, sans routeur client supplémentaire. Une erreur de ressource doit rester visible dans les tests et les outils réseau.
 
 **Conséquence.** L'ajout de pages nécessite de définir leur routage. Il ne suffit pas d'ajouter une URL dans le navigateur pour qu'elle soit distribuée par le serveur.
 
@@ -36,11 +36,37 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 ## Pas de stockage serveur initial
 
-**Décision.** Aucune base de données, authentification ou administration n'est intégrée. Le thème est stocké dans le navigateur lorsqu'il l'autorise.
+**Décision initiale, remplacée pour l'administration par l'accord de l'issue #3.** Le premier accueil n'intégrait ni base de données ni compte. Le thème reste stocké dans le navigateur lorsqu'il l'autorise.
 
 **Raison.** L'accueil ne collecte pas de données et n'a pas de contenu dynamique à administrer.
 
-**Conséquence.** Il n'y a pas de migration métier ni de données utilisateur à sauvegarder. Une future collecte de données devra introduire explicitement ses règles d'accès, de conservation et d'exploitation.
+**Conséquence actuelle.** L'accueil public reste sans collecte ; l'administration introduit les données et procédures décrites ci-dessous.
+
+## Administration dans le service existant — issue #3
+
+**Accord.** Thibault a explicitement validé l'évolution proposée (« Je valide »), consignée dans l'[issue #3](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/3). L'accord couvre `/admin`, les API privées FastAPI, un compte unique, SQLite durable, sessions sécurisées et clé LLM chiffrée.
+
+**Décision.** Réutiliser React/Vite et FastAPI, sans routeur ni service additionnel. Initialiser le compte par variables d'environnement uniquement lorsque la base est vide ; conserver ensuite les changements de nom et de mot de passe dans SQLite sur le volume `admin_data`. L'administration reste désactivée par défaut.
+
+**Raison.** Un simple fichier d'environnement ne peut pas conserver les modifications depuis l'interface sans modifier la configuration du déploiement. SQLite apporte des transactions et une persistance locale adaptée à ce compte unique.
+
+**Conséquence.** La base et `SITE_SECRET_KEY` demandent des sauvegardes. Les variables initiales ne sont pas un mécanisme de récupération ; une commande locale dédiée réinitialise le compte et révoque les sessions. Ne pas supprimer le volume pour changer un mot de passe. Plusieurs instances ou comptes nécessiteraient une autre décision.
+
+## Sessions, mot de passe et clé fournisseur
+
+**Décision.** Hacher les mots de passe avec scrypt (sel aléatoire, N=32768, r=8, p=3), stocker seulement l'empreinte SHA-256 des jetons de session aléatoires, expirer les sessions après 12 heures et toutes les révoquer après une modification du compte. Le cookie est `HttpOnly`, `SameSite=Strict`, limité à `/api/admin` et `Secure` en HTTPS. Les mutations exigent l'origine exacte et un jeton CSRF ; la connexion exige l'origine exacte. HTTP est réservé à la boucle locale.
+
+**Décision.** Chiffrer la clé fournisseur avec Fernet (`cryptography`) et une clé serveur distincte de SQLite. L'API expose seulement sa présence ; une valeur vide conserve la clé et un retrait explicite la supprime. Les pages privées sont sans cache, sans indexation et protégées par CSP. Les tentatives d'identifiants et de chat sont limitées en base pour conserver ces limites au redémarrage.
+
+**Conséquence.** Perdre `SITE_SECRET_KEY` empêche de déchiffrer la clé fournisseur ; la conserver lors des déploiements. Ce chiffrement protège une copie de la base seule, pas un serveur compromis disposant des deux éléments. La récupération et les sauvegardes sont décrites dans [Exploitation](operations.md).
+
+## Chat texte et destinations LLM fixes
+
+**Décision.** FastAPI appelle les API natives OpenAI, Anthropic ou Mistral via HTTPX, avec des URL fixes, sans redirection ni proxy hérité de l'environnement. Les identifiants de modèle sont configurables. L'interface attend une réponse complète en texte, sans streaming, outils, fichiers ni exécution de HTML.
+
+**Raison.** Ces adaptateurs répondent au besoin de chat simple et gardent la clé côté serveur sans multiplier les SDK. Les destinations fixes évitent qu'un paramètre utilisateur devienne une URL arbitraire appelée par le serveur.
+
+**Conséquence.** Une conversation reste dans la mémoire de l'onglet ; rechargement, déconnexion, changement de fournisseur ou de modèle la réinitialisent. Les limites de taille et de durée sont explicites. La conservation et les coûts externes dépendent du fournisseur ; les tests simulent ses réponses et n'engagent aucune dépense API.
 
 ## Site public, indexation désactivée
 
@@ -48,7 +74,7 @@ Cette page conserve les raisons des choix structurants. Une évolution qui chang
 
 **Raison.** Le sous-domaine sert la première version du site avant un éventuel élargissement du contenu.
 
-**Conséquence.** Ce mécanisme s'adresse aux moteurs qui le respectent ; il ne restreint pas l'accès aux visiteurs. Activer l'indexation est un changement explicite de configuration, distinct de la publication technique.
+**Conséquence.** Ce mécanisme s'adresse aux moteurs qui le respectent ; il ne restreint pas l'accès aux visiteurs. Activer l'indexation est distinct de la publication technique. `/admin` et `/api/admin/*` restent toujours non indexables ; leurs données sont protégées par la session, indépendamment de cette directive.
 
 ## Proxy existant et réseau privé
 

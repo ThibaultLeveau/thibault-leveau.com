@@ -36,7 +36,7 @@ Définir un identifiant d'image depuis le commit courant :
 
 ```bash
 export IMAGE_TAG="$(git rev-parse --short=12 HEAD)"
-docker compose config
+docker compose config --quiet
 docker network inspect multisite_proxy
 ```
 
@@ -44,13 +44,15 @@ Le réseau doit déjà exister et contenir Caddy. Vérifier son sous-réseau con
 
 ## 2. Construire et démarrer l'application
 
+Pour activer l'administration, préparer les variables selon le [guide dédié](administration.md#premiere-activation), avec `SITE_ADMIN_ORIGIN=https://new.thibault-leveau.com`. Garder `.env` privé (`0600`) et sauvegarder `SITE_SECRET_KEY`. Laisser `SITE_ADMIN_ENABLED=false` conserve un déploiement public sans compte. Une configuration d'administration invalide empêche tout le processus de démarrer : la vérifier avant le remplacement du service.
+
 ```bash
 docker compose build --pull site
 docker compose up -d --no-build --wait --wait-timeout 120
 docker compose ps
 ```
 
-Le Dockerfile compile le frontend, construit MkDocs en mode strict, installe le backend et copie les sorties dans l'image finale. Le processus s'exécute sous un utilisateur non privilégié ; Compose impose un système de fichiers racine en lecture seule et fournit un `/tmp` temporaire.
+Le Dockerfile compile le frontend, construit MkDocs en mode strict, installe le backend et copie les sorties dans l'image finale. Le processus s'exécute sous l'utilisateur `10001:10001` ; Compose impose une racine en lecture seule, un `/tmp` temporaire et le volume durable `admin_data` sur `/app/data`. Le répertoire initial de l'image appartient à cet utilisateur avec des permissions `0700` ; Docker transmet ces permissions lors de la création du volume. SQLite est créé en `0600`.
 
 Le contrôle de santé appelle `/api/health` depuis le conteneur. Si `up --wait` échoue, inspecter les journaux avant de poursuivre :
 
@@ -128,6 +130,10 @@ bash scripts/smoke-test.sh
 La première réponse doit rediriger vers HTTPS. La seconde doit réussir sans désactiver la vérification du certificat, avec l'en-tête `X-Robots-Tag: noindex, nofollow`. Le smoke test contrôle l'accueil, la santé, la documentation, l'index de recherche et des erreurs 404.
 
 Ouvrir enfin l'accueil sur mobile et bureau, tester le thème et lancer une recherche dans la documentation. Un contrôle JSON de santé seul ne suffit pas à valider l'expérience complète.
+
+Si l'administration est activée, vérifier `/admin`, une connexion HTTPS, les réglages et la déconnexion. Un visiteur sans session doit recevoir 401 sur `/api/admin/session`, et le cookie obtenu après connexion doit être `Secure`, `HttpOnly` et `SameSite=Strict`. Ne pas enregistrer les identifiants dans des captures ou traces. La validation d'un véritable appel LLM exige une clé et peut être facturée ; les tests automatisés utilisent un fournisseur simulé.
+
+Une fois le compte initialisé, retirer la valeur du mot de passe initial de `.env` et recréer le service avec le même tag. Conserver la clé Fernet : le compte existant est relu depuis SQLite et n'a plus besoin de son mot de passe initial en environnement.
 
 Pour consulter le certificat présenté :
 

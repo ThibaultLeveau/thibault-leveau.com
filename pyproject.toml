@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "Site personnel de Thibault Leveau"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+  "cryptography>=46,<49",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
   "pydantic-settings>=2.7,<3",
   "uvicorn[standard]>=0.34,<1",
 ]

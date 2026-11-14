@@ -20,6 +20,8 @@ index.html
 
 L'accueil ne charge pas de contenu distant et ne dépend pas de l'API de santé pour s'afficher. Il ne contient ni routeur client, ni gestionnaire d'état global supplémentaire, ni texte biographique.
 
+Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le même `ThemeProvider`. Le bundle administratif est distinct de celui de l'accueil. Les vues `chat`, `provider` et `account` sont gérées par état React, sans bibliothèque de routage supplémentaire.
+
 ## Organisation des composants
 
 | Élément | Responsabilité |
@@ -31,8 +33,24 @@ L'accueil ne charge pas de contenu distant et ne dépend pas de l'API de santé 
 | `ThemeProvider` | État React, préférence système et persistance |
 | `theme.ts` | Type `Theme`, clé de stockage, validation et accès au contexte |
 | `app.css` | Palette, police locale, typographie, espacements et variantes responsive |
+| `pages/AdminPage.tsx` | Session, navigation à deux menus latéraux, thème et changement de vue |
+| `admin/LoginForm.tsx` | Connexion et état d'erreur |
+| `admin/SettingsForms.tsx` | Fournisseur, modèle, clé et modification du compte |
+| `admin/ChatPanel.tsx` | Conversation temporaire, envoi, attente, erreurs et limites |
+| `admin/api.ts` | Appels relatifs, cookie, CSRF et erreurs HTTP |
+| `styles/admin.css` | Palette administrative, menus, formulaires, chat et variantes mobiles |
 
 Les icônes SVG de l'interface sont intégrées au code et marquées comme décoratives lorsque le bouton ou le lien possède déjà un nom accessible.
+
+## État privé et interactions
+
+Au montage, `/api/admin/session` détermine si l'écran doit afficher la connexion ou l'espace authentifié. Les requêtes utilisent `credentials: same-origin` et `cache: no-store`. Le cookie reste inaccessible au JavaScript ; le jeton CSRF est conservé uniquement dans l'état React et envoyé avec les mutations. Une réponse 401 ramène à la connexion.
+
+Les formulaires affichent leurs erreurs, désactivent leurs commandes pendant l'enregistrement et annoncent les succès. Le champ de clé est vide après sauvegarde ; il n'est jamais initialisé avec une clé reçue. Le formulaire du compte exige le mot de passe actuel et vérifie la confirmation du nouveau. Une mise à jour réussie ferme l'espace courant.
+
+Le chat reste monté mais masqué pendant les réglages afin de conserver la conversation lors d'une navigation interne. Un changement de fournisseur ou de modèle change sa clé React et réinitialise son état. Les textes sont rendus avec l'échappement React, sans HTML ni Markdown exécutable. En cas d'échec, le message non abouti redevient un brouillon. Un rechargement efface l'historique ; aucun message, identifiant ou secret n'est enregistré dans `localStorage`.
+
+Sur petit écran, le second menu se superpose au contenu devenu `inert`. À l'ouverture, le focus va à sa première commande ; `Échap` ferme le menu et revient au bouton des réglages. Chaque icône interactive conserve un nom accessible, même lorsque son texte est masqué.
 
 ## Cycle du thème
 

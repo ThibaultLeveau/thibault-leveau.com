@@ -54,6 +54,10 @@ npm --prefix frontend run dev -- --host 127.0.0.1
 
 Le backend en développement peut démarrer avant la première construction. Il répond à `/api/health` même si les fichiers de l'accueil n'existent pas encore. Pour tester leur distribution par FastAPI, effectuer la construction ci-dessous.
 
+## Travailler sur l'administration
+
+Suivre la [première activation](administration.md#premiere-activation) pour initialiser un compte local et une clé de chiffrement. Avec `make dev`, utiliser `SITE_ADMIN_ORIGIN=http://127.0.0.1:5173` et ouvrir `/admin` sur le serveur Vite. SQLite utilise `data/admin.sqlite3`, exclu de Git. Ne pas partager une base ou une clé de production avec les tests : leurs fixtures créent leurs propres données temporaires et simulent les fournisseurs.
+
 ## Travailler sur la documentation
 
 Dans un terminal indépendant :

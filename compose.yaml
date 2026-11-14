@@ -11,8 +11,16 @@ services:
       SITE_STATIC_DIR: /app/build
       SITE_INDEXABLE: ${SITE_INDEXABLE:-false}
       SITE_LOG_LEVEL: ${SITE_LOG_LEVEL:-info}
+      SITE_ADMIN_ENABLED: ${SITE_ADMIN_ENABLED:-false}
+      SITE_ADMIN_USERNAME: ${SITE_ADMIN_USERNAME:-admin}
+      SITE_ADMIN_PASSWORD: ${SITE_ADMIN_PASSWORD:-}
+      SITE_SECRET_KEY: ${SITE_SECRET_KEY:-}
+      SITE_ADMIN_ORIGIN: ${SITE_ADMIN_ORIGIN:-https://new.thibault-leveau.com}
+      SITE_ADMIN_DB_PATH: /app/data/admin.sqlite3
       FORWARDED_ALLOW_IPS: 172.19.0.0/16
     read_only: true
+    volumes:
+      - admin_data:/app/data
     tmpfs:
       - /tmp:size=16m,mode=1777
     cap_drop:
@@ -33,3 +41,6 @@ networks:
   proxy:
     external: true
     name: multisite_proxy
+
+volumes:
+  admin_data:
