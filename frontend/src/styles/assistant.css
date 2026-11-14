@@ -123,11 +123,25 @@
   align-items: center;
   gap: 12px;
 }
+.assistant-options {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+.assistant-options summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
+.assistant-options p {
+  margin: 6px 0 0;
+  max-width: 65ch;
+}
 .assistant-private {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 0;
   font-size: 0.78rem;
   line-height: 1.5;
   color: var(--muted);

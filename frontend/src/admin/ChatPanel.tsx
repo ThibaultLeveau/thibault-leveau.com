@@ -310,20 +310,26 @@ export function ChatPanel({
           onOpen={onOpen}
           onSessionEnd={onSessionEnd}
         />
-        <label className="assistant-private">
-          <input
-            type="checkbox"
-            checked={includePrivate}
-            disabled={pending}
-            onChange={(e) => setIncludePrivate(e.target.checked)}
-          />
-          Inclure les notes privées dans cette demande
-        </label>
-        <p className="composer-footnote">
-          Les fiches utiles sont transmises au fournisseur. Relisez les propositions avant
-          enregistrement. La conversation reste temporaire ; une demande complexe peut nécessiter
-          plusieurs appels.
-        </p>
+        <details className="assistant-options">
+          <summary>
+            Options de la demande{includePrivate ? ' · Notes privées incluses' : ''}
+          </summary>
+          <label className="assistant-private">
+            <input
+              type="checkbox"
+              checked={includePrivate}
+              disabled={pending}
+              aria-describedby="private-notes-help"
+              onChange={(e) => setIncludePrivate(e.target.checked)}
+            />
+            Autoriser l’IA à utiliser les notes privées des fiches
+          </label>
+          <p id="private-notes-help">
+            Désactivé par défaut. Si vous cochez cette option, les annotations internes des
+            fiches utiles à votre demande peuvent être envoyées à {provider.name} pour être
+            consultées ou modifiées.
+          </p>
+        </details>
       </div>
     </section>
   )
