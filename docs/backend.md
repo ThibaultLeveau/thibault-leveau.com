@@ -75,7 +75,43 @@ L'historique du chat alterne `user` et `assistant`, commence et termine par `use
 
 Les tentatives d'identifiants sont limitées à 5 par adresse et 30 globalement sur 15 minutes ; le chat à 10 par minute. Les compteurs SQLite survivent au redémarrage. Une seule réponse LLM peut être en cours dans l'instance. Les identifiants et les clés ne sont jamais journalisés par le code applicatif ; ne pas activer une capture des corps HTTP dans le proxy ou l'outillage de production.
 
-## Stockage et appels externes
+## API du studio de contenus
+
+Le préfixe `/api/admin/content` réutilise la session, l'origine et le jeton CSRF ci-dessus. Le statut « prêt » et la diffusion envisagée « public » n'ouvrent aucun accès public. Collections fermées : `projects`, `experiences`, `skills`, `technologies`, `educations`, `certifications`, `services`, `posts`, `publications`, `testimonials`, `awards`, `profiles`, `organizations`, `taxonomies`, `media`.
+
+| Méthode et suffixe | Entrée / résultat |
+| --- | --- |
+| `GET /catalog` | Schémas des quinze formulaires, libellés, sections, options et limites ; aucun type modifiable par l'utilisateur |
+| `GET /{collection}` | `q`, `status` (`draft`, `ready`, `archived`), `sort` (`updated`, `title`, `order`, `chronology`), `page` ≥ 1, `limit` de 1 à 100, `nature`, `related` facultatifs ; retourne `items`, `total`, `page`, `limit` |
+| `POST /{collection}` | `{entry: {...}}` ; crée un brouillon et renvoie 201 |
+| `GET /{collection}/{id}` | `entry`, `version`, `status`, dates serveur, `errors` de complétude, `usages`, libellés `references` et métadonnées de fichier éventuelles |
+| `PUT /{collection}/{id}` | `{entry: {...}, version: n, as_draft: false}` ; remplace atomiquement la fiche et ses sous-listes ; `as_draft: true` permet de revenir en brouillon |
+| `POST /{collection}/validate` | `{entry: {...}}` ; contrôle la saisie courante sans l'enregistrer |
+| `POST /{collection}/{id}/check` | Contrôle la complétude de la version enregistrée |
+| `POST /{collection}/{id}/transition` | `{version: n, status: "draft" / "ready" / "archived"}` ; relecture obligatoire pour `ready`, restauration d'une archive en `draft` |
+| `POST /{collection}/{id}/duplicate` | `{version: n}` ; nouveau brouillon et slug, références réutilisées ; indisponible pour le profil unique et les médias |
+| `DELETE /{collection}/{id}?version=n` | 204 uniquement pour une archive à jour, sans usages ; les objets partagés ne sont pas supprimés |
+| `GET /media/usage` | Taille cumulée et quota, en octets |
+| `POST /media/upload?filename=...` | Corps binaire brut et `Content-Type` autorisé ; 201 et fiche média. Pas de multipart ni de nom de chemin client |
+| `GET /media/{id}/file` | Fichier privé par identifiant, sans cache ; PDF en téléchargement |
+
+Les listes excluent les archives par défaut, les corps longs et les notes privées. Recherche sans distinction de casse ou d'accents. Le profil est unique, même archivé. Les champs communs et propres à chaque entité sont décrits dans le [studio](content-studio.md). `GET /catalog` donne leur format précis ; les propriétés inconnues sont refusées. Les références sont `{id, context}`, avec `release` pour une technologie et les informations d'usage pour un média. Une version devient périmée aussi lorsqu'une association réciproque est modifiée depuis l'autre fiche.
+
+Une erreur métier renvoie `detail` et `errors: [{path, message, code}]`, sans recopier la valeur fautive. Exemple de chemin : `media.0.alt`. Un conflit de version ou d'unicité renvoie 409 ; une purge bloquée contient aussi les `usages`. Une structure invalide ou une relecture incomplète renvoie 422. Aucun conflit ne force un écrasement.
+
+### Fichiers et limites
+
+L'exception à la limite JSON de 256 Kio concerne exclusivement `POST /media/upload`. La session et le CSRF sont contrôlés avant la lecture du flux. Un seul téléversement est traité à la fois dans l'instance ; le quota est vérifié dans une transaction SQLite avant de rendre le fichier visible. Les fichiers temporaires utilisent le volume durable, pas le tmpfs de 16 Mio. Échec et annulation nettoient le temporaire.
+
+Formats : JPEG, PNG, WebP (10 Mio, 20 millions de pixels, image fixe), PDF (20 Mio), MP4 et WebM (100 Mio). Le contenu des images est décodé et vérifié avec [Pillow](https://pillow.readthedocs.io/en/stable/reference/Image.html). PDF et vidéos ont un contrôle de signature ; cela ne garantit ni leur innocuité ni leur décodage complet. Pas d'antivirus, de transcodage, de téléchargement d'URL distante ou d'iframe automatique. SVG et HTML sont refusés. Le serveur utilise un nom aléatoire, conserve taille et SHA-256 et ne prend jamais un chemin de fichier depuis la requête. Un format non accepté renvoie 415 ; une taille ou un quota dépassé renvoie 413.
+
+### Persistance et migrations
+
+`content/schemas.py` définit les modèles métier ; `catalog.py` contient les correspondances fermées ; `store.py` gère les transactions. `content_entries` porte le socle, une table par collection les champs spécifiques, des tables ordonnées les sous-listes et des clés étrangères les relations. Aucun document JSON indifférencié n'est utilisé comme base métier. Les clés étrangères sont actives à chaque connexion.
+
+`content/migrations/001.sql` est un instantané immuable du premier schéma. Les migrations s'exécutent dans une transaction et leur registre `content_migrations` doit être une suite connue ; une version future bloque le démarrage. La première migration conserve compte, clé chiffrée, sessions et limites existantes. La [sauvegarde cohérente](operations.md#sauvegarde-du-studio-base-et-medias) couvre SQLite et les fichiers.
+
+## Adaptateurs LLM
 
 `admin/store.py` gère les transactions SQLite et `admin/security.py` le hachage, les jetons et la limite de corps. `admin/llm.py` adapte les messages aux API natives : [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages/create) et [Mistral Chat](https://docs.mistral.ai/api/endpoint/chat).
 

@@ -5,7 +5,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     secret_key: SecretStr = SecretStr("")
     admin_db_path: Path = Path(__file__).resolve().parents[3] / "data" / "admin.sqlite3"
     admin_origin: str = "http://127.0.0.1:5173"
+    media_quota_bytes: int = Field(default=1024**3, gt=0, le=1024**4)
 
     @field_validator("static_dir", "admin_db_path")
     @classmethod

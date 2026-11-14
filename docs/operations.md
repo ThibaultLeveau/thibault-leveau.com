@@ -34,7 +34,7 @@ La première valeur est le nom de l'image avec son tag ; la deuxième est son id
 ## Mettre à jour
 
 1. Vérifier que la version actuelle est saine et enregistrer son image.
-   Si l'administration est active, sauvegarder sa base et vérifier la disponibilité de sa clé de chiffrement.
+   Si l'administration est active, sauvegarder sa base et ses médias, puis vérifier la disponibilité de sa clé de chiffrement.
 2. Placer le dépôt sur le commit à publier, sans perdre de modifications locales.
 3. Exécuter les contrôles du [guide de tests](testing.md).
 4. Construire avec un nouveau tag de commit.
@@ -101,39 +101,71 @@ Les sources et fichiers de verrouillage sont conservés dans Git. Préserver aus
 
 Le volume réel se nomme normalement `thibault-personal-site_admin_data`. Vérifier les montages du conteneur si le nom du projet Compose a été modifié. Ne pas exécuter `docker compose down -v` : cette option supprime les données persistantes.
 
-### Sauvegarder SQLite pendant le fonctionnement
+### Sauvegarde du studio : base et médias
 
-Utiliser l'API de sauvegarde SQLite pour obtenir une copie cohérente pendant les écritures. Ces commandes créent un fichier privé hors du dépôt :
+`python -m personal_site.content.backup` fournit `export`, `verify` et `restore`. L'export utilise l'API SQLite et réserve les écritures pendant la copie des médias : base et fichiers décrivent ainsi le même instant. Le manifeste contient le format, la version de schéma, le commit fourni, la taille et le SHA-256 de chaque fichier et de la base. Aucun secret n'est affiché. Le répertoire de destination doit être nouveau.
+
+Sur un poste de développement, avec `SITE_ADMIN_DB_PATH` correctement configuré :
+
+```bash
+umask 077
+studio_backup="/chemin/prive/studio-$(date -u +%Y%m%dT%H%M%SZ)"
+uv run python -m personal_site.content.backup export "$studio_backup" --commit "$(git rev-parse HEAD)"
+uv run python -m personal_site.content.backup verify "$studio_backup"
+```
+
+En production, utiliser l'image réellement déployée et un répertoire hôte dédié, accessible à l'UID/GID `10001:10001` du conteneur. Exemple de préparation par l'opérateur autorisé :
+
+```bash
+sudo install -d -m 0700 -o 10001 -g 10001 /home/deploy/backups/thibault-personal-site
+```
+
+Prévoir une fenêtre de maintenance courte, surtout pour les gros fichiers : une requête d'écriture durant un export long peut dépasser son attente SQLite. Le serveur est arrêté dans cet exemple et le conteneur de maintenance utilise le même volume. Ne pas arrêter le proxy partagé.
 
 ```bash
 set -e
-umask 077
-mkdir -p /home/deploy/backups/thibault-personal-site
-admin_backup="/home/deploy/backups/thibault-personal-site/admin-$(date -u +%Y%m%dT%H%M%SZ).sqlite3"
-docker compose exec -T site python -c 'import sqlite3; source=sqlite3.connect("file:/app/data/admin.sqlite3?mode=ro", uri=True); target=sqlite3.connect("/tmp/admin-backup.sqlite3"); source.backup(target); target.close(); source.close()'
-docker compose exec -T site python -c 'import sys; from pathlib import Path; sys.stdout.buffer.write(Path("/tmp/admin-backup.sqlite3").read_bytes())' > "$admin_backup"
-chmod 600 "$admin_backup"
-uv run python -c 'import sqlite3,sys; db=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro", uri=True); assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"; assert db.execute("SELECT count(*) FROM account").fetchone()[0]==1; db.close()' "$admin_backup"
-docker compose exec -T site python -c 'from pathlib import Path; Path("/tmp/admin-backup.sqlite3").unlink()'
-```
-
-L'export passe par `exec -T` et une redirection binaire vers le fichier privé : `docker compose cp` ne retrouve pas toujours les fichiers du montage tmpfs `/tmp` sur cette plateforme. Conserver `-T` pour ne pas altérer le flux avec un terminal. Les vérifications contrôlent l'intégrité et la présence du compte avant de supprimer la copie temporaire.
-
-Transférer la copie validée dans le stockage de sauvegarde prévu. Conserver la clé de chiffrement dans un emplacement protégé distinct et noter le commit de l'image avec la sauvegarde. Ne pas envoyer ces fichiers dans une issue ou une PR, ni laisser leur contenu binaire s'afficher dans le terminal.
-
-### Restaurer une sauvegarde
-
-Choisir une copie vérifiée et une image compatible, conserver la base actuelle avant écrasement, puis arrêter le service. Dans la même session où `admin_backup` désigne la copie à restaurer :
-
-```bash
-test -f "$admin_backup"
+site_container_id="$(docker compose ps -q site)"
+studio_image="$(docker inspect --format '{{.Config.Image}}' "$site_container_id")"
+export IMAGE_TAG="${studio_image##*:}"
+studio_backup_name="studio-$(date -u +%Y%m%dT%H%M%SZ)"
 docker compose stop site
-docker compose run --rm -T --no-deps --entrypoint python site -c 'import sys, sqlite3; from pathlib import Path; p=Path("/app/data/admin.sqlite3"); p.write_bytes(sys.stdin.buffer.read()); p.chmod(0o600); db=sqlite3.connect(p); db.execute("DELETE FROM sessions"); db.commit(); db.close()' < "$admin_backup"
+docker compose run --rm -T --no-deps --volume /home/deploy/backups/thibault-personal-site:/backup site python -m personal_site.content.backup export "/backup/$studio_backup_name" --commit "$IMAGE_TAG"
+docker compose run --rm -T --no-deps --volume /home/deploy/backups/thibault-personal-site:/backup:ro site python -m personal_site.content.backup verify "/backup/$studio_backup_name"
 docker compose up -d --no-build --wait --wait-timeout 120
 bash scripts/smoke-test.sh
 ```
 
-Le conteneur de restauration utilise le même utilisateur `10001:10001` et le même volume. Avant le redémarrage, `SITE_SECRET_KEY` doit correspondre à la copie. La suppression des sessions restaurées impose une nouvelle connexion. Vérifier ensuite le compte et la présence de la clé dans l'interface, sans l'afficher.
+Le tag doit être le commit de l'image ; si son origine ne permet pas de l'établir, utiliser explicitement `--commit unknown` et documenter ce manque. Le montage `/backup` évite le tmpfs `/tmp` de 16 Mio. Si une commande échoue après l'arrêt, diagnostiquer l'erreur puis relancer le service avec le même tag : `set -e` ne le redémarre pas automatiquement.
+
+Transférer le répertoire validé vers le stockage de sauvegarde prévu, avec ses permissions privées. Sauvegarder `SITE_SECRET_KEY` séparément. Une copie de SQLite seule ne suffit plus dès qu'un média a été téléversé. Les médias archivés sont inclus ; les URL externes ne sont pas téléchargées. Un arrêt brutal peut laisser un temporaire `.upload-*` ou un fichier orphelin non référencé : l'export n'inclut que les références validées. Nettoyer ces fichiers seulement après arrêt, sauvegarde et comparaison avec `media_files` ; ne jamais effacer le répertoire de médias en bloc.
+
+### Vérifier une restauration isolée
+
+La commande vérifie intégrité SQLite, clés étrangères, version et empreintes. Elle refuse une destination existante, copie vers un nouveau répertoire et révoque toutes les sessions dans la copie restaurée. Le manifeste d'origine reste une preuve de l'export ; la base restaurée change volontairement après révocation des sessions.
+
+```bash
+uv run python -m personal_site.content.backup verify "$studio_backup"
+uv run python -m personal_site.content.backup restore "$studio_backup" /chemin/prive/restauration-test
+```
+
+Démarrer une instance locale isolée avec `SITE_ADMIN_DB_PATH=/chemin/prive/restauration-test/admin.sqlite3`, l'ancienne clé Fernet et l'origine locale exacte. Vérifier connexion, réglages sans révéler la clé, projet lié à une expérience et ouverture d'un média. Ne pas pointer cette instance de test vers le volume actif.
+
+Pour restaurer la production : vérifier la copie isolée et l'image compatible, sauvegarder l'état actuel, arrêter le service, puis remplacer **ensemble** `admin.sqlite3` et `media/` dans le volume. Conserver le couple précédent dans un répertoire privé avant le remplacement ; ne pas écraser une base en cours d'utilisation. Utiliser un conteneur de maintenance avec le volume et la sauvegarde montée en lecture seule, en conservant l'utilisateur `10001:10001`, les dossiers `0700` et les fichiers `0600`. La commande `restore` peut préparer `/app/data/restauration-verifiee` avant cette bascule contrôlée. Ne pas démarrer l'application entre les deux déplacements. Révoquer les sessions est déjà fait par `restore` ; configurer la clé Fernet correspondante, puis redémarrer et vérifier les parcours.
+
+### Avant la première migration vers le studio
+
+L'ancienne image ne contient pas encore la commande de sauvegarde du studio et la base ne contient pas de médias. Sauvegarder SQLite par son API avant de publier l'image qui applique la migration initiale :
+
+```bash
+umask 077
+admin_backup="/chemin/prive/admin-avant-studio.sqlite3"
+docker compose exec -T site python -c 'import sqlite3; source=sqlite3.connect("file:/app/data/admin.sqlite3?mode=ro", uri=True); target=sqlite3.connect("/tmp/admin-backup.sqlite3"); source.backup(target); target.close(); source.close()'
+docker compose exec -T site python -c 'import sys; from pathlib import Path; sys.stdout.buffer.write(Path("/tmp/admin-backup.sqlite3").read_bytes())' > "$admin_backup"
+uv run python -c 'import sqlite3,sys; db=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro", uri=True); assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"; db.close()' "$admin_backup"
+docker compose exec -T site python -c 'from pathlib import Path; Path("/tmp/admin-backup.sqlite3").unlink()'
+```
+
+L'export binaire utilise `exec -T` car `docker compose cp` ne retrouve pas toujours les fichiers tmpfs sur cette plateforme. Cette procédure SQLite seule est réservée à la base antérieure au studio. Le premier schéma de contenu est additif : revenir à l'ancienne image conserve ses tables et fichiers, mais les rend indisponibles jusqu'au retour à une image compatible.
 
 ## Récupérer le compte administrateur
 

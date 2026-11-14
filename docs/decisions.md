@@ -2,9 +2,15 @@
 
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
-## Proposition en attente — studio de contenus, issue #8
+## Studio de contenus — issue #8
 
-La [conception du studio de contenus](content-studio.md) propose un modèle relationnel pour le portfolio, le parcours, les services et les publications, des API privées et une médiathèque dans le volume existant. **Aucun accord d'architecture n'est encore consigné.** Cette entrée assure la traçabilité de la proposition ; elle ne remplace pas les décisions en vigueur ci-dessous. L'implémentation attend l'accord explicite de Thibault dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8).
+**Accord.** Thibault a répondu « Ok » à la demande explicite de validation le 14 novembre 2026, accord consigné dans l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8#issuecomment-6878880881).
+
+**Décision.** La [conception du studio de contenus](content-studio.md) définit des tables métier relationnelles dans SQLite, des migrations versionnées, des API privées et une médiathèque dans `/app/data/media` sur le volume existant. Les sauvegardes associent base, fichiers et manifeste. Les sessions et protections CSRF existantes sont réutilisées. Les vues restent internes à `/admin`.
+
+**Raison.** Des fiches typées et des références partagées permettent une saisie complète sans dupliquer compétences, organisations ou médias. Le service et les outils actuels suffisent.
+
+**Conséquence.** Les migrations, la cohérence base/fichiers et les quotas deviennent des responsabilités de FastAPI. Le contenu reste privé, même au statut « Prêt ». Le rendu public et ses routes restent hors périmètre. L'implémentation et ses vérifications sont consignées dans la [PR #9](https://github.com/ThibaultLeveau/thibault-leveau.com/pull/9).
 
 ## Un dépôt et une image applicative
 

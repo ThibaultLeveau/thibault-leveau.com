@@ -53,7 +53,23 @@ Les fixtures construisent l'application en production avec le dossier `build/`. 
 
 Ces tests utilisent le client HTTP de l'application : ils n'ouvrent pas de port public et ne vérifient pas le certificat TLS. Une construction manquante est une erreur de préparation du test, pas une raison de remplacer les artefacts par des fichiers factices.
 
+### Studio de contenus : tests HTTP
+
+`test_content.py` vérifie les quinze collections sur une vraie base temporaire : création, lecture, modification, duplication autorisée, archivage, restauration et suppression. Les parcours contrôlent les projets professionnel et personnel, les associations réciproques, le mauvais type de référence, la portée des catégories, les usages inverses, la suppression bloquée, les versions concurrentes et la persistance au redémarrage.
+
+Les contrôles métier couvrent dates réelles et partielles, fin/en cours, certifications en préparation ou expirées, prix exacts dont zéro, consentement des témoignages, brouillon et passage prêt. Les tests de fichiers couvrent session, CSRF, formats trompeurs, SVG refusé, taille/quota, nom de chemin hostile, alternative d'image et lecture privée. La migration est testée depuis une base administrative peuplée (compte, clé chiffrée et session conservés) et refuse une version future. Un export/restauration vérifie manifeste, empreintes, intégrité, références, fichiers et révocation des sessions ; une copie altérée est refusée.
+
+Commande ciblée : `uv run --frozen pytest backend/tests/test_content.py`. Elle ne touche aucun volume ni identifiant de production.
+
 ## Tests navigateur
+
+### Parcours du studio
+
+`content.spec.ts` traverse React, FastAPI, SQLite et les fichiers sans simuler le stockage. Il crée un média, un projet professionnel avec expérience, organisation créée depuis le sélecteur, compétence, technologie, lieu, lien et image ; puis un service avec formule et FAQ et un article long. Il vérifie passage prêt, aperçu sans notes privées ni HTML exécutable, rechargement, conflit, garde de navigation, saisie conservée après reconnexion, duplication, archivage et restauration.
+
+Les deux projets navigateur exécutent ce parcours avec des noms distincts, sans conflit de données. Les captures couvrent clair/sombre à 1440, 1024, 390 et 320 pixels, les six sections à 320 pixels et un viewport effectif équivalent au zoom 200 % sur bureau. Les couleurs de texte de l'éditeur sont mesurées dans les deux thèmes (rapport joint au test) ; le focus clavier et les débordements sont contrôlés. Le fournisseur est volontairement indisponible dans ce parcours pour vérifier l'indépendance des contenus.
+
+### Accueil, réglages et documentation
 
 Deux projets Chromium couvrent un bureau de 1440 pixels et un viewport mobile. Un scénario spécifique vérifie une largeur de 320 pixels. Les parcours couvrent l'accueil, la police locale, l'absence de débordement, le clavier, les préférences système, la persistance du thème et un stockage navigateur indisponible.
 

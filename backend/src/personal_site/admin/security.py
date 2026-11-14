@@ -45,6 +45,7 @@ class AdminBodyLimit:
         if (
             scope["type"] != "http"
             or not scope["path"].startswith("/api/admin/")
+            or (scope["path"] == "/api/admin/content/media/upload" and scope["method"] == "POST")
             or scope["method"] not in {"POST", "PUT", "PATCH"}
         ):
             return await self.app(scope, receive, send)

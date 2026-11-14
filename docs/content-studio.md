@@ -1,12 +1,12 @@
-# Studio de contenus — proposition
+# Studio de contenus
 
-**Statut : proposition à valider, pas une fonctionnalité disponible.** Cette conception répond à l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8). L'administration actuelle contient encore uniquement le chat et les réglages. Les tables, API et fichiers décrits ici ne seront ajoutés qu'après l'accord explicite de Thibault, conformément à `AGENTS.md`.
+**Conception approuvée et implémentée dans la PR #9.** Cette conception répond à l'[issue #8](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8). Thibault a explicitement approuvé l'architecture le 14 novembre 2026 (« Ok »), [accord consigné](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/8#issuecomment-6878880881), conformément à `AGENTS.md`. Le [guide d’administration](administration.md) décrit le parcours utilisateur ; les [contrats HTTP](backend.md#api-du-studio-de-contenus) et les [tests](testing.md) décrivent le comportement livré et ses contrôles.
 
 ## Intention et périmètre
 
 Renseigner une information une seule fois, puis la relier aux réalisations qui l'illustrent. Une expérience décrit un poste ou une mission ; un projet décrit une réalisation ; un service décrit une prestation proposée. Une compétence décrit un savoir-faire, une technologie un outil. Ces distinctions évitent de confondre un employeur avec un client, un diplôme avec une certification, ou une responsabilité avec un résultat.
 
-La demande porte sur la gestion privée de ces contenus. Le studio permettra création, lecture, modification, duplication et archivage, ainsi que la gestion des médias. Le statut **Prêt** attestera une relecture éditoriale ; il ne publiera rien sur l'accueil actuel. Le rendu public, ses URL et l'indexation demanderont une conception distincte. Les champs de présentation et de référencement seront néanmoins conservés pour éviter une nouvelle saisie.
+La demande porte sur la gestion privée de ces contenus. Le studio permet création, lecture, modification, duplication et archivage, ainsi que la gestion des médias. Le statut **Prêt** atteste une relecture éditoriale ; il ne publie rien sur l'accueil actuel. Le rendu public, ses URL et l'indexation demanderont une conception distincte. Les champs de présentation et de référencement seront néanmoins conservés pour éviter une nouvelle saisie.
 
 La saisie restera utilisable sans fournisseur LLM. Aucun contenu biographique, client, témoignage ou résultat ne sera inventé pour remplir la base. Les éventuels exemples de maquette seront explicitement fictifs.
 
@@ -16,7 +16,7 @@ Les familles parcours, projets, compétences, formations, certifications, distin
 
 [Schema.org Service](https://schema.org/Service) distingue la prestation, son public, sa zone et les offres associées. Cela motive une fiche service avec des formules tarifaires, plutôt qu'un simple titre et un prix. [CreativeWork](https://schema.org/CreativeWork) et [EducationalOccupationalCredential](https://schema.org/EducationalOccupationalCredential) aident à distinguer contenu publié, auteur, médias, justificatif et organisme délivrant une qualification. Ces références ne constituent pas une promesse de compatibilité ou de données structurées publiques.
 
-Le regroupement des champs en étapes et la validation à proximité des champs suivent les recommandations W3C sur les [formulaires longs](https://www.w3.org/WAI/tutorials/forms/multi-page/) et la [validation](https://www.w3.org/WAI/tutorials/forms/validation/). Les règles métier ci-dessous sont une proposition propre à ce site, pas une obligation de ces standards.
+Le regroupement des champs en étapes et la validation à proximité des champs suivent les recommandations W3C sur les [formulaires longs](https://www.w3.org/WAI/tutorials/forms/multi-page/) et la [validation](https://www.w3.org/WAI/tutorials/forms/validation/). Les règles métier ci-dessous sont propres à ce site, pas une obligation de ces standards.
 
 ## Navigation latérale
 
@@ -49,7 +49,7 @@ Chaque collection présente titre, contexte utile, état éditorial, éventuelle
 
 ## Objets et champs
 
-Les tables nommées ci-dessous sont **proposées**, pas présentes en base. Les sous-listes structurées sont ordonnées et éditables avec Ajouter, Retirer, Monter et Descendre ; le glisser-déposer ne peut pas être leur seul contrôle.
+Les tables nommées ci-dessous structurent les données dans SQLite. Les sous-listes structurées sont ordonnées et éditables avec Ajouter, Retirer, Monter et Descendre ; le glisser-déposer ne peut pas être leur seul contrôle.
 
 ### Socle commun
 
@@ -61,7 +61,7 @@ Les liens sont des lignes nommées avec type (site, dépôt, démo, documentatio
 
 ### Projets
 
-| Groupe | Champs proposés |
+| Groupe | Champs |
 | --- | --- |
 | Identité | Titre, slug, résumé, description complète, catégorie, étiquettes, langue |
 | Contexte | Nature professionnelle, personnelle, associative ou académique ; caractère open source séparé ; problème initial, objectifs, public concerné, contraintes et confidentialité |
@@ -92,7 +92,7 @@ Exemple de distinction, sans préremplir la base : « concevoir une API » est u
 
 ### Formations et certifications
 
-| Objet | Champs proposés |
+| Objet | Champs |
 | --- | --- |
 | `educations` | Intitulé, établissement réutilisable, type (diplôme, formation continue, cours, apprentissage personnel), domaine, niveau ou diplôme visé, début/fin/précision/en cours, durée facultative, résultat (suivie, obtenue, interrompue), description, programme, projets/travaux, compétences, lieux/modalité, liens et justificatifs |
 | `certifications` | Nom, organisme délivrant, catégorie, référence/identifiant du justificatif facultatif, obtention, expiration ou « sans expiration » ou « inconnue », état obtenue/en préparation/révoquée, description, compétences attestées, lien de vérification, badge, justificatif privé et formation associée facultative |
@@ -111,7 +111,7 @@ Relations : compétences promises, technologies pertinentes, projets servant de 
 
 Un seul blog suffit : **Articles** est une collection de contenus, pas une table `blogs` supplémentaire sans usage.
 
-| Objet | Champs proposés |
+| Objet | Champs |
 | --- | --- |
 | `posts` | Titre, slug, chapô, corps long en Markdown avec aperçu, auteur (profil), langue, couverture, catégorie, tags, dates éditoriales facultatives, sources/liens, galerie, projets/services/compétences associés, SEO, URL canonique pour une republication |
 | `publications` | Type (conférence, podcast, interview, article externe, livre, autre), titre, résumé, description, rôle/auteurs, organisme ou événement, date, durée facultative, langue, lieu ou en ligne, URL de publication, identifiant DOI/ISBN facultatif, support, enregistrement, ressources et projets/compétences associés |
@@ -120,7 +120,7 @@ Les dates éditoriales des articles n'activent aucune planification. Une publica
 
 ### Témoignages, distinctions et profil
 
-| Objet | Champs proposés |
+| Objet | Champs |
 | --- | --- |
 | `testimonials` | Citation exacte, nom d'affichage de l'auteur ou anonymat explicite, fonction, organisation, date, relation professionnelle, source, lien de preuve facultatif, portrait facultatif, état de l'autorisation de diffusion et note privée ; projets, expériences et services concernés |
 | `awards` | Intitulé, organisme, date, catégorie/classement facultatif, description de la distinction, projet ou formation concernés, lien et justificatif |
@@ -144,7 +144,7 @@ Les couvertures et galeries sont facultatives. Si une image informative est util
 
 ## Relations et organisation en base
 
-Proposition : une table `content_entries` porte les champs communs des fiches et un type immuable. Les tables métier ci-dessus portent les champs spécifiques, avec une relation un-à-un vers cette entrée. Les références entre objets pointent sur leur table métier, pour empêcher de relier une certification à la place d'une expérience. Les petits champs structurés sont typés ; aucun formulaire ne demande du JSON brut.
+Une table `content_entries` porte les champs communs des fiches et un type immuable. Les tables métier ci-dessus portent les champs spécifiques, avec une relation un-à-un vers cette entrée. Les références entre objets pointent sur leur table métier, pour empêcher de relier une certification à la place d'une expérience. Les petits champs structurés sont typés ; aucun formulaire ne demande du JSON brut.
 
 | Relation | Cardinalité et comportement |
 | --- | --- |
@@ -168,7 +168,7 @@ Les recherches normalisent la casse et les accents. Les noms similaires déclenc
 
 ## Éditeur de fiche
 
-Les projets ont six sections accessibles dans l'ordre ou directement : **Essentiel**, **Contexte et dates**, **Contribution et résultats**, **Compétences et stack**, **Liens et médias**, **Relecture**. Sur grand écran, une barre locale et un encart compact de relecture accompagnent le formulaire. Sur mobile, les sections se replient en une navigation compacte au-dessus du formulaire et la relecture rejoint le flux. Les autres entités reprennent cette structure avec leurs propres sections et moins de champs.
+Les projets ont six sections accessibles dans l'ordre ou directement : **Essentiel**, **Contexte et dates**, **Contribution et résultats**, **Compétences et stack**, **Liens et médias**, **Relecture**. Sur grand écran, une barre locale donne accès à chaque section, dont la relecture. Sur mobile, les sections se replient en une navigation compacte au-dessus du formulaire et la relecture rejoint le flux. Les autres entités reprennent cette structure avec leurs propres sections et moins de champs.
 
 Le haut de page indique la fiche, son état et les changements non enregistrés. **Enregistrer le brouillon** reste disponible depuis toutes les sections ; **Vérifier la fiche** révèle les erreurs bloquantes et les conseils facultatifs. Une erreur conduit à la section et au champ concernés, même s'ils étaient masqués. L'aperçu présente le contenu prévu pour affichage, sans notes privées ni boutons factices de publication.
 
@@ -213,15 +213,15 @@ Un contrôle de complétude expose une liste lisible d'informations manquantes, 
 
 ## Architecture proposée et impacts
 
-### Périmètre d'accord demandé
+### Périmètre approuvé
 
 Étendre la base SQLite actuelle avec le modèle métier et des migrations versionnées ; stocker les médias dans `/app/data/media` sur le volume `admin_data` ; ajouter les API privées de contenu et de fichiers dans FastAPI ; étendre les sauvegardes au couple base/fichiers. React reste l'éditeur et FastAPI l'autorité de validation/persistance.
 
 L'URL de page reste `/admin` avec vues internes, sans nouveau routeur ni repli SPA. Les routes de fichiers restent sous `/api/admin/` pour utiliser le cookie existant. Les protections session/origine/CSRF sont réutilisées. MkDocs, le service Compose unique et Caddy conservent leurs responsabilités. Les nouvelles fonctionnalités ne modifient pas la disponibilité du chat ni l'initialisation du compte.
 
-Les modules proposés sont `personal_site/content/` pour schémas, migrations, stockage et fichiers, `api/content.py` pour les contrats privés, et `frontend/src/admin/content/` pour collections, éditeurs et contrôles partagés. Les mécanismes techniques communs ne doivent pas masquer les différences entre une fiche projet et une offre. Les dépendances nécessaires au Markdown sûr, au multipart et à la validation des images seront minimales, verrouillées et documentées ; aucun CMS ou éditeur hébergé.
+Les modules sont `personal_site/content/` pour schémas, migrations, stockage et fichiers, `api/content.py` pour les contrats privés, et `frontend/src/admin/content/` pour collections, éditeurs et contrôles partagés. Les mécanismes techniques communs ne doivent pas masquer les différences entre une fiche projet et une offre. Les dépendances nécessaires au Markdown sûr, au multipart et à la validation des images seront minimales, verrouillées et documentées ; aucun CMS ou éditeur hébergé.
 
-### API privée envisagée
+### API privée
 
 | Contrat | Fonction |
 | --- | --- |
@@ -235,15 +235,15 @@ Les modules proposés sont `personal_site/content/` pour schémas, migrations, s
 | `POST /api/admin/content/media/upload` | Téléversement borné ; contrôle avant persistance, résultat avec identifiant du média |
 | `GET /api/admin/content/media/{id}/file` | Lecture privée autorisée du fichier, sans chemin fourni par le client |
 
-Les routes spécialisées de médias et du profil sont enregistrées explicitement avant toute route paramétrée. Les collections ne deviennent jamais des noms SQL interpolés. Réponses prévues : `401` session absente, `403` origine/CSRF, `404` inconnu, `409` conflit/référence/slug, `413` taille, `422` champs invalides, `503` administration désactivée. Les erreurs de champs contiennent un chemin et un code stable sans recopier la valeur refusée. Une fiche prête modifiée est revalidée ; la sauvegarde doit proposer le retour en brouillon si elle devient incomplète.
+Les routes spécialisées de médias et du catalogue précèdent les routes paramétrées. Le profil utilise les contrats communs avec une unicité en base. Aucun identifiant SQL libre n’est accepté : les noms de tables proviennent du registre fermé des modèles. Réponses : `401` session absente, `403` origine/CSRF, `404` inconnu, `409` conflit/référence/slug, `413` taille, `422` champs invalides, `503` administration désactivée. Les erreurs de champs contiennent un chemin et un code stable sans recopier la valeur refusée. Une fiche prête modifiée est revalidée ; la sauvegarde doit proposer le retour en brouillon si elle devient incomplète.
 
 ### Médias et sécurité
 
 Les garde-fous sont adaptés à une administration unique et s'appuient sur les [recommandations OWASP pour les téléversements](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) : formats autorisés, vérification du contenu, noms générés, limites et stockage séparé des fichiers publics.
 
-Proposition initiale : JPEG/PNG/WebP jusqu'à 10 Mio par image, PDF jusqu'à 20 Mio, MP4/WebM jusqu'à 100 Mio, enveloppe totale de 1 Gio configurable. Images décodées avec limite de pixels, formats actifs (HTML/SVG) refusés, pièces PDF servies en téléchargement. Les noms d'origine sont des métadonnées ; le chemin de stockage est généré par le serveur. Le fichier devient visible uniquement après validation et enregistrement cohérent. Les échecs et annulations nettoient les temporaires. L'absence d'analyse antivirus ou de transcodage est une limite documentée, pas une prétendue garantie sur les fichiers.
+Limites : JPEG/PNG/WebP jusqu'à 10 Mio par image, PDF jusqu'à 20 Mio, MP4/WebM jusqu'à 100 Mio, enveloppe totale de 1 Gio configurable. Images décodées avec limite de pixels, formats actifs (HTML/SVG) refusés, pièces PDF servies en téléchargement. Les noms d'origine sont des métadonnées ; le chemin de stockage est généré par le serveur. Le fichier devient visible uniquement après validation et enregistrement cohérent. Les échecs et annulations nettoient les temporaires. L'absence d'analyse antivirus ou de transcodage est une limite documentée, pas une prétendue garantie sur les fichiers.
 
-Le middleware actuel met tous les corps privés en mémoire et les limite à 256 Kio. L'upload demandera un traitement en flux avec limite propre à cette seule route, authentification/origine/CSRF vérifiées avant consommation complète et quota sérialisé. Les autres routes conservent leur limite. Aucun téléchargement serveur d'URL, aucune exécution de média ni intégration externe automatique. La CSP permettra seulement les sources locales nécessaires à l'aperçu (`blob:` si utilisé), sans autoriser scripts ou iframes distants.
+Le middleware conserve la limite JSON de 256 Kio. Seul le téléversement binaire possède un traitement en flux, une limite propre à sa route, une authentification/origine/CSRF vérifiée avant consommation complète et un quota sérialisé. Les autres routes conservent leur limite. Aucun téléchargement serveur d'URL, aucune exécution de média ni intégration externe automatique. La CSP permettra seulement les sources locales nécessaires à l'aperçu (`blob:` si utilisé), sans autoriser scripts ou iframes distants.
 
 Les fichiers sont privés, sans cache, hors des répertoires statiques et accessibles par identifiant sous session. Les notes et contacts confidentiels restent en base sans chiffrement applicatif supplémentaire ; sauvegardes et permissions du volume doivent donc les protéger. Seule la clé fournisseur conserve son chiffrement actuel. Une page de contenu ne transmet rien au fournisseur LLM.
 
@@ -251,11 +251,11 @@ Les fichiers sont privés, sans cache, hors des répertoires statiques et access
 
 Ajouter un registre de migrations de contenu. Le premier changement ajoute des tables sans réécrire le compte, les sessions ou les réglages. Une migration s'exécute transactionnellement ; version inconnue plus récente ou échec de migration arrête le démarrage avec une erreur utile. Les tests partent aussi d'une base du schéma actuel contenant un compte et une clé chiffrée, pas uniquement d'une base vide.
 
-Sauvegarder la base et les médias comme un ensemble cohérent avec manifeste (version de schéma, commit, fichiers et empreintes). Pour cette instance unique, privilégier une courte fenêtre sans écritures pendant l'export, plutôt qu'une copie de fichiers vivants non coordonnée. La procédure actuelle de sauvegarde SQLite seule reste valable jusqu'à l'ajout des médias ; elle devra alors être complétée dans [Exploitation](operations.md). Vérifier intégrité SQLite, clés étrangères, fichiers référencés et restauration sur une instance isolée. Conserver `SITE_SECRET_KEY` séparément et révoquer les sessions restaurées.
+Sauvegarder la base et les médias comme un ensemble cohérent avec manifeste (version de schéma, commit, fichiers et empreintes). Pour cette instance unique, privilégier une courte fenêtre sans écritures pendant l'export, plutôt qu'une copie de fichiers vivants non coordonnée. La procédure SQLite seule est réservée aux bases antérieures au studio. Les commandes `export`, `verify` et `restore` sont décrites dans [Exploitation](operations.md#sauvegarde-du-studio-base-et-medias). Vérifier intégrité SQLite, clés étrangères, fichiers référencés et restauration sur une instance isolée. Conserver `SITE_SECRET_KEY` séparément et révoquer les sessions restaurées.
 
 Le retour arrière ne supprime pas les nouveaux contenus. Une ancienne image n'accède pas aux nouvelles tables ; toute migration ultérieure incompatible demande une sauvegarde compatible avant restauration. L'espace disque, le temps de sauvegarde et les bornes de téléversement sont les principaux nouveaux coûts d'exploitation. Pas de nouveau service, réseau, bucket ou authentification.
 
-## Vérification de l'implémentation à venir
+## Vérification de l’implémentation
 
 | Périmètre | Preuve attendue |
 | --- | --- |
@@ -268,4 +268,4 @@ Le retour arrière ne supprime pas les nouveaux contenus. Une ancienne image n'a
 | Interface | Clavier complet, focus, contrastes mesurés, clair/sombre à 1440, 390 et 320 px, zoom 200 %, erreurs, chargement et formulaires longs sans débordement |
 | Livraison | `make check`, `make test-e2e`, construction Docker, auto-revue documentée, CI du commit final, protections respectées, PR fusionnée et issue clôturée |
 
-La documentation d'architecture, des décisions, de l'administration, des contrats backend, de la configuration, de l'exploitation et des tests sera mise à jour avec le comportement réellement livré. Cette proposition ne remplace ni l'accord d'architecture ni ces vérifications. L'issue #8 reste ouverte jusqu'à la fonctionnalité complète.
+Les pages d'architecture, d'administration, de contrats backend, de configuration, d'exploitation et de tests complètent cette conception. La CI et la revue finale conditionnent la fusion et la clôture de l'issue #8.

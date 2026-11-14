@@ -78,9 +78,18 @@ async function mockAdmin(page: Page, { authenticated = true, configured = true }
   return writes
 }
 
+async function openMenuIfNeeded(page: Page) {
+  await expect(page.locator('.admin-shell')).toBeVisible()
+  if (!(await page.getByRole('button', { name: 'Réglages du site', exact: true }).isVisible()))
+    await page.getByRole('button', { name: 'Ouvrir le menu' }).click()
+}
+
 async function settingsView(page: Page, view: 'AI provider' | 'Admin user') {
+  if (!(await page.getByRole('button', { name: view, exact: true }).isVisible()))
+    await openMenuIfNeeded(page)
   const button = page.getByRole('button', { name: 'Réglages du site', exact: true })
-  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
+  if (!(await page.getByRole('button', { name: view, exact: true }).isVisible()))
+    await button.click()
   await page.getByRole('button', { name: view, exact: true }).click()
   await expect(page.getByRole('heading', { name: `${view}.`, exact: true })).toBeVisible()
 }
@@ -108,6 +117,7 @@ test('connexion, erreurs et déconnexion', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText('Identifiants incorrects.')
   await page.getByLabel('Mot de passe', { exact: true }).fill('test-password-long')
   await page.getByRole('button', { name: 'Se connecter' }).click()
+  await openMenuIfNeeded(page)
   await expect(page.getByRole('navigation', { name: 'Navigation administrateur' })).toBeVisible()
   await noOverflow(page)
   await page.getByRole('button', { name: 'Se déconnecter' }).click()
@@ -119,10 +129,15 @@ test('connexion, erreurs et déconnexion', async ({ page }) => {
 test('réglages accolés, fournisseur et confidentialité de la clé', async ({ page }) => {
   const writes = await mockAdmin(page, { configured: false })
   await page.goto('/admin')
+  await openMenuIfNeeded(page)
   await page.getByRole('button', { name: 'Réglages du site', exact: true }).click()
   const rail = await page.locator('.admin-sidebar').boundingBox()
   const second = await page.locator('.settings-sidebar').boundingBox()
-  expect(second!.x).toBeCloseTo(rail!.x + rail!.width, 0)
+  if (page.viewportSize()!.width > 900) expect(second!.x).toBeCloseTo(rail!.x + rail!.width, 0)
+  else {
+    expect(second!.x).toBe(0)
+    await expect(page.locator('.admin-main')).toHaveAttribute('inert', '')
+  }
   await page.getByRole('button', { name: 'AI provider', exact: true }).click()
   await page.getByRole('radio', { name: 'Mistral', exact: true }).check()
   await expect(page.getByLabel('Modèle', { exact: true })).toHaveValue('mistral-small-latest')
@@ -192,12 +207,13 @@ test('thèmes, clavier et écran étroit dans chaque vue', async ({ page }) => {
   await page.getByRole('button', { name: 'Activer le thème sombre' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await noOverflow(page)
+  await openMenuIfNeeded(page)
   const settings = page.getByRole('button', { name: 'Réglages du site', exact: true })
   await settings.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('button', { name: 'AI provider', exact: true })).toBeFocused()
   await page.keyboard.press('Escape')
-  await expect(settings).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Ouvrir le menu' })).toBeFocused()
   await settingsView(page, 'AI provider')
   await noOverflow(page)
   await settingsView(page, 'Admin user')

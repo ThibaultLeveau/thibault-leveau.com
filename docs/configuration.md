@@ -15,9 +15,12 @@
 | `SITE_ADMIN_PASSWORD` | Secret, 12–128 caractères | Vide | Requis pour une base neuve ; ignoré pour un compte existant et retirable après initialisation |
 | `SITE_SECRET_KEY` | Clé Fernet valide | Vide | Requise quand l'administration est activée ; chiffre la clé LLM |
 | `SITE_ADMIN_DB_PATH` | Chemin absolu | `data/admin.sqlite3` à la racine du dépôt | Base SQLite ; Compose impose `/app/data/admin.sqlite3` sur le volume `admin_data` |
+| `SITE_MEDIA_QUOTA_BYTES` | Entier positif, au plus 1 Tio | `1073741824` (1 Gio) | Quota cumulé des fichiers de la médiathèque ; transmis explicitement par Compose |
 | `SITE_ADMIN_ORIGIN` | Origine HTTPS exacte, sans chemin | `http://127.0.0.1:5173` en local | Origine autorisée pour les mutations ; HTTP permis seulement sur localhost, 127.0.0.1 ou ::1 |
 
 Dans le conteneur, `SITE_STATIC_DIR` vaut `/app/build`. Il désigne le **parent** des deux sites construits, pas directement `/app/build/web`.
+
+Le répertoire des médias est toujours `media/` à côté de la base : `/app/data/media` dans Compose. Il n'est pas servi par le montage statique. Le quota concerne les fichiers validés, y compris archivés ; un fichier temporaire supplémentaire peut occuper au plus 100 Mio pendant un téléversement. Réduire le quota ne supprime aucun fichier existant et bloque les ajouts tant que l'utilisation est trop élevée. Les limites unitaires restent 10 Mio pour une image, 20 Mio pour un PDF et 100 Mio pour une vidéo. Prévoir aussi l'espace de SQLite et des sauvegardes.
 
 ```text
 /app/build/
