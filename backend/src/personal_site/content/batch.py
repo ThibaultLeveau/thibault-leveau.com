@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from personal_site.content.catalog import list_fields, target
+from personal_site.content.localization import localize
 from personal_site.content.schemas import MODELS
 from personal_site.content.validation import ContentError, slugify, validate
 from personal_site.i18n import tr
@@ -41,7 +42,7 @@ def write_batch(store, db, operations, versions):
         if kind not in MODELS:
             raise ContentError(tr("errors.unknownCollection"))
         if ident is not None:
-            previous = store.read(db, kind, ident)
+            previous = localize(db, store.read(db, kind, ident), op.get("language"))
             if previous["version"] != op["version"]:
                 raise ContentError(tr("errors.proposalEntryConflict"), status=409)
             if previous["status"] == "archived":
@@ -49,7 +50,10 @@ def write_batch(store, db, operations, versions):
             entries[op["key"]] = {**previous["entry"], **deepcopy(op["changes"])}
             mapping[op["key"]] = ident
         else:
-            entries[op["key"]] = deepcopy(op["changes"])
+            entries[op["key"]] = {
+                **deepcopy(op["changes"]),
+                **({"language": op["language"]} if op.get("language") else {}),
+            }
 
     # Reserve real rows for new references before filling associations. Skeletons are never
     # committed or exposed; this also supports cycles between newly created entries.
@@ -86,7 +90,7 @@ def write_batch(store, db, operations, versions):
     # an earlier specialist's change. Write validation below still enforces every FK/type.
     for op in operations:
         ident = mapping[op["key"]]
-        current = store.read(db, op["kind"], ident)
+        current = localize(db, store.read(db, op["kind"], ident), op.get("language"))
         # Earlier operations may have changed the inverse side of an association.
         # Rebase only the explicitly requested fields onto that transaction-local state.
         data = validate(
@@ -103,13 +107,19 @@ def write_batch(store, db, operations, versions):
             entry_id=ident,
             version=current["version"],
             as_draft=op["as_draft"],
+            language=op.get("language"),
         )
     for op in operations:
-        actual = store.read(db, op["kind"], mapping[op["key"]])["entry"]
+        actual = localize(db, store.read(db, op["kind"], mapping[op["key"]]), op.get("language"))[
+            "entry"
+        ]
         expected = normalized_entries[op["key"]]
         for name in op["changes"]:
             if name == "slug" and not expected[name]:
                 continue
             if actual[name] != expected[name]:
                 raise ContentError(tr("errors.batchRelationships"))
-    return [store.read(db, op["kind"], mapping[op["key"]]) for op in operations]
+    return [
+        localize(db, store.read(db, op["kind"], mapping[op["key"]]), op.get("language"))
+        for op in operations
+    ]

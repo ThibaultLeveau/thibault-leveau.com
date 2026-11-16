@@ -1,3 +1,4 @@
+import { LocalizedLink, LanguageNotice } from './locale'
 import { t } from '../i18n'
 import type { ReactNode } from 'react'
 import { getCollections, date, getLabels, type Item } from './content'
@@ -55,9 +56,9 @@ export function Feedback({
       <section className="public-empty">
         <h2>{t('public.unavailable')}</h2>
         <p>{t('public.unavailableHint')}</p>
-        <a className="text-link" href="/explorer">
+        <LocalizedLink className="text-link" href="/explorer">
           {t('public.exploreContent')} <Arrow />
-        </a>
+        </LocalizedLink>
       </section>
     )
   if (error)
@@ -91,10 +92,10 @@ export function Empty({
       </span>
       <h2>{filtered ? t('public.noResults') : t('public.emptyTitle')}</h2>
       <p>{filtered ? t('public.noResultsHint') : t('public.emptyDescription')}</p>
-      <a className="text-link" href={filtered ? reset : '/explorer'}>
+      <LocalizedLink className="text-link" href={filtered ? reset : '/explorer'}>
         {filtered ? t('public.clearFilters') : t('public.exploreOtherCollections')}
         <Arrow />
-      </a>
+      </LocalizedLink>
     </div>
   )
 }
@@ -116,7 +117,7 @@ export function Card({
       className={`public-card ${project ? 'project-card' : ''} ${layout === 'timeline' ? 'timeline-card' : ''}`}
     >
       {project && layout !== 'rows' && (
-        <a
+        <LocalizedLink
           className={`project-visual tone-${index % 3}`}
           href={item.url}
           tabIndex={-1}
@@ -143,7 +144,7 @@ export function Card({
               </span>
             </>
           )}
-        </a>
+        </LocalizedLink>
       )}
       <div className="card-body">
         <p className="card-meta">
@@ -153,13 +154,18 @@ export function Card({
             getCollections()[item.kind][0]}
           {!!item.featured && <span>{t('public.featured')}</span>}
         </p>
-        <Heading>
-          <a href={item.url}>
+        <Heading lang={item.language}>
+          <LocalizedLink href={item.url}>
             {item.title}
             <Arrow diagonal />
-          </a>
+          </LocalizedLink>
         </Heading>
-        {item.summary && <p className="card-summary">{item.summary}</p>}
+        {item.summary && (
+          <p className="card-summary" lang={item.language}>
+            {item.summary}
+          </p>
+        )}
+        <LanguageNotice item={item} />
         {!project && layout !== 'timeline' && (
           <span className="card-category">{getCollections()[item.kind][0]}</span>
         )}
@@ -175,7 +181,9 @@ export function Cards({
   layout?: 'grid' | 'rows' | 'timeline'
 }) {
   if (items.length && items.every((item) => item.kind === 'skills')) {
-    const groups = [...new Set(items.map((item) => item.domain || t('public.otherSkills')))]
+    const groups = [
+      ...new Set(items.map((item) => item.domain || t('public.otherSkills'))),
+    ]
     return (
       <div className="expertise-groups">
         {groups.map((group) => (
@@ -218,10 +226,10 @@ export function SectionHeading({
         <span className="section-number">{number}</span>
         <h2>{title}</h2>
       </div>
-      <a className="text-link" href={href}>
+      <LocalizedLink className="text-link" href={href}>
         {link}
         <Arrow />
-      </a>
+      </LocalizedLink>
     </div>
   )
 }
@@ -236,11 +244,11 @@ export function Breadcrumb({
 }) {
   return (
     <nav className="breadcrumbs" aria-label={t('navigation.breadcrumbs')}>
-      <a href="/">{t('navigation.home')}</a>
+      <LocalizedLink href="/">{t('navigation.home')}</LocalizedLink>
       <span aria-hidden="true">/</span>
-      <a href={href} aria-current={!title ? 'page' : undefined}>
+      <LocalizedLink href={href} aria-current={!title ? 'page' : undefined}>
         {parent}
-      </a>
+      </LocalizedLink>
       {title && (
         <>
           <span aria-hidden="true">/</span>

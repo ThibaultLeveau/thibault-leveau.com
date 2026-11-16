@@ -11,13 +11,13 @@ from personal_site.assistant.models import MAX_INPUT
 from personal_site.i18n import tr
 
 
-async def invoke(model, schema, system, data, context):
+async def invoke(model, schema, system, data, context, *, tools=None):
     encoded = json.dumps(data, ensure_ascii=False)
     if len(encoded) + len(system) > MAX_INPUT:
         raise ProviderError(tr("errors.contextLimit"), 422)
     agent = create_agent(
         model,
-        tools=context.tools(),
+        tools=context.tools() if tools is None else tools,
         system_prompt=system,
         response_format=ToolStrategy(
             schema,

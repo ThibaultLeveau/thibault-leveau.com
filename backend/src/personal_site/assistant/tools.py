@@ -20,11 +20,12 @@ class Context:
     content: ContentStore
     budget: Budget
     include_private: bool
+    language: str | None = None
     versions: dict[str, int] = field(default_factory=dict)
     snapshots: dict[int, dict] = field(default_factory=dict)
 
     def read(self, kind, ident, fields=None):
-        record = self.content.get(kind, ident)
+        record = self.content.get(kind, ident, self.language)
         version = self.versions.setdefault(str(ident), record["version"])
         if record["version"] != version:
             raise ContentError(tr("errors.generationConflict"), status=409)
@@ -52,7 +53,7 @@ class Context:
             if len(query) > 160 or not 1 <= page <= 100:
                 return {"error": tr("errors.searchBounds")}
             result = await run_in_threadpool(
-                self.content.listing, kind, query=query, page=page, limit=15
+                self.content.listing, kind, query=query, page=page, limit=15, language=self.language
             )
             return {
                 "items": [

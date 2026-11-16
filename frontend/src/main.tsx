@@ -23,6 +23,8 @@ async function start() {
       // The French default also works when administration is disabled or offline.
     }
   }
+  const routeLanguage = window.location.pathname.split('/')[1]
+  if (isLanguage(routeLanguage)) initialLanguage = routeLanguage
   const root = createRoot(document.getElementById('root')!)
   try {
     await changeLanguage(initialLanguage)

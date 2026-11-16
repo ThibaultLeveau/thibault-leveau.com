@@ -34,7 +34,7 @@ for (const language of ['fr', 'en'] as const) {
       await route.continue()
     })
     const request = page.waitForRequest(asset)
-    await page.goto('/projets', { waitUntil: 'domcontentloaded' })
+    await page.goto(`/${language}/projets`, { waitUntil: 'domcontentloaded' })
     await request
     try {
       await expect(page.locator('#root')).toBeEmpty()
@@ -52,7 +52,7 @@ for (const language of ['fr', 'en'] as const) {
     await page.route(new RegExp(`/assets/${language}-[^/]+\\.js$`), (route) => route.abort(), {
       times: 1,
     })
-    await page.goto('/projets')
+    await page.goto(`/${language}/projets`)
     const recovery = page.getByRole('main')
     await expect(recovery).toHaveAttribute('lang', language)
     await expect(page.getByRole('alert')).toContainText(

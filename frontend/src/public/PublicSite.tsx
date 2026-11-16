@@ -1,3 +1,4 @@
+import { LocalizedLink, publicPath } from './locale'
 import { t } from '../i18n'
 import { lazy, Suspense } from 'react'
 import { SiteHeader } from '../components/SiteHeader'
@@ -13,7 +14,7 @@ const AboutPage = lazy(() =>
 )
 
 export default function PublicSite() {
-  const path = window.location.pathname.replace(/\/$/, '') || '/'
+  const path = publicPath().replace(/\/$/, '') || '/'
   const detail = Object.entries(getCollections())
     .map(([kind, [, prefix]]) => ({
       kind: kind as Kind,
@@ -22,9 +23,9 @@ export default function PublicSite() {
     .find((value) => value.match)
   return (
     <div className="public-site site-shell mx-auto flex min-h-svh w-full max-w-[1600px] flex-col">
-      <a className="skip-link" href="#contenu">
+      <LocalizedLink className="skip-link" href="#contenu">
         {t('navigation.skip')}
-      </a>
+      </LocalizedLink>
       <SiteHeader />
       <Suspense
         fallback={
@@ -46,28 +47,30 @@ export default function PublicSite() {
         ) : (
           <main id="contenu" className="public-main" tabIndex={-1}>
             <h1>{t('public.notFound')}</h1>
-            <a href="/explorer">{t('public.exploreSite')}</a>
+            <LocalizedLink href="/explorer">{t('public.exploreSite')}</LocalizedLink>
           </main>
         )}
       </Suspense>
       <footer className="public-footer">
         <div className="footer-identity">
-          <a href="/">
+          <LocalizedLink href="/">
             Thibault Leveau<span className="accent">.</span>
-          </a>
+          </LocalizedLink>
           <p>{t('public.footerTagline')}</p>
         </div>
         <nav aria-label={t('navigation.footer')}>
-          <a href="/explorer">
+          <LocalizedLink href="/explorer">
             {t('navigation.explore')}
             <Arrow diagonal />
-          </a>
-          <a href="/a-propos">{t('navigation.about')}</a>
-          <a href="/documentation/">{t('options.documentation')}</a>
+          </LocalizedLink>
+          <LocalizedLink href="/a-propos">{t('navigation.about')}</LocalizedLink>
+          <LocalizedLink href="/documentation/">
+            {t('options.documentation')}
+          </LocalizedLink>
         </nav>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Thibault Leveau</span>
-          <a href="#contenu">{t('navigation.backToTop')}</a>
+          <LocalizedLink href="#contenu">{t('navigation.backToTop')}</LocalizedLink>
         </div>
       </footer>
     </div>

@@ -20,7 +20,7 @@ test('accueil public, responsive et ressources locales', async ({
     ).toBeVisible()
   await expect(
     page.getByRole('link', { name: 'Thibault Leveau — accueil' }),
-  ).toHaveAttribute('href', '/')
+  ).toHaveAttribute('href', '/fr')
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.fonts.check('16px Inter'))).toBe(
     true,

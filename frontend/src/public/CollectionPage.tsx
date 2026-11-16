@@ -1,3 +1,4 @@
+import { LocalizedLink, publicUrl } from './locale'
 import { t } from '../i18n'
 import { Breadcrumb, Cards, Empty, Feedback, Intro, Arrow } from './components'
 import { getCollections, useContent, type Kind, type Listing } from './content'
@@ -85,7 +86,9 @@ export function CollectionPage({ path }: { path: string }) {
   })
   const state = useContent<Listing>(`entries?${query}`)
   const filters = useContent<Listing>('entries?kind=taxonomies&limit=48&sort=title')
-  const technologies = useContent<Listing>('entries?kind=technologies&limit=48&sort=title')
+  const technologies = useContent<Listing>(
+    'entries?kind=technologies&limit=48&sort=title',
+  )
   const reset = path + (kind && section.kinds.length > 1 ? `?collection=${kind}` : '')
   const pageURL = (n: number) => {
     const next = new URLSearchParams({
@@ -110,19 +113,19 @@ export function CollectionPage({ path }: { path: string }) {
           aria-label={t('public.sectionTabs', { title: section.title })}
         >
           {section.kinds.map((k) => (
-            <a
+            <LocalizedLink
               key={k}
               href={`${path}?collection=${k}`}
               aria-current={kind === k ? 'page' : undefined}
             >
               {getCollections()[k][0]}
-            </a>
+            </LocalizedLink>
           ))}
         </nav>
       )}
       <form
         className="public-filters"
-        action={path}
+        action={publicUrl(path)}
         method="get"
         role="search"
         aria-label={t('public.searchLabel')}
@@ -188,7 +191,9 @@ export function CollectionPage({ path }: { path: string }) {
               })
             : t('public.searching')}
         </p>
-        {(q || related) && <a href={reset}>{t('public.clearFilters')}</a>}
+        {(q || related) && (
+          <LocalizedLink href={reset}>{t('public.clearFilters')}</LocalizedLink>
+        )}
       </div>
       {!state.data ? (
         <Feedback {...state} />
@@ -201,9 +206,13 @@ export function CollectionPage({ path }: { path: string }) {
         <nav className="public-pagination" aria-label={t('public.pagination')}>
           <span>
             {page > 1 && (
-              <a className="public-button" href={pageURL(page - 1)} rel="prev">
+              <LocalizedLink
+                className="public-button"
+                href={pageURL(page - 1)}
+                rel="prev"
+              >
                 {t('public.previous')}
-              </a>
+              </LocalizedLink>
             )}
           </span>
           <p>
@@ -214,19 +223,28 @@ export function CollectionPage({ path }: { path: string }) {
           </p>
           <span>
             {page * state.data.limit < state.data.total && (
-              <a className="public-button" href={pageURL(page + 1)} rel="next">
+              <LocalizedLink
+                className="public-button"
+                href={pageURL(page + 1)}
+                rel="next"
+              >
                 {t('public.next')}
-              </a>
+              </LocalizedLink>
             )}
           </span>
         </nav>
       )}
       <div className="collection-end">
         <span>{t('public.exploreMore')}</span>
-        <a className="text-link" href={path === '/explorer' ? '/projets' : '/explorer'}>
-          {path === '/explorer' ? t('public.viewProjects') : t('public.exploreAllCollections')}
+        <LocalizedLink
+          className="text-link"
+          href={path === '/explorer' ? '/projets' : '/explorer'}
+        >
+          {path === '/explorer'
+            ? t('public.viewProjects')
+            : t('public.exploreAllCollections')}
           <Arrow />
-        </a>
+        </LocalizedLink>
       </div>
     </main>
   )

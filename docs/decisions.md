@@ -1,5 +1,15 @@
 # Décisions techniques
 
+## 2026-11 — Variantes éditoriales et URL publiques bilingues
+
+**Accord.** Thibault a répondu « Je valide cette conception » pour le stockage FR/EN, les parcours IA, la migration et les URL préfixées ; [accord consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/20#issuecomment-6917635569).
+
+**Décision.** Réutiliser SQLite, FastAPI et React. Ajouter des variantes textuelles normalisées avec un registre fermé ; partager identités, faits, relations et fichiers. Protéger toute écriture par la version de la fiche. Conserver la langue d’origine et invalider les variantes quand elle change, sans appliquer à une ligne déplacée le texte de son ancienne position. Demander explicitement la langue avant la génération ; produire les traductions sous forme de propositions relues et appliquées atomiquement.
+
+**Raison.** Deux contenus éditoriaux indépendants doivent rester cohérents avec les mêmes faits. Les traductions enregistrées évitent un appel IA à chaque lecture ; les catalogues séparés évitent de charger les deux langues d’interface. La projection SQL conserve pagination et recherche dans la langue demandée.
+
+**Conséquence.** Migration 3 → 4, sauvegarde préalable avec l’image précédente et restauration requise pour revenir au schéma 3. Les URL `/fr` et `/en` deviennent explicites ; les anciennes entrées redirigent sans perdre la recherche. Les traductions absentes ou périmées sont signalées. Le choix explicite du visiteur complète le réglage global défini par la décision précédente. Aucun nouveau service, framework, fournisseur, stockage ou mécanisme d’authentification.
+
 Cette page conserve les raisons des choix structurants. Une évolution qui change ces contraintes doit mettre à jour la décision concernée et les procédures associées.
 
 ## Langues des interfaces — issue #18

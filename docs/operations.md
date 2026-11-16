@@ -183,7 +183,7 @@ Les journaux `assistant_turn` indiquent identifiant, appels, lectures/outils et 
 
 Le stockage est borné à 50 propositions/reçus de 2 Mio maximum chacun. Une proposition expirée est toujours refusée ; le nettoyage physique intervient à la prochaine création, ou à la suppression de sa session. Les propositions et reçus sont inclus dans les exports privés. Les préférences globales et familiales sont durables. Aucun processus de maintenance supplémentaire n'est requis.
 
-Après déploiement, vérifier le schéma courant (3 depuis l’issue #18), les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+Après déploiement, vérifier le schéma courant (4 depuis l’issue #20), les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
 
 ## Migration des langues : schéma 2 vers 3
 
@@ -230,3 +230,11 @@ Le [guide de publication](administration.md#publier-sur-le-site) décrit Prêt +
 Les réponses dynamiques sont sans stockage HTTP. Les miniatures sont mises en cache en mémoire après contrôle de visibilité (24 dérivés maximum) et disparaissent au redémarrage. Aucun nettoyage de fichiers dérivés ni migration n'est nécessaire. Une erreur 404 sur une image peut indiquer la disparition du dernier usage public ; ne pas rendre directement accessible le dossier `media/` pour la contourner.
 
 Les tests publics de production ne modifient que la préférence de thème de leur navigateur. Compléter l'issue avec version exécutée, santé, HTTPS et résultats desktop/mobile/clair/sombre ; distinguer parcours sur contenus réels et collections encore vides.
+
+## Migration des collections bilingues : schéma 3 vers 4
+
+Avant remplacement, conserver l’image de schéma 3, exporter et vérifier base et médias avec **cette image**, puis tester une restauration isolée. La migration `004.sql` ajoute deux tables sans réécrire les contenus existants. Construire la nouvelle image avant l’interruption et remplacer uniquement `site` ; aucun changement de proxy, volume, secret ou réseau.
+
+Vérifier après démarrage le schéma 4, l’intégrité SQLite, les comptes, contenus et fichiers conservés. Contrôler `/fr`, `/en`, leurs API de lecture, métadonnées et sélecteur. Une traduction initiale de contenu publié doit être relue et appliquée par le domaine versionné ; vérifier la source juste avant l’application, puis la visibilité dans les deux langues. Ne pas créer de données fictives en production.
+
+**Retour au schéma 3 : restaurer la sauvegarde préalable avec l’image précédente.** L’ancienne image refuse la version 4. Conserver d’abord un export de l’état courant avec la nouvelle image, arrêter seulement `site`, restaurer dans une destination neuve et suivre le remplacement contrôlé du volume décrit plus haut. Une restauration révoque les sessions et ne contient pas les écritures postérieures ; conserver ces écritures pour réconciliation. Ne jamais supprimer une ligne de migration pour contourner cette protection.

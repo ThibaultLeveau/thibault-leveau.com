@@ -358,5 +358,10 @@
   "assistant.entryQuestion": "Que souhaitez-vous renseigner pour {collection} ?",
   "assistant.referenceRequired": "Référence à confirmer : {kind}",
   "public.anonymous": "Témoignage anonyme",
-  "content.copyTitle": "{title} — copie"
+  "content.copyTitle": "{title} — copie",
+  "errors.translationLanguage": "Choisissez la version française ou anglaise ; la langue d’origine reste inchangée.",
+  "errors.translationShared": "Les faits et la structure ont changé. Rechargez la fiche ; modifiez les informations partagées dans la version d’origine.",
+  "errors.translationSource": "Enregistrez une version à jour avant de la traduire.",
+  "errors.translationIncomplete": "La traduction est incomplète. Aucun changement n’a été enregistré.",
+  "assistant.translationReview": "La traduction est prête à être relue. Vérifiez les textes avant de les enregistrer."
 }

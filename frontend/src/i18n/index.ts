@@ -4,7 +4,9 @@ import type fr from './locales/fr.json'
 import bootstrap from './bootstrap.json'
 
 export type Language = 'fr' | 'en'
-type PluralBase<Key> = Key extends `${infer Base}_${'one' | 'other' | 'many'}` ? Base : Key
+type PluralBase<Key> = Key extends `${infer Base}_${'one' | 'other' | 'many'}`
+  ? Base
+  : Key
 export type MessageKey = PluralBase<keyof typeof fr> | keyof typeof bootstrap.fr
 export const languages = ['fr', 'en'] as const
 export const isLanguage = (value: unknown): value is Language =>
@@ -14,7 +16,10 @@ export const i18n = i18next.createInstance()
 void i18n.use(initReactI18next).init({
   // Keep only the recovery screen in the entry bundle. Vite emits each full
   // catalog as an immutable asset, loaded before the first application render.
-  resources: { fr: { translation: bootstrap.fr }, en: { translation: bootstrap.en } },
+  resources: {
+    fr: { translation: bootstrap.fr },
+    en: { translation: bootstrap.en },
+  },
   lng: document.documentElement.lang === 'en' ? 'en' : 'fr',
   fallbackLng: 'fr',
   supportedLngs: languages,
@@ -68,4 +73,8 @@ export async function changeLanguage(value: Language) {
   await i18n.changeLanguage(value)
   document.documentElement.lang = value
   document.documentElement.dataset.interfaceLanguage = value
+}
+
+export function languageName(code: string) {
+  return code === 'fr' ? 'Français' : 'English'
 }

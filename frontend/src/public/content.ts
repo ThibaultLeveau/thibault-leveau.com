@@ -1,4 +1,4 @@
-import { t, locale } from '../i18n'
+import { t, locale, language } from '../i18n'
 import { useEffect, useState } from 'react'
 
 export function getCollections() {
@@ -32,6 +32,8 @@ export interface Item {
   summary: string
   url: string
   language: string
+  translation_available?: boolean
+  source_url?: string
   featured: boolean
   date?: string
   scope?: string
@@ -93,7 +95,7 @@ export function useContent<T>(path: string) {
   const [retry, setRetry] = useState(0)
   useEffect(() => {
     const abort = new AbortController()
-    fetch(`/api/public/${path}`, {
+    fetch(`/api/public/${path}${path.includes('?') ? '&' : '?'}language=${language()}`, {
       signal: abort.signal,
       cache: 'no-store',
       credentials: 'omit',
@@ -135,7 +137,9 @@ export function date(value: string | undefined) {
   })
 }
 export const text = (entry: Entry, key: string) =>
-  typeof entry[key] === 'string' || typeof entry[key] === 'number' ? String(entry[key]) : ''
+  typeof entry[key] === 'string' || typeof entry[key] === 'number'
+    ? String(entry[key])
+    : ''
 export const rows = (entry: Entry, key: string): Row[] =>
   Array.isArray(entry[key]) ? (entry[key] as Row[]) : []
 export function safeLink(value: string, contact = false) {

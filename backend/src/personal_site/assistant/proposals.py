@@ -4,6 +4,7 @@ import sqlite3
 
 from personal_site.content.batch import reference_ids, write_batch
 from personal_site.content.catalog import PAIRS, target
+from personal_site.content.localization import localize
 from personal_site.content.schemas import MODELS
 from personal_site.content.validation import ContentError
 from personal_site.i18n import schema_text, tr
@@ -28,6 +29,8 @@ def preview(content, db, record, old, *, key, names, missing, related=False):
         refs.update(content.reference_labels(db, old["kind"], old["entry"]))
     return {
         "key": key,
+        "language": record["entry"]["language"],
+        "unmatched_texts": old.get("localization", {}).get("unmatched_texts", []) if old else [],
         "kind": record["kind"],
         "id": old["id"] if old else None,
         "title": record["entry"]["title"],
@@ -53,7 +56,7 @@ def prepare(content, operations, versions, missing):
                 ident = op["entry_id"]
                 old = None
                 if ident is not None:
-                    old = content.read(db, op["kind"], ident)
+                    old = localize(db, content.read(db, op["kind"], ident), op.get("language"))
                     before[op["key"]] = old
                     versions.setdefault(str(ident), old["version"])
                 references = list(reference_ids(op["kind"], op["changes"]))

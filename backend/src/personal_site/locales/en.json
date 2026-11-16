@@ -358,5 +358,10 @@
   "assistant.entryQuestion": "What would you like to add to {collection}?",
   "assistant.referenceRequired": "Reference to confirm: {kind}",
   "public.anonymous": "Anonymous testimonial",
-  "content.copyTitle": "{title} — copy"
+  "content.copyTitle": "{title} — copy",
+  "errors.translationLanguage": "Choose the French or English version; the original language cannot be changed.",
+  "errors.translationShared": "The shared facts or structure changed. Reload the entry; edit shared information in the original version.",
+  "errors.translationSource": "Save an up-to-date version before translating it.",
+  "errors.translationIncomplete": "The translation is incomplete. No changes have been saved.",
+  "assistant.translationReview": "The translation is ready for review. Check the texts before saving."
 }

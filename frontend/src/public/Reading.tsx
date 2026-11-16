@@ -1,3 +1,4 @@
+import { LocalizedLink } from './locale'
 import { t } from '../i18n'
 import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
@@ -47,14 +48,25 @@ function headingIds(prefix: string) {
 
 export function ReadingContents({ value }: { value: string }) {
   const heading = ({ id, children }: { id?: string; children?: ReactNode }) => (
-    <a href={`#${id}`}>{children}</a>
+    <LocalizedLink href={`#${id}`}>{children}</LocalizedLink>
   )
   return (
     <div className="reading-headings">
       <Markdown
         skipHtml
         remarkPlugins={[headingIds('texte')]}
-        allowedElements={['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'em', 'strong', 'code', 'a']}
+        allowedElements={[
+          'h1',
+          'h2',
+          'h3',
+          'h4',
+          'h5',
+          'h6',
+          'em',
+          'strong',
+          'code',
+          'a',
+        ]}
         components={{
           h1: heading,
           h2: heading,
@@ -81,13 +93,15 @@ export function Reading({ value, prefix = 'texte' }: { value: string; prefix?: s
         components={{
           h1: ({ id, children }) => <h2 id={id}>{children}</h2>,
           img: ({ alt }) => (
-            <span className="markdown-image-note">{alt || t('reading.illustration')}</span>
+            <span className="markdown-image-note">
+              {alt || t('reading.illustration')}
+            </span>
           ),
           a: ({ href, children }) =>
             href ? (
-              <a href={href} rel="noreferrer">
+              <LocalizedLink href={href} rel="noreferrer">
                 {children}
-              </a>
+              </LocalizedLink>
             ) : (
               <span>{children}</span>
             ),

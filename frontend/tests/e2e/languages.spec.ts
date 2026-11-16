@@ -121,6 +121,7 @@ test('langues indépendantes, persistance, parcours anglais et accessibilité', 
     .getByLabel('Your message', { exact: true })
     .fill('Un nouveau projet pour notre atelier')
   await page.getByRole('button', { name: 'Send message', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Français', exact: true }).click()
   await expect(page.locator('.assistant-proposal')).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('.proposal-missing').first()).toContainText('Complete')
   await expect(page.locator('.assistant-proposal')).toContainText('Atelier Python')

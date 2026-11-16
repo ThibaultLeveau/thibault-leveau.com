@@ -404,6 +404,7 @@ LABELS = {
 
 
 class Save(Model):
+    language: Literal["fr", "en"] | None = None
     entry: dict
     version: Annotated[int, Field(strict=True, ge=1)] | None = None
     as_draft: bool = False

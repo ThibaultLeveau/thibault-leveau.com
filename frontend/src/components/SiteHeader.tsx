@@ -1,3 +1,4 @@
+import { LocalizedLink, LanguageSelector, publicPath } from '../public/locale'
 import { t } from '../i18n'
 import { useRef } from 'react'
 import { ThemeToggle } from './ThemeToggle'
@@ -16,20 +17,20 @@ function getLinks() {
 export function SiteHeader() {
   const dialog = useRef<HTMLDialogElement>(null)
   const menuButton = useRef<HTMLButtonElement>(null)
-  const current = window.location.pathname
+  const current = publicPath()
   const navigation = getLinks().map(([url, name]) => (
-    <a
+    <LocalizedLink
       href={url}
       key={url}
       aria-current={current === url || current.startsWith(url + '/') ? 'page' : undefined}
     >
       {name}
-    </a>
+    </LocalizedLink>
   ))
   return (
     <header className="site-header">
       <div className="public-header-inner">
-        <a
+        <LocalizedLink
           className="brand inline-flex items-center gap-3.5"
           href="/"
           aria-label={t('navigation.brandHome')}
@@ -44,12 +45,12 @@ export function SiteHeader() {
             <path d="M2 6h20v4h-8v20h-4V10H2zm20 8h4v12h6v4H22z" fill="currentColor" />
           </svg>
           <span>Thibault Leveau</span>
-        </a>
+        </LocalizedLink>
         <nav className="desktop-navigation" aria-label={t('navigation.main')}>
           {navigation}
         </nav>
         <div className="header-tools">
-          <a
+          <LocalizedLink
             className="explore-link"
             href="/explorer"
             aria-label={t('navigation.exploreCollections')}
@@ -67,7 +68,8 @@ export function SiteHeader() {
               <path d="m16 16 5 5" />
             </svg>
             <span>{t('navigation.explore')}</span>
-          </a>
+          </LocalizedLink>
+          <LanguageSelector />
           <ThemeToggle />
           <button
             ref={menuButton}
@@ -120,9 +122,11 @@ export function SiteHeader() {
           </button>
         </div>
         <nav aria-label={t('navigation.mobile')}>
-          <a href="/">{t('navigation.home')}</a>
+          <LocalizedLink href="/">{t('navigation.home')}</LocalizedLink>
           {navigation}
-          <a href="/explorer">{t('navigation.exploreCollections')}</a>
+          <LocalizedLink href="/explorer">
+            {t('navigation.exploreCollections')}
+          </LocalizedLink>
         </nav>
         <p>{t('navigation.personalSite')}</p>
       </dialog>

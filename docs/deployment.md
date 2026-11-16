@@ -183,3 +183,9 @@ Après remplacement du seul service `site`, contrôler les huit pages, `/api/pub
 L’issue #18 passe le schéma SQLite de 2 à 3. Appliquer la [procédure de migration des langues](operations.md#migration-des-langues-schema-2-vers-3) avant le remplacement du service. Aucun changement Caddy, DNS, réseau ou secret n’est requis. Les valeurs initiales restent français/français.
 
 Après déploiement, vérifier le schéma et les données conservées, les codes publics minimaux, les en-têtes `Content-Language`, le `lang` HTML, la connexion et **Réglages du site → Langue** en bureau/mobile et clair/sombre. Le compte rendu de l’issue précise l’image précédente, la sauvegarde, le commit/image exécuté et les résultats HTTPS et navigateur. Une image de schéma 2 exige la restauration préalable de la sauvegarde correspondante.
+
+## Livraison des collections bilingues
+
+L’issue #20 passe de SQLite 3 à 4 selon l’[accord explicite](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/20#issuecomment-6917635569). Appliquer la [procédure de migration](operations.md#migration-des-collections-bilingues-schema-3-vers-4) avec sauvegarde vérifiée et image précédente conservée. La version finale de `main`, validée par CI et revue, identifie l’image.
+
+Après remplacement du seul service `site`, vérifier l’image et le commit réellement exécutés, `healthy`, HTTPS, `/fr` et `/en`, la conservation des paramètres au changement de langue, `lang`/`Content-Language`/canonique/`hreflang`, les contenus publiés dans les deux langues et les 401 des API privées. Contrôler clavier, bureau/mobile et thèmes clair/sombre. Consigner le résultat de la traduction initiale, de la migration et du déploiement dans l’issue.

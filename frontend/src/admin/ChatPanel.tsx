@@ -1,4 +1,6 @@
-import { t, language } from '../i18n'
+import { Dialog } from './content/Dialog'
+import { TranslationOffer } from './assistant/TranslationOffer'
+import { languageName, t, language, type Language } from '../i18n'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   adminRequest,
@@ -33,7 +35,10 @@ export function ChatPanel({
 }) {
   const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [draft, setDraft] = useState('')
+  const [choosingLanguage, setChoosingLanguage] = useState(false)
   const [pending, setPending] = useState(false)
+  const [translationBusy, setTranslationBusy] = useState(false)
+  const busy = pending || translationBusy
   const [error, setError] = useState('')
   const bottom = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -61,8 +66,13 @@ export function ChatPanel({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (draft.trim() && !busy && !uploading && settings.has_api_key)
+      setChoosingLanguage(true)
+  }
+  async function generate(code: Language) {
+    setChoosingLanguage(false)
     const text = draft.trim()
-    if (!text || pending || uploading || !settings.has_api_key) return
+    if (!text || busy || uploading || !settings.has_api_key) return
     const next: ConversationMessage[] = [...messages, { role: 'user', content: text }]
     if (
       next.length > 40 ||
@@ -82,21 +92,33 @@ export function ChatPanel({
         method: 'POST',
         csrf: session.csrf_token,
         body: {
+          language: code,
           messages: next.map(({ role, content }) => ({ role, content })),
           request_id: requestId.current,
           thread_id: thread.current,
           include_private_notes: includePrivate,
           media_ids: media.map((m) => m.id),
         },
-        signal: AbortSignal.any([controller.current.signal, AbortSignal.timeout(250_000)]),
+        signal: AbortSignal.any([
+          controller.current.signal,
+          AbortSignal.timeout(250_000),
+        ]),
       })
-      const content = [reply.message, ...reply.questions.map((q) => q.question)].join('\n')
+      const content = [reply.message, ...reply.questions.map((q) => q.question)].join(
+        '\n',
+      )
       setMessages([
         ...next,
-        { role: 'assistant', content, reply, source: `${reply.provider} · ${reply.model}` },
+        {
+          role: 'assistant',
+          content,
+          reply,
+          source: `${reply.provider} · ${reply.model}`,
+        },
       ])
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) onSessionEnd(t('session.expired'))
+      if (error instanceof ApiError && error.status === 401)
+        onSessionEnd(t('session.expired'))
       else {
         setMessages(messages)
         setDraft(text)
@@ -125,6 +147,24 @@ export function ChatPanel({
   ]
   return (
     <section className="chat-panel" aria-label={t('chat.label')} hidden={!visible}>
+      {choosingLanguage && (
+        <Dialog title={t('variants.chooseAI')} onClose={() => setChoosingLanguage(false)}>
+          <p>{t('variants.chooseHint')}</p>
+          <div className="dialog-actions">
+            {(['fr', 'en'] as const).map((code) => (
+              <button
+                type="button"
+                className="primary-button"
+                key={code}
+                lang={code}
+                onClick={() => void generate(code)}
+              >
+                {languageName(code)}
+              </button>
+            ))}
+          </div>
+        </Dialog>
+      )}
       <div className="chat-toolbar">
         <span className="model-label">
           <span className={settings.has_api_key ? 'status-dot' : 'status-dot inactive'} />
@@ -134,7 +174,7 @@ export function ChatPanel({
         <button
           className="text-button new-chat"
           type="button"
-          disabled={pending || uploading || !messages.length}
+          disabled={busy || uploading || !messages.length}
           onClick={() => {
             setMessages([])
             setDraft('')
@@ -228,7 +268,7 @@ export function ChatPanel({
                       proposal={message.reply.proposal}
                       session={session}
                       catalog={catalog}
-                      disabled={pending || index !== messages.length - 1}
+                      disabled={busy || index !== messages.length - 1}
                       onOpen={onOpen}
                       onSessionEnd={onSessionEnd}
                       onChanged={(proposal) =>
@@ -249,6 +289,22 @@ export function ChatPanel({
                       }
                     />
                   )}
+                  {message.reply?.proposal?.state === 'applied' &&
+                    !message.reply.proposal.translation &&
+                    message.reply.proposal.result?.map((item) => (
+                      <TranslationOffer
+                        key={`${item.id}-${item.version}`}
+                        kind={item.kind}
+                        id={item.id}
+                        version={item.version}
+                        sourceLanguage={item.language ?? 'fr'}
+                        session={session}
+                        disabled={busy || index !== messages.length - 1}
+                        onBusy={setTranslationBusy}
+                        onSessionEnd={onSessionEnd}
+                        onOpen={onOpen}
+                      />
+                    ))}
                 </div>
               </article>
             ))}
@@ -258,7 +314,11 @@ export function ChatPanel({
                   <span className="thinking-dot" />
                   {t('chat.preparing')}
                 </div>
-                <button type="button" className="text-button" onClick={() => void cancel()}>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => void cancel()}
+                >
                   {t('chat.cancel')}
                 </button>
               </div>
@@ -285,9 +345,13 @@ export function ChatPanel({
             placeholder={t('chat.placeholder')}
             maxLength={16000}
             rows={3}
-            disabled={pending}
+            disabled={busy}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
                 event.preventDefault()
                 void submit(event)
               }
@@ -302,7 +366,7 @@ export function ChatPanel({
             <button
               type="submit"
               className="send-button"
-              disabled={pending || uploading || !draft.trim() || !settings.has_api_key}
+              disabled={busy || uploading || !draft.trim() || !settings.has_api_key}
               aria-label={pending ? t('chat.responding') : t('chat.send')}
             >
               <Icon name="arrow" size={20} />
@@ -313,7 +377,7 @@ export function ChatPanel({
           items={media}
           onChange={setMedia}
           session={session}
-          disabled={pending}
+          disabled={busy}
           onBusy={setUploading}
           onOpen={onOpen}
           onSessionEnd={onSessionEnd}
@@ -327,7 +391,7 @@ export function ChatPanel({
             <input
               type="checkbox"
               checked={includePrivate}
-              disabled={pending}
+              disabled={busy}
               aria-describedby="private-notes-help"
               onChange={(e) => setIncludePrivate(e.target.checked)}
             />

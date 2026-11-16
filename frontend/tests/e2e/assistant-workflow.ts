@@ -12,6 +12,7 @@ async function nav(page: Page, label: string, group?: string) {
 async function send(page: Page, text: string) {
   await page.getByLabel('Votre message').fill(text)
   await page.getByRole('button', { name: 'Envoyer le message' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Français', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Réponse en cours' })).toHaveCount(0, {
     timeout: 30_000,
   })

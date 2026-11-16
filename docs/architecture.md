@@ -130,3 +130,11 @@ L'architecture du [studio de contenus](content-studio.md#architecture-proposee-e
 ## Présentation publique des collections — issue #14
 
 L'[accord explicite](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/14#issuecomment-6881977535) étend les routes et l'accès aux données selon la [conception publique](public-site-design.md). `content/public.py` possède la sélection et les projections ; `api/public.py` valide les entrées et distribue les réponses/fichiers. La liste utilise des résumés SQL paginés ; les corps longs sont chargés sur les fiches. Chaque accès média recontrôle la visibilité avant le cache de miniatures. Les dérivés sont éphémères en mémoire, sans migration ni modification du volume. Quand le studio est désactivé, les pages restent disponibles avec des collections vides, sans créer de stockage.
+
+## Variantes éditoriales FR/EN
+
+L’[accord explicite de l’issue #20](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/20#issuecomment-6917635569) autorise la migration 3 → 4 et les routes publiques `/fr` et `/en`. Deux tables SQLite normalisées conservent les états et textes de variantes ; les fiches, relations et fichiers restent uniques. Le registre fermé et les empreintes de lignes appartiennent à `content/localization.py`, les écritures versionnées au domaine existant, et les projections autorisées à `content/public.py`.
+
+Les routes FastAPI restent explicites, avec liens natifs React et sans bibliothèque de routage supplémentaire. Le code de l’URL prime sur le choix du visiteur puis sur le défaut du site. L’administration conserve sa propre langue. La recherche SQL utilise les résumés localisés et les catalogues d’interface sont chargés à la demande.
+
+`assistant/translation.py` prépare une traduction structurée sans outils de contexte, limitée aux textes autorisés. Il réutilise les adaptateurs, budgets, propositions, validations transactionnelles et protections existants. La publication ne déclenche jamais de génération. Les [langues](languages.md) détaillent les contrats, les états et le comportement des traductions périmées.

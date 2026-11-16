@@ -25,11 +25,17 @@ class State(TypedDict, total=False):
 
 
 def build_graph(model, context, preferences, turn, previous):
-    system_policy = policy(current_language.get())
+    system_policy = (
+        policy(current_language.get())
+        + "\nLa langue éditoriale content_language est imposée par l’utilisateur et "
+        "prime sur les préférences. Les champs non textuels des variantes sont partagés et "
+        "ne doivent pas être modifiés. Une nouvelle fiche doit avoir cette langue.\n"
+    )
     history = [m.model_dump() for m in turn.messages]
     common = {
         "messages": history,
-        "preferences": preferences.defaults.model_dump(),
+        "preferences": {**preferences.defaults.model_dump(), "language": turn.language},
+        "content_language": turn.language,
         "private_notes_enabled": turn.include_private_notes,
         "attached_media": [
             {
@@ -131,7 +137,7 @@ def build_graph(model, context, preferences, turn, previous):
             system_policy + SPECIALIST,
             {
                 **common,
-                "preferences": style.model_dump(),
+                "preferences": {**style.model_dump(), "language": turn.language},
                 "task": task.model_dump(),
                 "section": worker["section"],
                 "allowed_fields": worker["fields"],
@@ -191,9 +197,22 @@ def build_graph(model, context, preferences, turn, previous):
                 Operation(
                     key=task.key,
                     kind=task.kind,
+                    language=turn.language,
                     entry_id=task.entry_id,
-                    changes=changes,
-                    as_draft=as_draft,
+                    changes={
+                        **changes,
+                        **({"language": turn.language} if task.entry_id is None else {}),
+                    },
+                    as_draft=as_draft
+                    or bool(
+                        task.entry_id
+                        and context.snapshots[task.entry_id]["localization"]["source_language"]
+                        != turn.language
+                        and context.snapshots[task.entry_id]["localization"]["states"].get(
+                            turn.language
+                        )
+                        != "ready"
+                    ),
                     version=context.versions.get(str(task.entry_id)) if task.entry_id else None,
                 )
             )

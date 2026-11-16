@@ -15,6 +15,7 @@ from personal_site.assistant.models import RUN_SECONDS, Budget, ModelFactory
 from personal_site.assistant.registry import PRIVATE_FIELDS
 from personal_site.assistant.store import AssistantStore
 from personal_site.assistant.tools import Context
+from personal_site.assistant.translation import translate
 from personal_site.content.validation import ContentError
 from personal_site.i18n import tr
 
@@ -28,7 +29,7 @@ class AssistantService:
 
     async def reply(self, turn, owner, config):
         started, budget = time.monotonic(), Budget()
-        context = Context(self.store.content, budget, turn.include_private_notes)
+        context = Context(self.store.content, budget, turn.include_private_notes, turn.language)
         try:
             with tracing_context(enabled=False):
                 async with asyncio.timeout(RUN_SECONDS), self.models.open(config, budget) as model:
@@ -51,11 +52,14 @@ class AssistantService:
                         }
                     for ident in turn.media_ids:
                         await run_in_threadpool(context.read, "media", ident)
-                    graph = build_graph(model, context, preferences, turn, previous)
-                    state = await graph.ainvoke(
-                        {"results": []}, {"recursion_limit": 24, "callbacks": []}
-                    )
-                    response = state["response"]
+                    if turn.translation:
+                        response = await translate(model, context, turn)
+                    else:
+                        graph = build_graph(model, context, preferences, turn, previous)
+                        state = await graph.ainvoke(
+                            {"results": []}, {"recursion_limit": 24, "callbacks": []}
+                        )
+                        response = state["response"]
                     payload = response.pop("proposal_payload")
                     proposal = (
                         await run_in_threadpool(self.store.create, owner, turn.thread_id, payload)

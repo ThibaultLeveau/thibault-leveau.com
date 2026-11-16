@@ -53,7 +53,16 @@ class Message(Model):
     content: str = Field(min_length=1, max_length=20000)
 
 
+class TranslationTask(Model):
+    kind: Kind
+    entry_id: Annotated[int, Field(strict=True, gt=0)]
+    version: Annotated[int, Field(strict=True, ge=1)]
+    source_language: Literal["fr", "en"]
+
+
 class Turn(Model):
+    language: Literal["fr", "en"]
+    translation: TranslationTask | None = None
     request_id: UUID
     thread_id: UUID
     messages: list[Message] = Field(min_length=1, max_length=40)
@@ -98,6 +107,7 @@ class Plan(Model):
 
 
 class Operation(Model):
+    language: Literal["fr", "en"] | None = None
     key: Key
     kind: Kind
     entry_id: int | None = None

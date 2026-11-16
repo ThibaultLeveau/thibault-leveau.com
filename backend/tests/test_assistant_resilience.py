@@ -87,6 +87,7 @@ def test_cancellation_stops_server_work_and_releases_lock(admin_client):
                     f"{ROOT}/turn",
                     json={
                         "request_id": ident,
+                        "language": "fr",
                         "thread_id": str(uuid4()),
                         "messages": [{"role": "user", "content": "Créer un projet"}],
                     },
@@ -97,6 +98,7 @@ def test_cancellation_stops_server_work_and_releases_lock(admin_client):
                 f"{ROOT}/turn",
                 json={
                     "request_id": str(uuid4()),
+                    "language": "fr",
                     "thread_id": str(uuid4()),
                     "messages": [{"role": "user", "content": "Autre demande"}],
                 },
@@ -185,6 +187,8 @@ def test_migration_from_populated_v1_preserves_contents_and_sessions(admin_clien
     with store.connect() as db:
         db.execute("DROP TABLE assistant_proposals")
         db.execute("DROP TABLE assistant_preferences")
+        db.execute("DROP TABLE content_localized_values")
+        db.execute("DROP TABLE content_localizations")
         db.execute("DROP TABLE site_languages")
         db.execute("DELETE FROM content_migrations WHERE version>=2")
     migrate(store)

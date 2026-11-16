@@ -53,5 +53,12 @@ export default defineConfig({
           reuseExistingServer: false,
           timeout: 90_000,
         },
+        {
+          command: 'PUBLIC_FIXTURES=1 E2E_PORT=8768 uv run python backend/tests/serve_e2e.py',
+          cwd: root,
+          url: 'http://127.0.0.1:8768/api/health',
+          reuseExistingServer: false,
+          timeout: 90_000,
+        },
       ],
 })

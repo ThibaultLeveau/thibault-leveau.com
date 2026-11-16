@@ -49,6 +49,7 @@ def turn(client, message="Créer une fiche", messages=None, thread=None, **kwarg
     return client.post(
         f"{ROOT}/turn",
         json={
+            "language": "fr",
             "messages": messages or [{"role": "user", "content": message}],
             "request_id": str(uuid4()),
             "thread_id": str(thread or uuid4()),
