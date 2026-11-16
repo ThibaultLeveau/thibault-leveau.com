@@ -64,7 +64,22 @@ export interface Item {
   visibility: 'private' | 'public'
   updated_at?: string
 }
+export interface LocalizationField {
+  path: string
+  source: string
+  label: string
+  section: string
+  translated: boolean
+  max_length: number
+}
 export interface ContentRecord {
+  localization?: {
+    language: 'fr' | 'en'
+    source_language: string
+    states: Record<string, 'missing' | 'draft' | 'ready' | 'stale' | 'archived'>
+    fields: LocalizationField[]
+    unmatched_texts?: { path: string; value: string }[]
+  }
   derived?: { expired: boolean }
   id: number
   kind: Collection
@@ -141,7 +156,11 @@ export function defaults(schema: FieldSchema, root = schema): Draft {
   )
 }
 export function getStatusLabels() {
-  return { draft: t('status.draft'), ready: t('status.ready'), archived: t('status.archived') }
+  return {
+    draft: t('status.draft'),
+    ready: t('status.ready'),
+    archived: t('status.archived'),
+  }
 }
 export function getOptionLabels(): Record<string, string> {
   return {
@@ -241,7 +260,8 @@ export function safeHref(value: string, contact = false): string | undefined {
       !u.hash
     )
       return value
-    if (['http:', 'https:'].includes(u.protocol) && !u.username && !u.password) return value
+    if (['http:', 'https:'].includes(u.protocol) && !u.username && !u.password)
+      return value
   } catch {
     /* Invalid links remain text. */
   }

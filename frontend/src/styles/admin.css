@@ -280,3 +280,55 @@
   font-weight: 400;
 }
 .language-settings select:focus { border-color: var(--accent); }
+
+.variant-tabs {
+  display: flex;
+  gap: 12px;
+  margin-block: 24px;
+  flex-wrap: wrap;
+}
+.variant-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 48px;
+  color: var(--ink);
+}
+.variant-tabs button.active {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.variant-tabs small {
+  color: var(--muted);
+}
+.translation-offer {
+  margin-block: 24px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.translation-offer h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.translation-offer p {
+  line-height: 1.7;
+}
+.translation-field {
+  min-width: 0;
+}
+.translation-field details {
+  margin-block: 8px;
+  color: var(--muted);
+}
+.translation-field details p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.translation-field textarea {
+  width: 100%;
+  min-height: 80px;
+}

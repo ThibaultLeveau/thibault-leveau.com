@@ -55,13 +55,14 @@ def store(request):
 
 
 @router.get("/home")
-def home(request: Request):
+def home(request: Request, language: Literal["fr", "en"] | None = None):
     return store(request).home()
 
 
 @router.get("/entries")
 def listing(
     request: Request,
+    language: Literal["fr", "en"] | None = None,
     kind: Annotated[str, Query(max_length=30)] = "",
     q: Annotated[str, Query(max_length=160)] = "",
     page: Annotated[int, Query(ge=1, le=100000)] = 1,
@@ -75,7 +76,7 @@ def listing(
 
 
 @router.get("/entries/{kind}/{entry_id}")
-def detail(kind: str, entry_id: int, request: Request):
+def detail(kind: str, entry_id: int, request: Request, language: Literal["fr", "en"] | None = None):
     return store(request).detail(kind, entry_id)
 
 

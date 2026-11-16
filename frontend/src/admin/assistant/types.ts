@@ -7,6 +7,8 @@ export interface Question {
   fields: string[]
 }
 export interface ProposalItem {
+  unmatched_texts?: { path: string; value: string }[]
+  language?: 'fr' | 'en'
   key: string
   kind: Collection
   id: number | null
@@ -20,13 +22,22 @@ export interface ProposalItem {
   related: boolean
 }
 export interface Proposal {
+  translation?: boolean
   id: string
   revision: number
   state: 'pending' | 'applied' | 'cancelled' | 'superseded'
   expires: number
   items: ProposalItem[]
   result:
-    { id: number; kind: Collection; title: string; status: string; version: number }[] | null
+    | {
+        id: number
+        kind: Collection
+        title: string
+        status: string
+        version: number
+        language?: 'fr' | 'en'
+      }[]
+    | null
 }
 export interface AssistantReply {
   message: string

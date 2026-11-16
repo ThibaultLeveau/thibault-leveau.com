@@ -11,6 +11,7 @@ from personal_site.content.catalog import (
     table,
     target,
 )
+from personal_site.content.localization import fingerprint, invalidate, localize, write_translation
 from personal_site.content.migrate import migrate
 from personal_site.content.schemas import MODELS
 from personal_site.content.validation import (
@@ -141,10 +142,10 @@ class ContentStore:
             if i != entry_id
         ]
 
-    def get(self, kind, entry_id):
+    def get(self, kind, entry_id, language=None):
         with self.admin.connect() as db:
             db.execute("BEGIN")
-            result = self.read(db, kind, entry_id)
+            result = localize(db, self.read(db, kind, entry_id), language)
             result["usages"] = self.usages(db, entry_id)
             result["references"] = self.reference_labels(db, kind, result["entry"])
             return result
@@ -178,13 +179,23 @@ class ContentStore:
         limit=30,
         nature="",
         related=None,
+        language=None,
     ):
         table(kind)  # Closed registry check, including empty collections.
         where, args = ["kind = ?"], [kind]
         if query:
             # instr avoids wildcard semantics; search text is accent/case normalized on write.
-            where.append("instr(search_text, ?) > 0")
-            args.append(normalize(query))
+            if language:
+                where.append(
+                    "(instr(search_text, ?) > 0 OR EXISTS (SELECT 1 "
+                    "FROM content_localized_values v WHERE v.entry_id=content_entries.id "
+                    "AND v.language=? AND v.path IN ('title','summary') "
+                    "AND instr(content_normalize(v.value), ?) > 0))"
+                )
+                args.extend([normalize(query), language, normalize(query)])
+            else:
+                where.append("instr(search_text, ?) > 0")
+                args.append(normalize(query))
         if status:
             where.append("status = ?")
             args.append(status)
@@ -220,6 +231,7 @@ class ContentStore:
                 f'WHERE "{table(kind)}".id = content_entries.id) DESC, id DESC'
             )
         with self.admin.connect() as db:
+            db.create_function("content_normalize", 1, normalize)
             if related:
                 used = [r["id"] for r in self.usages(db, related)]
                 where.append("id IN (" + ",".join("?" for _ in used) + ")" if used else "0")
@@ -237,6 +249,17 @@ class ContentStore:
                     [*args, limit, (page - 1) * limit],
                 )
             ]
+            if language and items:
+                by_id = {item["id"]: item for item in items}
+                placeholders = ",".join("?" for _ in items)
+                for value in db.execute(
+                    "SELECT entry_id, path, value FROM content_localized_values "
+                    f"WHERE entry_id IN ({placeholders}) AND language=? "
+                    "AND path IN ('title','summary')",
+                    [*by_id, language],
+                ):
+                    by_id[value["entry_id"]][value["path"]] = value["value"]
+                    by_id[value["entry_id"]]["language"] = language
             return {"items": items, "total": total, "page": page, "limit": limit}
 
     def check_relations(self, db, kind, data):
@@ -294,7 +317,36 @@ class ContentStore:
         if errors:
             raise ContentError(tr("errors.relationships"), errors=errors)
 
-    def write(self, db, kind, data, *, entry_id=None, version=None, as_draft=False, uploaded=False):
+    def write(
+        self,
+        db,
+        kind,
+        data,
+        *,
+        entry_id=None,
+        version=None,
+        as_draft=False,
+        uploaded=False,
+        language=None,
+    ):
+        if entry_id:
+            original = self.read(db, kind, entry_id)["entry"]
+            selected = language or original["language"]
+            if selected != original["language"]:
+                return write_translation(
+                    self,
+                    db,
+                    kind,
+                    entry_id,
+                    data,
+                    version=version,
+                    language=selected,
+                    as_draft=as_draft,
+                )
+            if data["language"] != original["language"]:
+                raise ContentError(tr("errors.translationLanguage"))
+            if fingerprint(original) != fingerprint(data):
+                invalidate(db, entry_id)
         if kind == "media" and data["source"] == "file" and not uploaded:
             previous = self.read(db, kind, entry_id)["entry"] if entry_id else None
             if not previous or previous["source"] != "file" or previous["nature"] != data["nature"]:
@@ -398,6 +450,7 @@ class ContentStore:
                 # Reciprocal editors must detect stale associations as well as stale text.
                 if tab in {"project_services", "project_testimonials", "service_testimonials"}:
                     for ident in changed:
+                        invalidate(db, ident)
                         db.execute(
                             "UPDATE content_entries SET version = version + 1, updated_at = ? "
                             "WHERE id = ?",
@@ -409,13 +462,19 @@ class ContentStore:
                     insert(db, f"entry_{name}", {"entry_id": entry_id, "position": index, **row})
         return entry_id
 
-    def save(self, kind, payload, *, entry_id=None, version=None, as_draft=False):
+    def save(self, kind, payload, *, entry_id=None, version=None, as_draft=False, language=None):
         data = validate(kind, payload)
         try:
             with self.admin.connect() as db:
                 db.execute("BEGIN IMMEDIATE")
                 entry_id = self.write(
-                    db, kind, data, entry_id=entry_id, version=version, as_draft=as_draft
+                    db,
+                    kind,
+                    data,
+                    entry_id=entry_id,
+                    version=version,
+                    as_draft=as_draft,
+                    language=language,
                 )
         except sqlite3.IntegrityError:
             raise ContentError(
@@ -423,7 +482,7 @@ class ContentStore:
                 status=409,
                 errors=[issue("slug", tr("errors.slugTaken"), "unique")],
             ) from None
-        return self.get(kind, entry_id)
+        return self.get(kind, entry_id, language)
 
     def transition(self, kind, entry_id, version, status):
         with self.admin.connect() as db:
@@ -483,4 +542,14 @@ class ContentStore:
                 suffix += 1
             data["slug"] = f"{base}-{suffix}"
             ident = self.write(db, kind, data)
+            db.execute(
+                "INSERT INTO content_localizations SELECT ?, language, 'draft', 1, "
+                "source_hash FROM content_localizations WHERE entry_id=?",
+                (ident, entry_id),
+            )
+            db.execute(
+                "INSERT INTO content_localized_values SELECT ?, language, path, "
+                "value, anchor FROM content_localized_values WHERE entry_id=?",
+                (ident, entry_id),
+            )
         return self.get(kind, ident)

@@ -48,6 +48,9 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 7px; }
 
 .site-shell { padding-inline: clamp(24px, 5.6vw, 96px); }
+.bootstrap-error { max-width: 38rem; margin: 18vh auto 0; padding: 24px; line-height: 1.7; }
+.bootstrap-error button { min-height: 44px; margin-top: 20px; padding: 10px 20px; color: var(--canvas); background: var(--ink); border-radius: 8px; }
+.bootstrap-error button:hover { background: var(--accent); }
 .site-header { height: 112px; border-bottom: 1px solid var(--line); }
 .brand { color: var(--ink); font-size: 15px; font-weight: 550; letter-spacing: -0.035em; text-decoration: none; }
 .brand-mark { color: var(--accent); }

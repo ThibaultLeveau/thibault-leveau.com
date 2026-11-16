@@ -1,9 +1,10 @@
 """Projection publique fermée : aucun contrat privé n'est envoyé au visiteur."""
 
 from personal_site.content.catalog import target
+from personal_site.content.localization import localize
 from personal_site.content.schemas import LABELS
 from personal_site.content.validation import ContentError, normalize, slugify
-from personal_site.i18n import schema_text, tr
+from personal_site.i18n import current_language, schema_text, tr
 
 PAGES = {
     "/": "Accueil",
@@ -86,13 +87,26 @@ FIELDS = {
 # Names used by search come from this sanitized projection, never search_text.
 BASE = """
 WITH visible AS (
- SELECT c.id, c.kind, c.language, c.featured, c.sort_order,
+ SELECT c.id, c.kind, c.language AS source_language,
+ CASE WHEN l.entry_id IS NOT NULL THEN '{{language}}' ELSE c.language END AS language,
+ (c.language = '{{language}}' OR l.entry_id IS NOT NULL) AS translation_available,
+ c.featured, c.sort_order,
  CASE WHEN t.anonymous = 1 THEN ?
-      WHEN o.alias != '' THEN o.alias ELSE c.title END AS title,
+      WHEN o.alias != '' THEN COALESCE(la.value, o.alias) ELSE COALESCE(lt.value,
+ c.title) END AS title,
  CASE WHEN t.anonymous = 1 THEN 'temoignage-anonyme'
       WHEN o.alias != '' THEN 'organisation' ELSE c.slug END AS slug,
- CASE WHEN t.anonymous = 1 OR o.alias != '' THEN '' ELSE c.summary END AS summary
+ CASE WHEN t.anonymous = 1 OR o.alias != '' THEN '' ELSE COALESCE(ls.value, c.summary)
+ END AS summary
  FROM content_entries c
+ LEFT JOIN content_localizations l ON l.entry_id=c.id AND l.language='{{language}}'
+ AND l.state='ready' AND l.stale=0
+ LEFT JOIN content_localized_values lt ON lt.entry_id=l.entry_id AND
+ lt.language=l.language AND lt.path='title'
+ LEFT JOIN content_localized_values ls ON ls.entry_id=l.entry_id AND
+ ls.language=l.language AND ls.path='summary'
+ LEFT JOIN content_localized_values la ON la.entry_id=l.entry_id AND
+ la.language=l.language AND la.path='alias'
  LEFT JOIN testimonials t ON t.id = c.id
  LEFT JOIN organizations o ON o.id = c.id
  WHERE c.status = 'ready' AND c.visibility = 'public'
@@ -110,8 +124,10 @@ WITH visible AS (
 """
 
 
-def address(item):
-    return f"/{PATHS[item['kind']]}/{item['id']}/{item['slug']}"
+def address(item, language=None):
+    return (
+        f"/{language or current_language.get()}/{PATHS[item['kind']]}/{item['id']}/{item['slug']}"
+    )
 
 
 def missing():
@@ -121,16 +137,39 @@ def missing():
 class PublicContent:
     def __init__(self, content):
         self.content = content
+        self._summary_values = {}
+
+    @property
+    def base(self):
+        # The context is a closed fr/en code, never a raw request value.
+        return BASE.replace("{{language}}", current_language.get())
 
     def visible(self, db, ident, kind=None):
         if not isinstance(ident, int) or ident < 1 or ident > 9223372036854775807:
             return None
         row = db.execute(
-            BASE + "SELECT * FROM visible WHERE id = ?", (tr("public.anonymous"), ident)
+            self.base + "SELECT * FROM visible WHERE id = ?", (tr("public.anonymous"), ident)
         ).fetchone()
         if not row or (kind and row["kind"] != kind):
             return None
         return dict(row)
+
+    def summary_values(self, db, ids):
+        missing_ids = set(ids) - self._summary_values.keys()
+        if missing_ids:
+            self._summary_values.update({ident: {} for ident in missing_ids})
+            placeholders = ",".join("?" for _ in missing_ids)
+            rows = db.execute(
+                "SELECT v.entry_id, v.path, v.value FROM content_localized_values v "
+                "JOIN content_localizations l USING(entry_id, language) "
+                "WHERE l.language=? AND l.state='ready' AND l.stale=0 "
+                f"AND v.entry_id IN ({placeholders}) "
+                "AND (v.path IN ('level','credit','license') OR v.path LIKE 'media.%')",
+                [current_language.get(), *missing_ids],
+            )
+            for value in rows:
+                self._summary_values[value["entry_id"]][value["path"]] = value["value"]
+        return self._summary_values
 
     def summary(self, db, row, *, cover=True):
         item = {
@@ -138,7 +177,10 @@ class PublicContent:
             for key in ("id", "kind", "title", "slug", "summary", "language", "featured")
         }
         item["url"] = address(item)
+        item["translation_available"] = bool(row["translation_available"])
+        item["source_url"] = address(item, row["source_language"])
         item["featured"] = bool(item["featured"])
+        translated = self.summary_values(db, [item["id"]])[item["id"]]
         kind = item["kind"]
         dated = {
             "projects": "start_date",
@@ -164,6 +206,8 @@ class PublicContent:
             item[field] = db.execute(
                 f'SELECT "{field}" FROM "{kind}" WHERE id = ?', (item["id"],)
             ).fetchone()[0]
+        if "level" in translated:
+            item["level"] = translated["level"]
         if kind == "skills":
             domain = db.execute(
                 "SELECT domain_id FROM skills WHERE id = ?", (item["id"],)
@@ -173,7 +217,8 @@ class PublicContent:
                 item["domain"] = domain["title"]
         if cover:
             media = db.execute(
-                BASE + "SELECT v.*, em.alt, em.decorative, em.caption, m.credit, m.license "
+                self.base + "SELECT v.*, em.alt, em.decorative, em.caption, em.position_a, "
+                "m.credit, m.license "
                 "FROM entry_media em "
                 "JOIN visible v ON v.id = em.ref_id JOIN media_assets m ON m.id = v.id "
                 "WHERE em.entry_id = ? AND em.role = 'cover' AND m.nature = 'image' "
@@ -185,6 +230,7 @@ class PublicContent:
                     "SELECT width, height FROM media_files WHERE entry_id = ?", (media["id"],)
                 ).fetchone()
                 if file:
+                    media_text = self.summary_values(db, [media["id"]])[media["id"]]
                     variants = {}
                     for width in (480, 960, 1600):
                         ratio = min(1, width / max(file["width"], file["height"]))
@@ -196,8 +242,13 @@ class PublicContent:
                     item["cover"] = {
                         "url": f"/api/public/media/{media['id']}/image?width=960",
                         "srcset": ", ".join(f"{url} {width}w" for width, url in variants.items()),
-                        "alt": "" if media["decorative"] else media["alt"],
-                        **{key: media[key] for key in ("caption", "credit", "license")},
+                        "alt": ""
+                        if media["decorative"]
+                        else translated.get(f"media.{media['position_a']}.alt", media["alt"]),
+                        "caption": translated.get(
+                            f"media.{media['position_a']}.caption", media["caption"]
+                        ),
+                        **{key: media_text.get(key, media[key]) for key in ("credit", "license")},
                         **dict(file),
                     }
         return item
@@ -269,7 +320,7 @@ class PublicContent:
                 args.extend(ids)
             condition = " AND ".join(where)
             total = db.execute(
-                BASE + f"SELECT count(*) FROM visible v WHERE {condition}",
+                self.base + f"SELECT count(*) FROM visible v WHERE {condition}",
                 [tr("public.anonymous"), *args],
             ).fetchone()[0]
             order = {
@@ -293,10 +344,11 @@ class PublicContent:
                 )
             )
             rows = db.execute(
-                BASE + f"SELECT v.* FROM visible v {joins} WHERE {condition} "
+                self.base + f"SELECT v.* FROM visible v {joins} WHERE {condition} "
                 f"ORDER BY {order} LIMIT ? OFFSET ?",
                 [tr("public.anonymous"), *args, limit, (page - 1) * limit],
             ).fetchall()
+            self.summary_values(db, [r["id"] for r in rows])
             return {**empty, "total": total, "items": [self.summary(db, r) for r in rows]}
 
     def detail(self, kind, ident):
@@ -308,6 +360,8 @@ class PublicContent:
             if not row:
                 missing()
             raw = self.content.read(db, kind, ident)
+            if row["translation_available"]:
+                raw = localize(db, raw, current_language.get())
             data = {key: raw["entry"][key] for key in (COMMON + " " + FIELDS[kind]).split()}
             if self.masked(db, row):
                 keep = (
@@ -350,6 +404,10 @@ class PublicContent:
                             (entry["id"],),
                         ).fetchone()
                         references[entry["id"]].update(dict(media))
+                        translated = self.summary_values(db, [entry["id"]])[entry["id"]]
+                        references[entry["id"]].update(
+                            {k: v for k, v in translated.items() if k in {"credit", "license"}}
+                        )
                         if file:
                             references[entry["id"]].update(
                                 file_url=f"/api/public/media/{entry['id']}/file", **dict(file)
@@ -368,6 +426,19 @@ class PublicContent:
                 "references": references,
                 "related": related,
                 "expired": raw["derived"]["expired"],
+                "available_languages": [
+                    raw["localization"]["source_language"]
+                    if "localization" in raw
+                    else row["source_language"],
+                    *[
+                        r[0]
+                        for r in db.execute(
+                            "SELECT language FROM content_localizations WHERE "
+                            "entry_id=? AND state='ready' AND stale=0",
+                            (ident,),
+                        )
+                    ],
+                ],
             }
             if kind == "media" and raw["file"]:
                 result["file"] = {

@@ -67,3 +67,7 @@ Ne pas ajouter de Google Fonts au thème documentaire : `font: false` conserve l
 `styles/public.css` isole les couleurs secondaires sous `.public-site` : texte secondaire `#606a64` en clair et `#a8b1ac` en sombre, surfaces blanches ou `#202527`, panneaux minéraux et accent existant. La navigation desktop laisse place à un dialogue sous 1120 px. Les grilles passent de trois à deux puis une colonne ; les filtres, chronologies et fiches se replient jusqu'à 320 px.
 
 La page publique utilise grandes introductions typographiques, repères numérotés, couvertures réelles ou compositions de titre, séparateurs et contenus éditoriaux. Les fiches conservent une colonne de lecture bornée ; les formulaires et FAQ ont des contrôles explicites. Le thème, le focus, le dialogue modal, les états réseau et la réduction des animations sont vérifiés dans les deux palettes. Une page vide garde des accès aux autres collections, sans inventer de données pour remplir l'écran.
+
+## Commandes de langue
+
+Le sélecteur natif public reste visible sur mobile et conserve un focus distinct. L’en-tête peut passer sur deux lignes à petite largeur. Les boutons de version du studio exposent leur sélection avec `aria-pressed` et un état textuel. Les textes partagés, sources et anciennes traductions dissociées sont expliqués à proximité de l’éditeur, sans dépendre d’une couleur. La proposition de traduction réutilise les boutons et le diff de l’assistant.

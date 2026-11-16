@@ -3,12 +3,12 @@ set -euo pipefail
 base_url="${1:-https://new.thibault-leveau.com}"
 base_url="${base_url%/}"
 curl --fail --silent --show-error "$base_url/api/health" | python3 -c 'import json,sys; assert json.load(sys.stdin) == {"status":"ok"}'
-curl --fail --silent --show-error "$base_url/" | python3 -c 'import sys; assert "Thibault Leveau" in sys.stdin.read()'
+curl --fail --location --silent --show-error "$base_url/" | python3 -c 'import sys; assert "Thibault Leveau" in sys.stdin.read()'
 curl --fail --silent --show-error "$base_url/documentation/" | python3 -c 'import sys; assert "<html" in sys.stdin.read()'
 curl --fail --silent --show-error "$base_url/documentation/search/search_index.json" | python3 -c 'import json,sys; assert json.load(sys.stdin)["docs"]'
 curl --fail --silent --show-error "$base_url/admin" | python3 -c 'import sys; assert "Thibault Leveau" in sys.stdin.read()'
-for route in /projets /parcours /expertise /services /journal /a-propos /explorer; do
-  curl --fail --silent --show-error "$base_url$route" | python3 -c 'import sys; assert "Thibault Leveau" in sys.stdin.read()'
+for route in /fr /en /projets /parcours /expertise /services /journal /a-propos /explorer; do
+  curl --fail --location --silent --show-error "$base_url$route" | python3 -c 'import sys; assert "Thibault Leveau" in sys.stdin.read()'
 done
 curl --fail --silent --show-error "$base_url/api/public/home" | python3 -c 'import json,sys; assert "profile" in json.load(sys.stdin)'
 curl --fail --silent --show-error "$base_url/api/public/entries?limit=1" | python3 -c 'import json,sys; result=json.load(sys.stdin); assert len(result["items"]) <= 1 and result["total"] >= 0'

@@ -69,6 +69,7 @@ def media_file(entry_id: int, request: Request):
 def listing(
     kind: str,
     request: Request,
+    language: Literal["fr", "en"] | None = None,
     q: Annotated[str, Query(max_length=160)] = "",
     status: Literal["", "draft", "ready", "archived"] = "",
     sort: Literal["updated", "title", "order", "chronology"] = "updated",
@@ -80,6 +81,7 @@ def listing(
     return store(request).listing(
         collection(kind),
         query=q,
+        language=language,
         status=status,
         sort=sort,
         page=page,
@@ -105,8 +107,8 @@ def create(kind: str, payload: Save, request: Request):
 
 
 @router.get("/{kind}/{entry_id}")
-def detail(kind: str, entry_id: int, request: Request):
-    return store(request).get(collection(kind), entry_id)
+def detail(kind: str, entry_id: int, request: Request, language: Literal["fr", "en"] | None = None):
+    return store(request).get(collection(kind), entry_id, language)
 
 
 @router.put("/{kind}/{entry_id}")
@@ -117,6 +119,7 @@ def update(kind: str, entry_id: int, payload: Save, request: Request):
         entry_id=entry_id,
         version=payload.version,
         as_draft=payload.as_draft,
+        language=payload.language,
     )
 
 

@@ -121,6 +121,7 @@ class AssistantStore:
         return {
             "id": row["id"],
             "revision": row["revision"],
+            "translation": payload.get("translation", False),
             "state": row["state"],
             "expires": row["expires"],
             "items": payload["preview"],
@@ -159,6 +160,7 @@ class AssistantStore:
                 result = [
                     {
                         "id": r["id"],
+                        "language": r["entry"]["language"],
                         "kind": r["kind"],
                         "title": r["entry"]["title"],
                         "version": r["version"],

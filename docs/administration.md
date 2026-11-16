@@ -147,3 +147,7 @@ Publier séparément les références que l'on souhaite montrer : une compétenc
 Pour les médias, **Prêt + Public** est nécessaire sur le média et sur au moins une fiche qui l'utilise avec un rôle public (couverture, galerie, vidéo, pièce jointe ou partage). Un justificatif privé ne constitue pas cet usage. Les notes privées, notes d'autorisation et contraintes confidentielles ne sont jamais envoyées par l'API publique. Un téléchargement déjà effectué par un visiteur ne peut pas être rappelé.
 
 Les pages utilisent les champs déjà renseignés : mise en avant et ordre pour la sélection, dates pour le tri récent, titre/résumé pour la recherche. Les identifiants restent stables dans les URL ; changer le slug redirige vers son adresse actuelle. La recherche générale se trouve dans **Explorer**. L'indexation par les moteurs reste désactivée par défaut, indépendamment de la publication.
+
+## Collections bilingues
+
+Les boutons **Français / English** choisissent la version éditée sans changer l’interface administrative. Le chat demande la version avant chaque génération. Après sauvegarde, vous pouvez générer et relire l’équivalent dans l’autre langue. Voir le [guide complet des langues](languages.md).

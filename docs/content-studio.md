@@ -269,3 +269,7 @@ Le retour arrière ne supprime pas les nouveaux contenus. Une ancienne image n'a
 | Livraison | `make check`, `make test-e2e`, construction Docker, auto-revue documentée, CI du commit final, protections respectées, PR fusionnée et issue clôturée |
 
 Les pages d'architecture, d'administration, de contrats backend, de configuration, d'exploitation et de tests complètent cette conception. La CI et la revue finale conditionnent la fusion et la clôture de l'issue #8.
+
+## Versions françaises et anglaises
+
+Chaque fiche conserve une identité et des faits partagés, avec une variante FR/EN des textes. L’éditeur protège la saisie au changement de version et propose une traduction après sauvegarde. Le [guide des langues](languages.md) précise les champs partagés, les états, la validation et la relecture des anciennes traductions lorsque les listes changent.

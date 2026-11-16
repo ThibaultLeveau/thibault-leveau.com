@@ -1,4 +1,7 @@
-import { number, t } from '../../i18n'
+import { UnmatchedTranslations } from './UnmatchedTranslations'
+import { TranslationFields } from './TranslationFields'
+import { TranslationOffer } from '../assistant/TranslationOffer'
+import { languageName, number, t, isLanguage, type Language } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminRequest, ApiError, errorMessage, type Session } from '../api'
 import { Dialog } from './Dialog'
@@ -46,22 +49,28 @@ export function Editor({
     const saved = memory.read()
     return saved?.kind === kind && saved.record?.id === initial?.id ? saved : null
   })
-  const [record, setRecord] = useState(initial)
+  const [record, setRecord] = useState(remembered?.record ?? initial)
   const [draft, setDraft] = useState<Draft>(
     () => remembered?.draft ?? initial?.entry ?? defaults(definition.schema),
   )
+  const [offerVersion, setOfferVersion] = useState<number | null>(null)
+  const selectedLanguage = String(draft.language || 'fr')
+  const translating =
+    !!record?.localization && selectedLanguage !== record.localization.source_language
   const [section, setSection] = useState(remembered?.section ?? 'essential')
   const [errors, setErrors] = useState<FieldError[]>([])
   const [message, setMessage] = useState('')
   const [notice, setNotice] = useState('')
   const [conflict, setConflict] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [references, setReferences] = useState<Record<number, Item>>(initial?.references ?? {})
+  const [references, setReferences] = useState<Record<number, Item>>(
+    initial?.references ?? {},
+  )
   const [preview, setPreview] = useState(false)
   const [pending, setPending] = useState<(() => void) | null>(null)
-  const [confirm, setConfirm] = useState<'archive' | 'delete' | 'duplicate' | 'reload' | null>(
-    null,
-  )
+  const [confirm, setConfirm] = useState<
+    'archive' | 'delete' | 'duplicate' | 'reload' | null
+  >(null)
   const dirty =
     JSON.stringify(draft) !== JSON.stringify(record?.entry ?? defaults(definition.schema))
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -102,7 +111,8 @@ export function Editor({
       setSection(nextSection)
       requestAnimationFrame(() => {
         const element =
-          document.getElementById(fieldId(error.path)) ?? document.getElementById(fieldId(key))
+          document.getElementById(fieldId(error.path)) ??
+          document.getElementById(fieldId(key))
         element?.focus()
         element?.scrollIntoView({ block: 'center', behavior: 'instant' })
       })
@@ -130,7 +140,7 @@ export function Editor({
     memory.write({ kind, record: next, draft: next.entry, section })
     onRecord(next)
   }
-  async function save(asDraft = false): Promise<ContentRecord | null> {
+  async function save(asDraft = translating): Promise<ContentRecord | null> {
     setBusy(true)
     setMessage('')
     setNotice('')
@@ -140,11 +150,19 @@ export function Editor({
         {
           method: record ? 'PUT' : 'POST',
           csrf: session.csrf_token,
-          body: { entry: draft, version: record?.version, as_draft: asDraft },
+          body: {
+            entry: draft,
+            version: record?.version,
+            as_draft: asDraft,
+            ...(record && isLanguage(selectedLanguage)
+              ? { language: selectedLanguage }
+              : {}),
+          },
         },
       )
       accepted(next)
       setNotice(t('editor.saved'))
+      setOfferVersion(next.version)
       return next
     } catch (e) {
       failed(e)
@@ -158,11 +176,14 @@ export function Editor({
     setMessage('')
     setNotice('')
     try {
-      const result = await adminRequest<{ errors: FieldError[] }>(`/content/${kind}/validate`, {
-        method: 'POST',
-        csrf: session.csrf_token,
-        body: { entry: draft },
-      })
+      const result = await adminRequest<{ errors: FieldError[] }>(
+        `/content/${kind}/validate`,
+        {
+          method: 'POST',
+          csrf: session.csrf_token,
+          body: { entry: draft },
+        },
+      )
       setErrors(result.errors)
       if (result.errors.length) {
         setMessage(t('editor.incomplete'))
@@ -222,7 +243,11 @@ export function Editor({
         memory.write(null)
         onBack()
       } else if (confirm === 'reload') {
-        accepted(await adminRequest<ContentRecord>(`/content/${kind}/${record.id}`))
+        accepted(
+          await adminRequest<ContentRecord>(
+            `/content/${kind}/${record.id}?language=${selectedLanguage}`,
+          ),
+        )
       } else if (confirm === 'duplicate') {
         const next = await adminRequest<ContentRecord>(
           `/content/${kind}/${record.id}/duplicate`,
@@ -238,6 +263,25 @@ export function Editor({
       setConfirm(null)
     } catch (e) {
       setConfirm(null)
+      failed(e)
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function selectLanguage(code: Language) {
+    setOfferVersion(null)
+    if (!record) {
+      setDraft((value) => ({ ...value, language: code }))
+      return
+    }
+    setBusy(true)
+    try {
+      accepted(
+        await adminRequest<ContentRecord>(
+          `/content/${kind}/${record.id}?language=${code}`,
+        ),
+      )
+    } catch (e) {
       failed(e)
     } finally {
       setBusy(false)
@@ -279,10 +323,48 @@ export function Editor({
             </span>
           </div>
         </div>
-        <button type="button" className="secondary-button" onClick={() => setPreview(true)}>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => setPreview(true)}
+        >
           {t('editor.preview')}
         </button>
       </header>
+      <nav className="variant-tabs" aria-label={t('variants.versions')}>
+        {(['fr', 'en'] as const).map((code) => (
+          <button
+            type="button"
+            key={code}
+            disabled={busy}
+            aria-pressed={selectedLanguage === code}
+            className={selectedLanguage === code ? 'active' : ''}
+            onClick={() => {
+              if (code !== selectedLanguage)
+                guardRef.current?.(() => void selectLanguage(code))
+            }}
+          >
+            <span lang={code}>{languageName(code)}</span>
+            {record?.localization && (
+              <small>
+                {
+                  {
+                    missing: t('variants.missing'),
+                    draft: t('variants.draft'),
+                    ready: t('variants.ready'),
+                    stale: t('variants.stale'),
+                    archived: t('variants.archived'),
+                  }[record.localization.states[code]]
+                }
+              </small>
+            )}
+          </button>
+        ))}
+      </nav>
+      {translating && <p className="field-help">{t('variants.sharedHint')}</p>}
+      {translating && (
+        <UnmatchedTranslations texts={record?.localization?.unmatched_texts} />
+      )}
       <div className="editor-toolbar">
         <div className="editor-actions">
           {!archived && (
@@ -294,9 +376,11 @@ export function Editor({
             >
               {busy
                 ? t('common.processing')
-                : record?.status === 'ready'
-                  ? t('common.save')
-                  : t('editor.saveDraft')}
+                : translating
+                  ? t('editor.saveDraft')
+                  : record?.status === 'ready'
+                    ? t('common.save')
+                    : t('editor.saveDraft')}
             </button>
           )}
           {!archived && (
@@ -362,6 +446,24 @@ export function Editor({
           ✓ {notice}
         </p>
       )}
+      {record && offerVersion !== null && isLanguage(selectedLanguage) && !archived && (
+        <TranslationOffer
+          key={`${record.id}-${selectedLanguage}-${offerVersion}`}
+          kind={kind}
+          id={record.id}
+          version={record.version}
+          sourceLanguage={selectedLanguage}
+          session={session}
+          disabled={dirty || busy}
+          onBusy={setBusy}
+          onSessionEnd={onSessionEnd}
+          onOpen={onOpen}
+          onApplied={async () => {
+            setOfferVersion(null)
+            await selectLanguage(selectedLanguage)
+          }}
+        />
+      )}
       <nav className="editor-sections" aria-label={t('editor.sections')}>
         {available.map(([name, label], index) => (
           <button
@@ -387,7 +489,7 @@ export function Editor({
             <p>{activeSection[2]}</p>
           </div>
         </div>
-        {activeSection[0] === 'review' && (
+        {activeSection[0] === 'review' && !translating && (
           <div className="review-panel">
             <h3>{t('editor.publicReviewTitle')}</h3>
             <p>{t('editor.publicReviewHint')}</p>
@@ -422,30 +524,62 @@ export function Editor({
             </a>
           </div>
         )}
+        {translating && activeSection[0] === 'review' && (
+          <div className="review-panel">
+            <h3>{t('variants.validateTitle')}</h3>
+            <p>{t('variants.validateHint')}</p>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={busy || archived}
+              onClick={() => void save(false)}
+            >
+              {t('variants.validate')}
+            </button>
+          </div>
+        )}
         <fieldset className="editor-fields-container" disabled={busy || archived}>
           <div className="content-fields">
-            {sectionFields(schema, activeSection[0], kind, draft).map(([name, field]) => (
-              <FieldControl
-                key={name}
-                name={name}
-                schema={field}
-                root={schema}
-                value={draft[name]}
+            {translating ? (
+              <TranslationFields
+                fields={record!.localization!.fields.filter(
+                  (field) => field.section === activeSection[0],
+                )}
+                draft={draft}
                 onChange={(value) => {
-                  setDraft((previous) => ({ ...previous, [name]: value }))
+                  setDraft(value)
                   setNotice('')
                 }}
-                errors={errors}
-                references={references}
-                session={session}
-                onSessionEnd={onSessionEnd}
-                onReference={(item) =>
-                  setReferences((current) => ({ ...current, [item.id]: item }))
-                }
-                onOpen={onOpen}
-                disabled={busy || archived}
               />
-            ))}
+            ) : (
+              sectionFields(schema, activeSection[0], kind, draft)
+                .filter(([name]) => name !== 'language')
+                .map(([name, field]) => (
+                  <FieldControl
+                    key={name}
+                    name={name}
+                    schema={field}
+                    root={schema}
+                    value={draft[name]}
+                    onChange={(value) => {
+                      setDraft((previous) => ({ ...previous, [name]: value }))
+                      setNotice('')
+                    }}
+                    errors={errors}
+                    references={references}
+                    session={session}
+                    onSessionEnd={onSessionEnd}
+                    onReference={(item) =>
+                      setReferences((current) => ({
+                        ...current,
+                        [item.id]: item,
+                      }))
+                    }
+                    onOpen={onOpen}
+                    disabled={busy || archived}
+                  />
+                ))
+            )}
           </div>
         </fieldset>
         <div className="section-pagination">
@@ -453,7 +587,9 @@ export function Editor({
             <button
               className="text-button"
               type="button"
-              onClick={() => setSection(available[available.indexOf(activeSection) - 1][0])}
+              onClick={() =>
+                setSection(available[available.indexOf(activeSection) - 1][0])
+              }
             >
               {t('editor.previousSection')}
             </button>
@@ -462,7 +598,9 @@ export function Editor({
             <button
               className="secondary-button"
               type="button"
-              onClick={() => setSection(available[available.indexOf(activeSection) + 1][0])}
+              onClick={() =>
+                setSection(available[available.indexOf(activeSection) + 1][0])
+              }
             >
               {t('editor.nextSection')}
             </button>
@@ -609,7 +747,9 @@ export function Editor({
             {confirm === 'delete'
               ? t('editor.deleteDescription')
               : confirm === 'archive'
-                ? t('editor.archiveDescription', { count: record?.usages.length ?? 0 })
+                ? t('editor.archiveDescription', {
+                    count: record?.usages.length ?? 0,
+                  })
                 : confirm === 'reload'
                   ? t('editor.reloadDescription')
                   : t('editor.duplicateDescription')}

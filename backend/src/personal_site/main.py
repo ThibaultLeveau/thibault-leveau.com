@@ -89,6 +89,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if localized and app.state.admin_store:
             preferences = await run_in_threadpool(app.state.admin_store.languages)
             language = preferences["admin_language" if private else "public_language"]
+        if localized and not private:
+            explicit = request.url.path.split("/")[1]
+            requested = (
+                request.query_params.get("language")
+                if request.url.path.startswith("/api/public/")
+                else explicit
+            )
+            if requested in {"fr", "en"}:
+                language = requested
+            elif request.cookies.get("site_language") in {"fr", "en"}:
+                language = request.cookies["site_language"]
         token = current_language.set(language)
         try:
             response = await call_next(request)

@@ -1,3 +1,4 @@
+import { LocalizedLink, LanguageNotice } from './locale'
 import { t } from '../i18n'
 import { Arrow, Breadcrumb, Cards, Feedback, Intro, SectionHeading } from './components'
 import {
@@ -125,13 +126,16 @@ function MediaView({ item, use }: { item: Detail['references'][number]; use: Row
         />
       ) : item.file_url && item.nature === 'video' ? (
         <video controls preload="metadata" src={item.file_url}>
-          <a href={item.file_url}>{t('media.downloadVideo')}</a>
+          <LocalizedLink href={item.file_url}>{t('media.downloadVideo')}</LocalizedLink>
         </video>
       ) : (
-        <a className="public-button" href={item.file_url || safeLink(item.external_url || '')}>
+        <LocalizedLink
+          className="public-button"
+          href={item.file_url || safeLink(item.external_url || '')}
+        >
           {item.title}
           <Arrow diagonal />
-        </a>
+        </LocalizedLink>
       )}
       {(use.caption || item.credit || item.license) && (
         <figcaption>
@@ -151,7 +155,9 @@ function MediaView({ item, use }: { item: Detail['references'][number]; use: Row
         </details>
       )}
       {!!use.subtitles_url && safeLink(String(use.subtitles_url)) && (
-        <a href={safeLink(String(use.subtitles_url))}>{t('detail.subtitles')}</a>
+        <LocalizedLink href={safeLink(String(use.subtitles_url))}>
+          {t('detail.subtitles')}
+        </LocalizedLink>
       )}
     </figure>
   )
@@ -163,8 +169,12 @@ export function DetailBody({ item }: { item: Detail }) {
   const packages = rows(d, 'packages')
   const faq = rows(d, 'faq')
   const body = text(d, 'body')
-  const availableNarrative = Object.entries(getNarrative()).filter(([key]) => text(d, key))
-  const availableLists = Object.entries(getListLabels()).filter(([key]) => rows(d, key).length)
+  const availableNarrative = Object.entries(getNarrative()).filter(([key]) =>
+    text(d, key),
+  )
+  const availableLists = Object.entries(getListLabels()).filter(
+    ([key]) => rows(d, key).length,
+  )
   const hasInfo = !!(
     period(d) ||
     Object.keys(getInfoLabels()).some((key) => text(d, key)) ||
@@ -253,9 +263,9 @@ export function DetailBody({ item }: { item: Detail }) {
                     <div key={key}>
                       <dt>{label}</dt>
                       <dd>
-                        <a href={item.references[Number(d[key])].url}>
+                        <LocalizedLink href={item.references[Number(d[key])].url}>
                           {item.references[Number(d[key])].title}
-                        </a>
+                        </LocalizedLink>
                       </dd>
                     </div>
                   ) : null,
@@ -301,7 +311,9 @@ export function DetailBody({ item }: { item: Detail }) {
                       {[location.label, location.city, location.region, location.country]
                         .filter(Boolean)
                         .join(', ')}
-                      {location.mode && <span> · {getLabels()[String(location.mode)]}</span>}
+                      {location.mode && (
+                        <span> · {getLabels()[String(location.mode)]}</span>
+                      )}
                     </dd>
                   </div>
                 ))}
@@ -313,17 +325,17 @@ export function DetailBody({ item }: { item: Detail }) {
               <h2>{t('detail.contentsTitle')}</h2>
               {anchors.map(([id, label]) => (
                 <div key={id} className="reading-group">
-                  <a href={`#${id}`}>{label}</a>
+                  <LocalizedLink href={`#${id}`}>{label}</LocalizedLink>
                   {id === 'description' && <ReadingContents value={body} />}
                 </div>
               ))}
             </nav>
           )}
           {contact && (
-            <a className="public-button primary" href={contact}>
+            <LocalizedLink className="public-button primary" href={contact}>
               {text(d, 'contact_label') || t('detail.letsTalk')}
               <Arrow diagonal />
-            </a>
+            </LocalizedLink>
           )}
         </aside>
         <div className="detail-content">
@@ -337,7 +349,9 @@ export function DetailBody({ item }: { item: Detail }) {
                       .filter(Boolean)
                       .join(' · ')}
                 {text(d, 'relationship') && <p>{text(d, 'relationship')}</p>}
-                {text(d, 'testimonial_date') && <p>{date(text(d, 'testimonial_date'))}</p>}
+                {text(d, 'testimonial_date') && (
+                  <p>{date(text(d, 'testimonial_date'))}</p>
+                )}
               </figcaption>
             </figure>
           )}
@@ -398,7 +412,9 @@ export function DetailBody({ item }: { item: Detail }) {
                       {String(m.context)} {String(m.period)}
                     </p>
                     {m.proof_url && safeLink(String(m.proof_url)) && (
-                      <a href={safeLink(String(m.proof_url))}>{t('detail.source')}</a>
+                      <LocalizedLink href={safeLink(String(m.proof_url))}>
+                        {t('detail.source')}
+                      </LocalizedLink>
                     )}
                   </div>
                 ))}
@@ -416,10 +432,10 @@ export function DetailBody({ item }: { item: Detail }) {
                     <p>{String(p.scope)}</p>
                     <small>{[p.unit, p.tax_note].filter(Boolean).join(' · ')}</small>
                     {contact && (
-                      <a className="text-link" href={contact}>
+                      <LocalizedLink className="text-link" href={contact}>
                         {t('detail.discuss')}
                         <Arrow />
-                      </a>
+                      </LocalizedLink>
                     )}
                   </article>
                 ))}
@@ -463,14 +479,17 @@ export function DetailBody({ item }: { item: Detail }) {
                 <h2>{label}</h2>
                 <div className="relation-links">
                   {linked.map((r) => (
-                    <a key={Number(r.id)} href={item.references[Number(r.id)].url}>
+                    <LocalizedLink
+                      key={Number(r.id)}
+                      href={item.references[Number(r.id)].url}
+                    >
                       <span>
                         {item.references[Number(r.id)].title}
                         {r.release && <small> {String(r.release)}</small>}
                         {r.context && <small>{String(r.context)}</small>}
                       </span>
                       <Arrow diagonal />
-                    </a>
+                    </LocalizedLink>
                   ))}
                 </div>
               </section>
@@ -479,7 +498,11 @@ export function DetailBody({ item }: { item: Detail }) {
           {rows(d, 'media')
             .filter((r) => r.role !== 'cover' && item.references[Number(r.id)])
             .map((r) => (
-              <MediaView key={Number(r.id)} item={item.references[Number(r.id)]} use={r} />
+              <MediaView
+                key={Number(r.id)}
+                item={item.references[Number(r.id)]}
+                use={r}
+              />
             ))}
           {item.kind === 'media' && (
             <>
@@ -512,18 +535,26 @@ export function DetailBody({ item }: { item: Detail }) {
               <div className="detail-links">
                 {rows(d, 'links').map((link, i) =>
                   safeLink(String(link.url)) ? (
-                    <a key={i} className="text-link" href={safeLink(String(link.url))}>
+                    <LocalizedLink
+                      key={i}
+                      className="text-link"
+                      href={safeLink(String(link.url))}
+                    >
                       {String(link.label) || t('detail.openLink')}
                       <Arrow diagonal />
-                    </a>
+                    </LocalizedLink>
                   ) : null,
                 )}
                 {Object.entries(getUrls()).map(([key, label]) =>
                   safeLink(text(d, key), true) ? (
-                    <a key={key} className="text-link" href={safeLink(text(d, key), true)}>
+                    <LocalizedLink
+                      key={key}
+                      className="text-link"
+                      href={safeLink(text(d, key), true)}
+                    >
                       {label}
                       <Arrow diagonal />
-                    </a>
+                    </LocalizedLink>
                   ) : null,
                 )}
               </div>
@@ -570,7 +601,8 @@ export default function DetailPage({ kind, id }: { kind: Kind; id: number }) {
         </>
       ) : (
         <>
-          <header className="detail-intro">
+          <LanguageNotice item={item} />
+          <header className="detail-intro" lang={item.language}>
             <p className="eyebrow">
               <span />
               {getCollections()[kind][0]}
@@ -581,7 +613,9 @@ export default function DetailPage({ kind, id }: { kind: Kind; id: number }) {
             <h1>{item.title}</h1>
             {item.summary && <p>{item.summary}</p>}
           </header>
-          <DetailBody item={item} />
+          <div lang={item.language}>
+            <DetailBody item={item} />
+          </div>
         </>
       )}
     </main>
@@ -596,12 +630,15 @@ export function AboutPage() {
     <main id="contenu" className="public-main about-page" tabIndex={-1}>
       <Breadcrumb parent={t('navigation.about')} href="/a-propos" />
       <Intro eyebrow={t('about.eyebrow')} title={item?.title || t('navigation.about')}>
-        <p>{item ? text(item.entry, 'tagline') || item.summary : t('about.description')}</p>
+        <p lang={item?.language}>
+          {item ? text(item.entry, 'tagline') || item.summary : t('about.description')}
+        </p>
       </Intro>
       {!state.data ? (
         <Feedback {...state} />
       ) : item ? (
         <div className="about-content">
+          <LanguageNotice item={item} />
           {item.cover && (
             <img
               className="about-portrait"
@@ -613,21 +650,23 @@ export function AboutPage() {
               height={item.cover.height}
             />
           )}
-          <DetailBody item={item} />
+          <div lang={item.language}>
+            <DetailBody item={item} />
+          </div>
         </div>
       ) : (
         <section className="about-empty">
           <h2>{t('about.emptyTitle')}</h2>
           <p>{t('about.emptyDescription')}</p>
           <div className="hero-actions">
-            <a className="public-button primary" href="/parcours">
+            <LocalizedLink className="public-button primary" href="/parcours">
               {t('about.career')}
               <Arrow />
-            </a>
-            <a className="text-link" href="/projets">
+            </LocalizedLink>
+            <LocalizedLink className="text-link" href="/projets">
               {t('public.viewProjects')}
               <Arrow diagonal />
-            </a>
+            </LocalizedLink>
           </div>
         </section>
       )}

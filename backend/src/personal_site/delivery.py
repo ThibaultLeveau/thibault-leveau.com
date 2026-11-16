@@ -50,7 +50,7 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
         app.mount("/documentation", BuildFiles(documentation), name="documentation")
     if web.is_dir():
 
-        def document(title, description, *, status=200):
+        def document(title, description, *, status=200, path=None, languages=("fr", "en")):
             html = (web / "index.html").read_text()
             language = current_language.get()
             html = html.replace(
@@ -69,10 +69,25 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
                 ),
                 html,
             )
+            if path is not None and status == 200:
+                origin = settings.admin_origin
+                code = language if language in languages else languages[0]
+                canonical = escape(origin + "/" + code + path, quote=True)
+                links = f'<link rel="canonical" href="{canonical}" />'
+                links += "".join(
+                    f'<link rel="alternate" hreflang="{lang}" '
+                    f'href="{escape(origin + "/" + lang + path, quote=True)}" />'
+                    for lang in languages
+                    if lang in {"fr", "en"}
+                )
+                html = html.replace("</head>", links + "</head>")
             return HTMLResponse(html, status_code=status, headers={"Cache-Control": "no-store"})
 
         def public_page(request: Request):
             path = request.url.path.rstrip("/") or "/"
+            if path.split("/")[1] not in {"fr", "en"}:
+                return localized_redirect(request)
+            path = path[3:] or "/"
             key = {
                 "/": "home",
                 "/projets": "projects",
@@ -84,10 +99,23 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
                 "/explorer": "explore",
             }[path]
             name = tr(f"pages.{key}")
-            return document(name, tr("pages.description", title=name))
+            return document(
+                name, tr("pages.description", title=name), path="" if path == "/" else path
+            )
 
-        for path in PAGES:
-            app.add_api_route(path, public_page, methods=["GET", "HEAD"], include_in_schema=False)
+        def localized_redirect(request):
+            path = request.url.path.rstrip("/")
+            target = f"/{current_language.get()}{path}"
+            if request.url.query:
+                target += "?" + request.url.query
+            return RedirectResponse(target, status_code=307, headers={"Cache-Control": "no-store"})
+
+        for prefix in ("", "/fr", "/en"):
+            for path in PAGES:
+                route = (prefix + path).rstrip("/") or "/"
+                app.add_api_route(
+                    route, public_page, methods=["GET", "HEAD"], include_in_schema=False
+                )
 
         def public_redirect(request: Request):
             target = request.url.path.rstrip("/")
@@ -95,11 +123,16 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
                 target += "?" + request.url.query
             return RedirectResponse(target, status_code=308)
 
-        for path in PAGES:
-            if path != "/":
-                app.add_api_route(
-                    path + "/", public_redirect, methods=["GET", "HEAD"], include_in_schema=False
-                )
+        for prefix in ("", "/fr", "/en"):
+            for path in PAGES:
+                route = (prefix + path).rstrip("/")
+                if route:
+                    app.add_api_route(
+                        route + "/",
+                        public_redirect,
+                        methods=["GET", "HEAD"],
+                        include_in_schema=False,
+                    )
 
         def detail_handler(kind):
             def public_detail(entry_id: int, slug: str, request: Request):
@@ -113,23 +146,28 @@ def mount_builds(app: FastAPI, settings: Settings) -> None:
                     return document(tr("pages.missing"), tr("pages.unavailable"), status=404)
                 if request.url.path != address(item):
                     return RedirectResponse(
-                        address(item), status_code=308, headers={"Cache-Control": "no-store"}
+                        address(item) + ("?" + request.url.query if request.url.query else ""),
+                        status_code=308,
+                        headers={"Cache-Control": "no-store"},
                     )
                 data = item["entry"]
                 return document(
                     data.get("seo_title") or item["title"],
                     data.get("seo_description") or item["summary"],
+                    path=address(item)[3:],
+                    languages=item["available_languages"],
                 )
 
             return public_detail
 
-        for kind, prefix in PATHS.items():
-            app.add_api_route(
-                f"/{prefix}/{{entry_id:int}}/{{slug}}",
-                detail_handler(kind),
-                methods=["GET", "HEAD"],
-                include_in_schema=False,
-            )
+        for language_prefix in ("", "/fr", "/en"):
+            for kind, prefix in PATHS.items():
+                app.add_api_route(
+                    f"{language_prefix}/{prefix}/{{entry_id:int}}/{{slug}}",
+                    detail_handler(kind),
+                    methods=["GET", "HEAD"],
+                    include_in_schema=False,
+                )
 
         @app.api_route("/admin/", methods=["GET", "HEAD"], include_in_schema=False)
         async def admin_redirect():

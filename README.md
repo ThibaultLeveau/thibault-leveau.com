@@ -2,7 +2,7 @@
 
 Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Huit pages publiques pour explorer les quinze collections et un studio privé pour les administrer, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
 
-**Réglages du site → Langue** définit indépendamment le français ou l’anglais du public et de l’administration. Les contenus des collections restent inchangés : voir le [guide des langues](docs/languages.md).
+Le sélecteur public donne accès aux versions `/fr` et `/en`. Les quinze collections possèdent des textes français/anglais, avec choix de version pour l’IA et proposition de traduction après sauvegarde. **Réglages du site → Langue** conserve les valeurs par défaut du public et de l’administration : voir le [guide des langues](docs/languages.md).
 
 - Site : [new.thibault-leveau.com](https://new.thibault-leveau.com)
 - Documentation : [guide technique](https://new.thibault-leveau.com/documentation/)

@@ -1,3 +1,4 @@
+import { LocalizedLink, LanguageNotice } from './locale'
 import { t } from '../i18n'
 import { Arrow, Cards, Feedback, SectionHeading } from './components'
 import { safeLink, text, useContent, type Home } from './content'
@@ -19,6 +20,7 @@ export default function PublicHome() {
   const contact = profile ? safeLink(text(profile, 'public_contact'), true) : undefined
   return (
     <main id="contenu" className="public-main" tabIndex={-1}>
+      <LanguageNotice item={data?.profile} />
       <section className="public-hero">
         <div className="hero-primary">
           <p className="eyebrow">
@@ -27,7 +29,7 @@ export default function PublicHome() {
               ? text(profile, 'public_location') || 'Thibault Leveau'
               : t('home.eyebrow')}
           </p>
-          <h1>
+          <h1 lang={data?.profile?.language}>
             {profile ? (
               text(profile, 'profession')
             ) : (
@@ -39,20 +41,20 @@ export default function PublicHome() {
               </>
             )}
           </h1>
-          <p className="hero-description">
+          <p className="hero-description" lang={data?.profile?.language}>
             {profile
               ? text(profile, 'tagline') || text(profile, 'summary')
               : t('home.description')}
           </p>
           <div className="hero-actions">
-            <a className="public-button primary" href="/projets">
+            <LocalizedLink className="public-button primary" href="/projets">
               {t('home.discoverProjects')}
               <Arrow diagonal />
-            </a>
-            <a className="text-link" href={contact || '/a-propos'}>
+            </LocalizedLink>
+            <LocalizedLink className="text-link" href={contact || '/a-propos'}>
               {contact ? t('detail.letsTalk') : t('home.getAcquainted')}
               <Arrow />
-            </a>
+            </LocalizedLink>
           </div>
         </div>
         <aside className="hero-aside" aria-label={t('home.discoverSite')}>
@@ -74,14 +76,16 @@ export default function PublicHome() {
             ['02', '/expertise', t('home.exploreSkills')],
             ['03', '/journal', t('home.read')],
           ].map(([n, url, label]) => (
-            <a key={url} href={url}>
+            <LocalizedLink key={url} href={url}>
               <span>{n}</span>
               {label}
               <Arrow diagonal />
-            </a>
+            </LocalizedLink>
           ))}
           <p className="aside-note">
-            {profile ? text(profile, 'availability') || t('home.profileNote') : t('home.note')}
+            {profile
+              ? text(profile, 'availability') || t('home.profileNote')
+              : t('home.note')}
           </p>
         </aside>
       </section>
@@ -106,14 +110,14 @@ export default function PublicHome() {
         />
         <div className="destination-grid">
           {getDestinations().map(([url, name, desc], i) => (
-            <a key={url} href={url}>
+            <LocalizedLink key={url} href={url}>
               <span className="destination-number">0{i + 1}</span>
               <h3>
                 {name}
                 <Arrow diagonal />
               </h3>
               <p>{desc}</p>
-            </a>
+            </LocalizedLink>
           ))}
         </div>
       </section>
@@ -126,17 +130,17 @@ export default function PublicHome() {
               <br />
               {t('home.skillsEnd')}
             </h2>
-            <a className="text-link" href="/expertise">
+            <LocalizedLink className="text-link" href="/expertise">
               {t('home.discoverExpertise')}
               <Arrow />
-            </a>
+            </LocalizedLink>
           </div>
           <div className="skill-links">
             {data.skills.map((skill) => (
-              <a href={skill.url} key={skill.id}>
+              <LocalizedLink href={skill.url} key={skill.id}>
                 {skill.title}
                 <Arrow diagonal />
-              </a>
+              </LocalizedLink>
             ))}
           </div>
         </section>
@@ -166,10 +170,10 @@ export default function PublicHome() {
       <section className="public-outro">
         <p className="eyebrow">{t('home.outroEyebrow')}</p>
         <h2>{contact ? t('home.idea') : t('home.meet')}</h2>
-        <a className="public-button primary" href={contact || '/a-propos'}>
+        <LocalizedLink className="public-button primary" href={contact || '/a-propos'}>
           {contact ? t('home.talk') : t('home.profile')}
           <Arrow diagonal />
-        </a>
+        </LocalizedLink>
       </section>
     </main>
   )

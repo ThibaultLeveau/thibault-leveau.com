@@ -99,6 +99,10 @@ class ScriptedProvider:
         final_tool = spec.get("function", spec)["name"]
         if final_tool == "Plan":
             result = self.plan(data) if callable(self.plan) else self.plan
+        elif final_tool == "Translation":
+            result = {
+                "texts": {k: ("English: " + v if v else "") for k, v in data["texts"].items()}
+            }
         else:
             task = data["task"]
             draft = self.drafts[task["key"]]
