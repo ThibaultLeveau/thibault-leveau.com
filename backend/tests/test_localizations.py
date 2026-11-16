@@ -166,6 +166,7 @@ def test_translation_is_reviewable_bounded_and_conflict_checked(admin_client):
         body = json.loads(request.content)
         data = request_data(body)
         requests.append(data)
+        assert data["existing_target"] == {}  # A missing version is not French target context.
         assert "SECRET" not in request.content.decode()
         assert "12.50" not in request.content.decode()
         assert len(body["tools"]) == 1  # Only the structured output; no context tools.
