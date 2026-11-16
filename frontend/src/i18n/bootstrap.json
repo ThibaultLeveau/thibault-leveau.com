@@ -1,0 +1,10 @@
+{
+  "fr": {
+    "bootstrap.unavailable": "L’interface n’a pas pu être chargée. Vérifiez votre connexion, puis réessayez.",
+    "bootstrap.retry": "Réessayer"
+  },
+  "en": {
+    "bootstrap.unavailable": "The interface could not be loaded. Check your connection, then try again.",
+    "bootstrap.retry": "Try again"
+  }
+}

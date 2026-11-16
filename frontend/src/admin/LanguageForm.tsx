@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { changeLanguage, isLanguage, t, type Language } from '../i18n'
+import { changeLanguage, isLanguage, loadLanguage, t, type Language } from '../i18n'
 import { adminRequest, ApiError, errorMessage, type Session } from './api'
 import { Dialog } from './content/Dialog'
 import type { NavigationGuard } from './content/types'
@@ -67,6 +67,9 @@ export function LanguageForm({
     setError('')
     setSuccess(false)
     try {
+      // A failed asset download must not persist a setting the current tab
+      // cannot apply. Loading the catalog leaves the active language unchanged.
+      await loadLanguage(draft.admin_language)
       const value = await adminRequest<LanguageSettings>('/languages', {
         method: 'PUT',
         body: draft,

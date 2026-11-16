@@ -3,6 +3,14 @@ import fs from 'node:fs'
 import { test } from 'node:test'
 import { createInstance } from 'i18next'
 
+const bootstrap = JSON.parse(
+  fs.readFileSync(new URL('../src/i18n/bootstrap.json', import.meta.url), 'utf8'),
+)
+assert.deepEqual(Object.keys(bootstrap).sort(), ['en', 'fr'])
+assert.deepEqual(Object.keys(bootstrap.fr).sort(), Object.keys(bootstrap.en).sort())
+for (const messages of Object.values(bootstrap))
+  for (const value of Object.values(messages)) assert.ok(value.trim())
+
 const resources = Object.fromEntries(
   ['fr', 'en'].map((lang) => [
     lang,
