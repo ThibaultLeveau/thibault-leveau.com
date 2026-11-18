@@ -363,5 +363,20 @@
   "errors.translationShared": "Les faits et la structure ont changé. Rechargez la fiche ; modifiez les informations partagées dans la version d’origine.",
   "errors.translationSource": "Enregistrez une version à jour avant de la traduire.",
   "errors.translationIncomplete": "La traduction est incomplète. Aucun changement n’a été enregistré.",
-  "assistant.translationReview": "La traduction est prête à être relue. Vérifiez les textes avant de les enregistrer."
+  "assistant.translationReview": "La traduction est prête à être relue. Vérifiez les textes avant de les enregistrer.",
+  "jobs.missing": "Travail introuvable.",
+  "jobs.interrupted": "Le traitement a été interrompu. Reprenez pour continuer les étapes restantes.",
+  "jobs.planStalled": "Le plan ne précise pas la suite de la demande. Ajoutez une précision pour continuer.",
+  "jobs.notRunning": "Le travail est en pause ou arrêté.",
+  "jobs.providerChanged": "Le fournisseur, le modèle ou sa clé ont changé. Rétablissez les réglages du début du travail pour le reprendre.",
+  "jobs.finished": "Ce travail est terminé ou arrêté.",
+  "jobs.pauseFirst": "Mettez le travail en pause avant d’ajouter une précision.",
+  "jobs.batchCancelled": "Ce lot a été abandonné. Précisez la correction ou reprenez pour le préparer de nouveau.",
+  "jobs.translationDirect": "Utilisez la demande de traduction de la fiche pour traduire ses textes.",
+  "jobs.emptyTask": "Une fiche ne contient aucune modification proposée. Ajoutez les faits nécessaires.",
+  "jobs.referenceKind": "Une référence du travail vise une autre collection. Précisez le lien attendu.",
+  "jobs.deferredField": "Le champ de liens « {field} » sera proposé séparément après l’enregistrement de ses fiches cibles.",
+  "jobs.missingDependency": "Des liens attendent une fiche absente du plan ou d’une autre collection. Précisez les cibles pour terminer le travail.",
+  "jobs.sessionExpired": "La session de lancement a expiré ou a été révoquée. Reconnectez-vous puis reprenez le travail.",
+  "jobs.validationFailed": "Une étape nécessite une correction ou une nouvelle relecture après modification des fiches. Les lots enregistrés sont conservés ; ajoutez une précision pour reprendre les éléments concernés."
 }

@@ -26,7 +26,7 @@ export interface Proposal {
   id: string
   revision: number
   state: 'pending' | 'applied' | 'cancelled' | 'superseded'
-  expires: number
+  expires: number | null
   items: ProposalItem[]
   result:
     | {
@@ -40,6 +40,7 @@ export interface Proposal {
     | null
 }
 export interface AssistantReply {
+  job?: AssistantJob | null
   message: string
   questions: Question[]
   proposal: Proposal | null
@@ -47,6 +48,49 @@ export interface AssistantReply {
   model: string
   calls: number
   delegations: number
+}
+
+export type JobStatus =
+  | 'queued'
+  | 'running'
+  | 'review'
+  | 'needs_input'
+  | 'paused'
+  | 'failed'
+  | 'completed'
+  | 'cancelled'
+
+export interface AssistantJob {
+  id: string
+  status: JobStatus
+  language: 'fr' | 'en'
+  message: string
+  created: number
+  updated: number
+  planned: number
+  prepared: number
+  applied: number
+  pending_batches: number
+  total_tasks: number | null
+  calls: number
+  delegations: number
+  questions: Question[]
+  error: string | null
+  provider: string
+  model: string
+  include_private_notes: boolean
+}
+
+export interface JobBatch {
+  sequence: number
+  proposal: Proposal
+}
+
+export interface JobPage<T> {
+  items: T[]
+  page: number
+  limit: number
+  total: number
 }
 export function getFamilies() {
   return {

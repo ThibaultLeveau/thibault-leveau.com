@@ -22,6 +22,7 @@ class State(TypedDict, total=False):
     workers: list[dict]
     results: Annotated[list[dict], operator.add]
     response: dict
+    durable: bool
 
 
 def build_graph(model, context, preferences, turn, previous):
@@ -59,7 +60,11 @@ def build_graph(model, context, preferences, turn, previous):
             {**common, "collections": {k: v[0] for k, v in LABELS.items()}},
             context,
         )
-        if plan.questions or not plan.tasks:
+        if plan.questions:
+            return {"plan": plan, "workers": []}
+        if plan.has_more or (plan.total_tasks and plan.total_tasks > len(plan.tasks)):
+            return {"plan": plan, "workers": [], "durable": True}
+        if not plan.tasks:
             return {"plan": plan, "workers": []}
         if len({t.key for t in plan.tasks}) != len(plan.tasks):
             raise ContentError(tr("errors.planTaskDuplicate"))
@@ -115,13 +120,7 @@ def build_graph(model, context, preferences, turn, previous):
                     }
                 )
         if len(workers) > 16:
-            return {
-                "plan": Plan(
-                    message=tr("assistant.scopeTooLarge"),
-                    questions=[Question(question=tr("assistant.prioritize"))],
-                ),
-                "workers": [],
-            }
+            return {"plan": plan, "workers": [], "durable": True}
         return {"plan": plan, "workers": workers}
 
     def dispatch(state):
@@ -171,6 +170,9 @@ def build_graph(model, context, preferences, turn, previous):
             "proposal_payload": None,
             "delegations": len(state.get("workers", [])),
         }
+        if state.get("durable"):
+            response["job_plan"] = plan
+            return {"response": response}
         if unique or not plan.tasks:
             return {"response": response}
         operations, missing = [], {}

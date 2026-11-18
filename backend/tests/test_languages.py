@@ -141,6 +141,9 @@ def test_migration_restart_backup_and_restore(admin_client, admin_settings, tmp_
     account = c.app.state.admin_store.account()
     # Reconstruct the populated schema-2 predecessor, preserving the existing account/session.
     with c.app.state.admin_store.connect() as db:
+        from assistant_fakes import drop_job_schema
+
+        drop_job_schema(db)
         db.execute("DROP TABLE content_localized_values")
         db.execute("DROP TABLE content_localizations")
         db.execute("DROP TABLE site_languages")

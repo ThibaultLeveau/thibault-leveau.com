@@ -23,6 +23,7 @@ class Context:
     language: str | None = None
     versions: dict[str, int] = field(default_factory=dict)
     snapshots: dict[int, dict] = field(default_factory=dict)
+    max_search_page: int = 100
 
     def read(self, kind, ident, fields=None):
         record = self.content.get(kind, ident, self.language)
@@ -50,7 +51,7 @@ class Context:
         async def rechercher_fiches(kind: Kind, query: str = "", page: int = 1) -> dict:
             """Chercher des fiches existantes par nom ; page de 15 résultats, accents ignorés."""
             self.budget.use_tool()
-            if len(query) > 160 or not 1 <= page <= 100:
+            if len(query) > 160 or not 1 <= page <= self.max_search_page:
                 return {"error": tr("errors.searchBounds")}
             result = await run_in_threadpool(
                 self.content.listing, kind, query=query, page=page, limit=15, language=self.language

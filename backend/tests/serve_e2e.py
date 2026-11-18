@@ -44,7 +44,12 @@ def main():
                 )
             )
         )
-        app.state.assistant.models = ModelFactory(httpx.MockTransport(provider()))
+        if os.environ.get("ASSISTANT_JOBS_FIXTURES") == "1":
+            from assistant_jobs_e2e import provider as jobs_provider
+
+            app.state.assistant.models = ModelFactory(httpx.MockTransport(jobs_provider()))
+        else:
+            app.state.assistant.models = ModelFactory(httpx.MockTransport(provider()))
         if public:
             from public_fixtures import seed_public
 

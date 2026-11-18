@@ -487,6 +487,7 @@ export default function AdminWorkspace({
               onSettings={openSettings}
               onSessionEnd={onSessionEnd}
               visible={view === 'chat'}
+              guardRef={guardRef}
               onOpen={(kind, id) => navigate(kind, id)}
             />
           )}

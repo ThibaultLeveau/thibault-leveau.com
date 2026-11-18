@@ -1,6 +1,7 @@
 """Intégrations LangChain officielles avec transports fermés et budget partagé par tour."""
 
 import asyncio
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -32,10 +33,13 @@ class Budget:
     tool_calls: int = 0
     context_chars: int = 0
     semaphore: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(3))
+    guard: Callable | None = field(default=None, repr=False)
 
     def use_model(self):
         if self.calls >= MAX_CALLS:
             raise ProviderError(tr("errors.callBudget"), 422)
+        if self.guard:
+            self.guard()
         self.calls += 1
 
     def use_tool(self, size=0):

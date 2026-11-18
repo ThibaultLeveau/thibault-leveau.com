@@ -60,5 +60,12 @@ export default defineConfig({
           reuseExistingServer: false,
           timeout: 90_000,
         },
+        {
+          command: 'ASSISTANT_JOBS_FIXTURES=1 E2E_PORT=8769 uv run python backend/tests/serve_e2e.py',
+          cwd: root,
+          url: 'http://127.0.0.1:8769/api/health',
+          reuseExistingServer: false,
+          timeout: 90_000,
+        },
       ],
 })

@@ -69,6 +69,32 @@ Les tests traversent les véritables agents LangChain, le StateGraph LangGraph e
 
 Commande ciblée : `uv run --frozen pytest backend/tests/test_assistant*.py`. Construire auparavant avec `make build` ; ne pas reconstruire les artefacts pendant ces tests HTTP.
 
+### Travaux durables : critères de vérification
+
+Les scénarios de l'issue #22 doivent traverser la planification progressive, les sous-agents et le stockage durable avec des fournisseurs simulés. Un résultat de génération seul ne prouve pas l'absence de plafond : vérifier le nombre exact de tâches préparées et appliquées, leurs identités, les relations finales et les appels effectivement délégués.
+
+| Scénario | Preuve attendue |
+| --- | --- |
+| Demandes de 13 et 100 fiches | Toutes les fiches demandées, sans réduction imposée du volume, doublon ni écriture avant relecture |
+| Plus de 16 sections déléguées | Vagues successives et maximum mesuré de trois appels simultanés |
+| Plus de 50 lots et 40 apports | Continuité du travail, pagination effective et reçus antérieurs encore idempotents |
+| Coupure HTTP, rechargement et reconnexion | Même travail retrouvé, anciennes sessions refusées, étapes terminées conservées |
+| Redémarrage du processus | Étapes interrompues reprenables, applications passées non répétées |
+| Pause et arrêt | Confirmation de l'arrêt effectif des appels, absence de nouvel appel après prise en compte |
+| Questions, quota, erreur ou budget d'étape | Avancement sauvegardé et reprise explicite sans boucle illimitée |
+| Références entre lots, futures et cycliques | Identifiants réels réutilisés et propositions d'associations relues ; aucun lien omis |
+| Conflits, variantes et règles métier | Annulation atomique du lot en conflit, versions/FR-EN/statut/visibilité/consentement préservés |
+| Notes privées et suppression | Permission réellement observée dans les contextes, données techniques supprimées volontairement et fiches enregistrées conservées |
+| Migration 4 → 5 et restauration | Compte, contenus, variantes et médias préservés ; travaux/reçus restaurés et sessions révoquées |
+
+Conserver les scénarios des demandes simples et traductions : leur réussite est nécessaire en plus des nouveaux parcours. Les tests doivent inspecter de vraies bases temporaires et les sorties du graphe, sans remplacer les validations métier par des mocks. Les fournisseurs simulés évitent la dépense mais ne prouvent pas la qualité éditoriale réelle.
+
+`test_assistant_jobs.py` traverse les vrais sous-agents pour 13 et 100 fiches, mesure la concurrence, contrôle l'absence d'écriture avant application, puis vérifie les comptes et identités enregistrés. Il couvre également 52 lots avec reçus durables et 42 apports supplémentaires avec `request_id` idempotent. `test_assistant_jobs_storage.py` vérifie la migration d'une base bilingue peuplée de schéma 4, l'annulation transactionnelle d'une migration en échec et l'export/restauration des travaux, lots en attente, reçus et faits utilisateur. La restauration révoque les anciennes sessions, permet une nouvelle connexion et préserve l'idempotence des applications.
+
+`test_assistant_jobs_content.py` vérifie les lectures d'outils et médias attachés avec ou sans accord pour les notes privées, ainsi que l'édition anglaise sans écraser la source française. `test_assistant_jobs_concurrency.py` combine plusieurs travaux et un tour direct pour vérifier la limite globale de trois appels simultanés. Il contrôle aussi le rejeu d'un ancien abandon et l'annulation des créations `/turn` et `/jobs` avant ou après leur commit, sans relance implicite. Les fichiers `test_assistant_jobs_resilience.py` et `test_assistant_jobs_dependencies.py` couvrent les interruptions, les quotas, les conflits, les cycles entre pages et les corrections de liens après création.
+
+Commande ciblée : `uv run --frozen pytest backend/tests/test_assistant_jobs*.py`. Ces tests ne touchent ni volume ni identifiant de production. Les résultats datés de leur exécution et les éventuelles vérifications impossibles sont consignés dans l'issue et la pull request, séparément de cette description de couverture.
+
 ## Tests navigateur
 
 ### Parcours du studio
@@ -123,11 +149,15 @@ La CI ne publie pas d'image dans un registre et ne déploie pas le serveur. Un r
 
 Les simulations garantissent des scénarios reproductibles, pas la qualité d'un fournisseur réel. Lors d'un changement d'adaptateur, effectuer également un essai borné du modèle configuré avec des données synthétiques et un stockage temporaire. Aucun contenu de démonstration n'est appliqué en production. Consigner modèle, nombre d'appels, délégations, présence de questions/proposition et résultat, sans clé ni contenu privé. L'essai de l'issue #12 a notamment détecté le besoin de Responses pour les outils avec raisonnement de GPT-6 Luna ; le contrôle a été relancé après correction.
 
+Le parcours navigateur des travaux doit vérifier une demande importante, les compteurs et pages de lots, la relecture/application, les précisions, la pause/reprise/arrêt, le retour après rechargement et reconnexion, et la suppression volontaire du suivi. Contrôler français/anglais, clair/sombre, bureau/mobile jusqu'à 320 pixels, contrastes, focus visible et commandes clavier. Une perte réseau pendant l'application doit conduire à relire le reçu du même lot, sans nouvelle création. Les écritures de ces scénarios utilisent exclusivement un stockage de test isolé.
+
+`assistant-jobs.spec.ts` sépare deux niveaux : scénarios d'interface avec API simulée (états, réponses retardées, reprise, 51 lots et 41 apports), puis parcours réel de 13 fiches sur le serveur dédié 8769. Ce dernier utilise React, FastAPI, SQLite, LangChain et LangGraph ; seul le transport fournisseur est simulé par `assistant_jobs_e2e.py`. Le serveur est lancé par `serve_e2e.py` avec `ASSISTANT_JOBS_FIXTURES=1` et `E2E_PORT=8769`, sur une base temporaire distincte. Ce parcours d'écriture s'exécute une seule fois sur bureau et n'est jamais dirigé vers la production.
+
 ## Collections publiques
 
 `test_public.py` couvre les quinze projections et routes, Prêt + Public, retrait, archives, références privées, recherche sans accents, pagination, limites, anonymat, consentement, métadonnées échappées, 404 et fichiers/miniatures avec contrôle d'accès avant cache. `public_fixtures.py` produit des contenus et une illustration synthétiques uniquement pour les tests.
 
-Playwright démarre quatre serveurs locaux isolés : 8765 pour les parcours historiques (base vierge), 8766 avec `PUBLIC_FIXTURES=1` pour les collections publiques et 8767 avec `E2E_PORT=8767` pour les langues. Les serveurs 8766 et 8767 utilisent des bases peuplées temporaires distinctes. Le serveur 8768 est réservé aux écritures du parcours bilingue. Aucun de ces réglages n'appartient à la configuration de production. `public.spec.ts` vérifie les sept rubriques, les quinze fiches, la recherche et ses liens, les tarifs, FAQ, sommaire, images, le menu au clavier et les erreurs. Les captures couvrent desktop/mobile, clair/sombre et 320 px. Le profil de démonstration n'entre jamais dans l'image ni dans la base de production.
+Playwright démarre cinq serveurs locaux isolés : 8765 pour les parcours historiques (base vierge), 8766 avec `PUBLIC_FIXTURES=1` pour les collections publiques et 8767 avec `E2E_PORT=8767` pour les langues. Les serveurs 8766 et 8767 utilisent des bases peuplées temporaires distinctes. Le serveur 8768 est réservé aux écritures du parcours bilingue et 8769 aux travaux durables de l'assistant. Aucun de ces réglages n'appartient à la configuration de production. `public.spec.ts` vérifie les sept rubriques, les quinze fiches, la recherche et ses liens, les tarifs, FAQ, sommaire, images, le menu au clavier et les erreurs. Les captures couvrent desktop/mobile, clair/sombre et 320 px. Le profil de démonstration n'entre jamais dans l'image ni dans la base de production.
 
 Avec `PLAYWRIGHT_BASE_URL`, les tests dépendant de données synthétiques sont ignorés et les vérifications publiques restent en lecture seule. Exécuter les constructions avant les tests HTTP et navigateur ; ne pas reconstruire `build/web` pendant qu'un test le lit. Les contrôles de contraste, zoom 200 % et revue visuelle complètent les assertions fonctionnelles.
 

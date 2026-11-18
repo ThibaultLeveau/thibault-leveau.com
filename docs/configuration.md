@@ -101,6 +101,8 @@ Toute nouvelle variable doit être ajoutée au modèle de configuration, à `.en
 
 Aucune nouvelle variable d'environnement n'est nécessaire. L'assistant utilise le fournisseur et le modèle enregistrés dans **Fournisseur IA** ; la clé reste chiffrée avec `SITE_SECRET_KEY`. Les préférences globales et par famille sont réglées dans **Agents et rédaction**, validées et versionnées en SQLite. Elles sont incluses dans la sauvegarde du studio.
 
+Les travaux durables utilisent également cette base, ce fournisseur et le processus FastAPI existants. Les limites de génération s'appliquent à chaque étape, avec trois appels simultanés maximum ; elles n'imposent pas de plafond total de fiches ou de lots. Le brief, les faits utiles et les reçus occupent de l'espace SQLite jusqu'à suppression volontaire du suivi. Le quota des médias ne limite pas ces données : prévoir l'espace de la base et des sauvegardes selon l'[exploitation](operations.md#travaux-durables-et-conservation).
+
 Les budgets d'exécution sont des constantes serveur dans `assistant/models.py` et des limites de contrats dans `assistant/contracts.py` ; les prompts de `assistant/prompts/` restent versionnés dans le dépôt. Ne pas exposer de prompt système modifiable, d'URL fournisseur libre ou de réglage de permissions dans les préférences éditoriales. Les plafonds effectifs sont décrits dans l'[architecture de l'assistant](assistant-design.md#limites-et-extension-du-code).
 
 Les dépendances LangChain/LangGraph et leurs SDK sont verrouillées dans `uv.lock`. Leur mise à jour exige les tests des trois transports natifs, des sorties structurées, des outils et du graphe. La trace LangSmith est désactivée par le service, même si une variable de traçage est présente dans l'environnement.

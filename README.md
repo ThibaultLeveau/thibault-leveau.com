@@ -1,6 +1,6 @@
 # Thibault Leveau
 
-Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Huit pages publiques pour explorer les quinze collections et un studio privé pour les administrer, avec assistant de contenus LangChain/LangGraph, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
+Site personnel : **FastAPI**, **React / TypeScript / Tailwind CSS** et **MkDocs Material**. Huit pages publiques pour explorer les quinze collections et un studio privé pour les administrer, avec assistant de contenus LangChain/LangGraph, travaux par lots et sous-agents, préférences de rédaction et gestion du compte, en thèmes clair et sombre.
 
 Le sélecteur public donne accès aux versions `/fr` et `/en`. Les quinze collections possèdent des textes français/anglais, avec choix de version pour l’IA et proposition de traduction après sauvegarde. **Réglages du site → Langue** conserve les valeurs par défaut du public et de l’administration : voir le [guide des langues](docs/languages.md).
 
@@ -51,7 +51,9 @@ Navigateur → Caddy (HTTPS) → FastAPI :8000
                               └── /documentation/    MkDocs compilé
 ```
 
-Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. L'administration activée conserve son compte, ses sessions, ses réglages et ses contenus dans SQLite sur le volume `admin_data`. FastAPI chiffre la clé API et contacte le fournisseur LLM ; les conversations restent en mémoire dans le navigateur.
+Le conteneur final contient Python et les fichiers construits. Node.js, Vite et MkDocs servent à la construction, sans serveur frontend supplémentaire en production. L'administration activée conserve son compte, ses sessions, ses réglages et ses contenus dans SQLite sur le volume `admin_data`. FastAPI chiffre la clé API et contacte le fournisseur LLM. La conversation courante reste en mémoire dans le navigateur ; les travaux de création conservent leur brief, faits utiles, progression et lots dans SQLite pour permettre la reprise.
+
+Les grandes demandes enchaînent les lots sans plafond total de fiches, avec trois appels de sous-agents simultanés au maximum et une relecture avant chaque enregistrement. Les budgets s'appliquent à chaque étape ; les ressources disponibles et quotas fournisseur restent applicables. Voir le [guide de l'assistant](docs/administration.md#demandes-importantes-et-travaux-enregistres) pour la reprise et la suppression des données du travail.
 
 ```text
 backend/src/personal_site/  Application et contrat HTTP

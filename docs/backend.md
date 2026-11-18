@@ -80,12 +80,12 @@ Les tentatives d'identifiants sont limitées à 5 par adresse et 30 globalement 
 
 ## API de l'assistant de contenus
 
-Le préfixe `/api/admin/assistant` réutilise session, origine, CSRF et limite de corps de 256 Kio. Aucun agent n'a accès aux routes d'application : ses trois outils (`rechercher_fiches`, `lire_fiche`, `decrire_collection`) sont en lecture seule. Les champs libres et messages sont des données de contexte ; ils ne peuvent définir un rôle système ou un outil.
+Le préfixe `/api/admin/assistant` réutilise session, origine, CSRF et limite de corps de 256 Kio. Aucun agent n'a accès aux routes d'application. Les outils `rechercher_fiches`, `lire_fiche` et `decrire_collection` sont en lecture seule ; les travaux ajoutent deux outils paginés, `lire_precisions` et `rechercher_taches`, également en lecture seule. Les champs libres et messages sont des données de contexte ; ils ne peuvent définir un rôle système ou un outil.
 
 | Méthode et suffixe | Entrée et résultat |
 | --- | --- |
-| `POST /turn` | `{request_id: UUID, thread_id: UUID, messages: [{role, content}], include_private_notes: false, media_ids: []}` ; 200 : `message`, `questions`, `proposal` ou null, `provider`, `model`, `calls`, `delegations` |
-| `POST /runs/{request_id}/cancel` | Attend l'annulation du tour de la même session ; 200 `{cancelled: true}` même si le tour est déjà terminé |
+| `POST /turn` | `{request_id: UUID, thread_id: UUID, language: "fr" ou "en", messages: [{role, content}], include_private_notes: false, media_ids: []}` ; 200 : `message`, `questions`, `proposal` ou null, `job` ou null, `provider`, `model`, `calls`, `delegations` |
+| `POST /runs/{request_id}/cancel` | Attend l'annulation de la demande `/turn` ou `/jobs` de la même session et met en pause son éventuel travail transféré ; 200 `{cancelled: true}` même si la demande est déjà terminée |
 | `GET /proposals/{id}` | Proposition opaque appartenant à la session, différences et reçu éventuel |
 | `POST /proposals/{id}/apply` | `{revision: n}` ; revalidation et écriture atomique, retourne le reçu ; un appel répété retourne le même résultat |
 | `POST /proposals/{id}/cancel` | `{revision: n}` ; abandon idempotent d'une proposition non appliquée |
@@ -96,11 +96,43 @@ Les messages alternent `user`/`assistant`, commencent et terminent par `user`. M
 
 Une question contient `question`, `reason`, `fields`. Une proposition expose `id`, `revision`, `state`, `expires` (timestamp UTC), `items`, `result`. Chaque item décrit collection, titre, identifiant existant éventuel, différences `{field,label,before,after}`, statuts, libellés des références, informations manquantes et erreurs de complétude. `related=true` désigne une association réciproque également modifiée par le lot. Les opérations internes et références locales `@key` restent côté serveur.
 
-Les états sont `pending`, `superseded` (une précision a remplacé la proposition mais elle peut servir de base au tour suivant), `cancelled`, `applied`. Seul `pending` est applicable ; `applied` retourne son reçu sans réécriture. Un reçu contient les identifiants, titres, collections, versions et statuts réellement enregistrés. Une proposition expire après une heure ; après application son reçu reste valide jusqu'à 24 heures, sous la limite globale de 50 entrées. La prochaine création purge les expirations et les entrées les plus anciennes. La révocation de session supprime ses propositions par clé étrangère.
+Les états sont `pending`, `superseded` (une précision a remplacé la proposition mais elle peut servir de base au tour suivant), `cancelled`, `applied`. Seul `pending` est applicable ; `applied` retourne son reçu sans réécriture. Un reçu contient les identifiants, titres, collections, versions et statuts réellement enregistrés. Une proposition du parcours direct expire après une heure ; après application son reçu reste valide jusqu'à 24 heures, sous la limite globale de 50 entrées ordinaires. La prochaine création purge les expirations et les entrées les plus anciennes. La révocation de session supprime ces propositions par clé étrangère. Les lots des travaux durables ont une conservation distincte, décrite ci-dessous.
 
 Les opérations sont validées dans un savepoint annulé avant la relecture. L'application relit toutes les versions de cibles et références sous `BEGIN IMMEDIATE`, résout les nouvelles références dans la même transaction et réutilise `ContentStore.write`. Les associations réciproques sont consolidées sans confondre leurs incréments internes de version avec un conflit externe. Une contradiction, un doublon, un statut invalide ou une référence périmée annule l'ensemble.
 
-En plus des statuts administratifs : 404 pour une proposition absente ou étrangère à la session, 410 pour une expiration, 409 pour proposition obsolète/annulée/appliquée lors d'un abandon, conflit de version ou génération annulée, 422 pour contrat ou budget dépassé, 429 pour fréquence ou génération concurrente, 502 pour refus/réponse fournisseur inutilisable, 504 pour délai total. La déconnexion HTTP annule le traitement (499 si une réponse peut encore être rendue). L'instance partage son verrou avec l'ancienne route texte ; les tours de l'assistant sont limités à dix par minute en SQLite.
+En plus des statuts administratifs : 404 pour une proposition absente ou étrangère à la session, 410 pour une expiration, 409 pour proposition obsolète/annulée/appliquée lors d'un abandon, conflit de version ou génération annulée, 422 pour contrat ou budget dépassé, 429 pour fréquence ou génération concurrente, 502 pour refus/réponse fournisseur inutilisable, 504 pour délai total. La déconnexion HTTP annule la demande initiale encore ouverte (499 si une réponse peut encore être rendue) et met en pause son éventuel transfert durable. Une fois cette demande terminée, fermer le navigateur n'arrête pas le travail pris en charge. L'instance partage son verrou avec l'ancienne route texte ; les tours de l'assistant sont limités à dix par minute en SQLite.
+
+### Travaux durables
+
+Le préfixe reste `/api/admin/assistant`. Chaque lecture exige une session valide et chaque mutation exige en plus l'origine et le CSRF. Le compte unique peut retrouver ses travaux avec une nouvelle session ; les anciens jetons restent révoqués. Ces routes n'exposent aucune donnée publiquement et utilisent `Cache-Control: no-store`.
+
+| Méthode et suffixe | Entrée et résultat |
+| --- | --- |
+| `POST /jobs` | Contrat `Turn` ci-dessus, sans tâche de traduction ; crée un travail et retourne 200 avec `Job` |
+| `GET /jobs?page=1&limit=10` | `{items: Job[], page, limit, total}` |
+| `GET /jobs/{id}` | `Job` courant, compteurs et éventuelles questions/erreur |
+| `GET /jobs/{id}/batches?page=1&limit=10` | `{items: [{sequence, proposal}], page, limit, total}` ; une page de lots avec leurs propositions/reçus |
+| `POST /jobs/{id}/input` | `{message: string, request_id?: UUID}` ; texte non vide de 1 à 16 000 caractères, identifiant facultatif pour rejouer le même apport sans le dupliquer ; retourne `Job` |
+| `POST /jobs/{id}/pause` | Sans corps ; attend la prise en compte de la pause et retourne `Job` |
+| `POST /jobs/{id}/resume` | Sans corps ; reprend les étapes restantes et retourne `Job` |
+| `POST /jobs/{id}/cancel` | Sans corps ; arrête le travail et retourne `Job` |
+| `DELETE /jobs/{id}` | Annule les étapes actives, attend leur arrêt puis supprime les données de suivi ; `{deleted: true}` |
+
+Les pages commencent à 1 ; `limit` vaut 10 par défaut et accepte de 1 à 20. Une valeur hors bornes répond 422. La création de nouveaux travaux partage la limite de dix tentatives par minute avec `/turn`. Une répétition de `request_id` déjà connu retrouve le travail avant cette limite, sans nouvel appel fournisseur.
+
+`Job` expose `id`, `status`, `language`, `message`, `created`, `updated`, `planned`, `prepared`, `applied`, `pending_batches`, `total_tasks`, `calls`, `delegations`, `questions`, `error`, `provider`, `model` et `include_private_notes`. Les dates sont des timestamps UTC. `total_tasks` peut valoir `null` tant que le coordinateur n'a pas fixé le total ; `prepared` inclut les tâches déjà `applied`. Les compteurs ne doivent pas être présentés comme une promesse de contenu déjà enregistré. `message` est le résumé courant du coordinateur, `questions` reprend `{question, reason, fields}`. `error` est un message nettoyé, jamais la réponse brute du fournisseur.
+
+Les états de travail sont `queued`, `running`, `review`, `needs_input`, `paused`, `failed`, `completed`, `cancelled`. Les étapes terminées et leurs lots persistent dans tous ces états. `review` demande la relecture des lots ; `needs_input` attend des précisions. `completed` exige la résolution de l'ensemble des tâches et dépendances, ainsi que l'application des lots. Une coupure réseau ne doit pas être assimilée à une commande de pause ou d'arrêt.
+
+`/turn` peut retourner `job` lorsqu'une planification a une suite ou que la demande dépasse le nombre de sections du parcours direct. La création explicite via `/jobs` permet de conserver le travail dès le premier envoi ; répéter le même `request_id` retrouve le travail déjà créé. Les apports suivants utilisent `/input` et leur nombre n'est pas limité par la taille d'un historique `Turn` : chaque segment conserve la limite de 16 000 caractères et le corps HTTP de 256 Kio. Les lectures restent paginées ; le client ne doit pas accumuler tous les lots pour afficher une seule page.
+
+Un apport pendant `queued` ou `running` répond 409 : mettre d'abord le travail en pause. Un nouvel apport en relecture, pause ou échec invalide les lots non appliqués et prépare leur correction sans supprimer les reçus ni réécrire les fiches appliquées. Une réponse à une question réessaie les sections bloquées. Avec le même `request_id`, `/input` renvoie l'état du travail sans ajouter de segment ni relancer la génération ; le client conserve donc cet UUID pour vérifier un envoi dont la réponse a été perdue. L'arrêt rend les lots restants inapplicables ; l'abandon d'une proposition durable met son travail en pause. Le redémarrage du processus transforme les travaux actifs en `paused`, sans lancer d'appel facturable au démarrage ; la reprise exige une session courante.
+
+Une proposition durable conserve le contrat `Proposal`, avec un identifiant `job_…` et `expires: null`. Elle réutilise `GET /proposals/{id}`, `/apply` et `/cancel`, sous session actuelle. L'application exige toujours `{revision: n}`, relit les versions métier et reste atomique/idempotente par lot. La correspondance tâche → fiche et le reçu sont persistés avec l'application ; leur validité dépasse la purge des 50 propositions ordinaires. Supprimer un travail retire ce reçu et les autres données techniques, sans supprimer les fiches déjà enregistrées.
+
+Les validations des quinze collections, des variantes FR/EN, des notes privées et des références restent dans le domaine métier. Une référence vers un lot antérieur utilise l'identifiant réel enregistré. Une référence future reste une dépendance. Après application de toutes les tâches de contenu, les associations différées sont préparées dans des propositions distinctes, avec un seul lot de liens en attente à la fois. Enregistrer ce lot permet de préparer le suivant ; toutes les dépendances doivent être appliquées pour terminer le travail. Une erreur ou un conflit ne valide pas partiellement le lot concerné et ne réécrit pas les lots appliqués auparavant.
+
+Le responsable d'exécution appartient au cycle de vie FastAPI. La requête initiale ne reste pas ouverte pendant toute la préparation. Les étapes interrompues sont rendues reprenables après redémarrage ; sessions et fournisseur sont recontrôlés avant de nouveaux appels. Le travail conserve la langue éditoriale, les préférences et la permission de notes privées choisis à sa création. Une empreinte serveur du fournisseur, du modèle et de la clé détecte leur changement, sans conserver la clé dans les tables de travaux. Une différence met le travail en pause et fait répondre 409 à une reprise ou à un nouvel apport jusqu'au rétablissement des réglages initiaux. La reprise réattache la session actuelle sans réactiver les anciens jetons. Les détails de conservation, de récupération et de suppression figurent dans l'[exploitation](operations.md#travaux-durables-et-conservation).
 
 ### Préférences et modèles
 
@@ -108,7 +140,7 @@ En plus des statuts administratifs : 404 pour une proposition absente ou étrang
 
 Les adaptateurs officiels sont isolés dans `assistant/models.py` : OpenAI Responses, Anthropic Messages, Mistral Chat. URL exactes fermées, POST uniquement, TLS, absence de redirection et de proxy d'environnement, réponse HTTP de 2 Mio maximum, pas de relance automatique SDK. OpenAI utilise `store=false`, `use_previous_response_id=false` et les éléments chiffrés de raisonnement seulement en mémoire pour les appels successifs ; aucun état fournisseur n'est conservé par le site. Les API des modèles choisis doivent supporter les outils structurés.
 
-Le [graphe et ses budgets](assistant-design.md#limites-et-extension-du-code) imposent 240 secondes par tour ; le navigateur attend au plus 250 secondes. Les exceptions fournisseur sont nettoyées, y compris lorsqu'un SDK enveloppe une erreur de transport. Le journal retient identifiant, comptes d'appels/outils, durée et catégorie technique d'échec, sans corps ni clé. La trace LangSmith est désactivée explicitement.
+Le [graphe et ses budgets](assistant-design.md#limites-et-extension-du-code) impose 240 secondes au tour direct ou à chaque étape d'un travail durable ; le navigateur attend au plus 250 secondes pour le tour direct. Les travaux sont suivis par lectures successives de leur état. Les exceptions fournisseur sont nettoyées, y compris lorsqu'un SDK enveloppe une erreur de transport. Le journal retient identifiant, comptes d'appels/outils, durée et catégorie technique d'échec, sans corps ni clé. La trace LangSmith est désactivée explicitement.
 
 ## API du studio de contenus
 
@@ -144,7 +176,9 @@ Formats : JPEG, PNG, WebP (10 Mio, 20 millions de pixels, image fixe), PDF (20 M
 
 `content/schemas.py` définit les modèles métier ; `catalog.py` contient les correspondances fermées ; `store.py` gère les transactions. `content_entries` porte le socle, une table par collection les champs spécifiques, des tables ordonnées les sous-listes et des clés étrangères les relations. Aucun document JSON indifférencié n'est utilisé comme base métier. Les clés étrangères sont actives à chaque connexion.
 
-`content/migrations/001.sql` est un instantané immuable du premier schéma. Les migrations s'exécutent dans une transaction et leur registre `content_migrations` doit être une suite connue ; une version future bloque le démarrage. La première migration conserve compte, clé chiffrée, sessions et limites existantes. `002.sql` ajoute les préférences et propositions temporaires de l’assistant ; le schéma courant est 2. Une restauration révoque les sessions et supprime leurs propositions, tout en conservant les préférences. La [sauvegarde cohérente](operations.md#sauvegarde-du-studio-base-et-medias) couvre SQLite et les fichiers.
+`content/migrations/001.sql` est un instantané immuable du premier schéma. Les migrations s'exécutent dans une transaction et leur registre `content_migrations` doit être une suite connue ; une version future bloque le démarrage. La première migration conserve compte, clé chiffrée, sessions et limites existantes. `002.sql` ajoute préférences et propositions temporaires, `003.sql` les langues d'interface, `004.sql` les variantes éditoriales et `005.sql` les travaux durables ; **le schéma courant est 5**.
+
+Les tables `assistant_jobs`, `assistant_job_inputs`, `assistant_job_tasks`, `assistant_job_sections`, `assistant_job_dependencies` et `assistant_job_batches` conservent l'état technique du travail. Ce stockage ne remplace ni les tables métier ni leurs validations. Une restauration révoque les sessions et supprime leurs propositions ordinaires ; préférences, travaux et lots durables restent dans la copie restaurée, accessibles après une nouvelle connexion. La [sauvegarde cohérente](operations.md#sauvegarde-du-studio-base-et-medias) couvre SQLite et les fichiers.
 
 ## Ancien adaptateur de chat texte
 

@@ -34,9 +34,9 @@ Le réseau partagé `multisite_proxy` est interne : il transporte les requêtes 
 
 | Sous-système | Responsabilités | Ne prend pas en charge |
 | --- | --- | --- |
-| React | Accueil, administration, formulaires, conversation en mémoire et thème | Secrets persistants, authentification serveur, appel direct aux LLM |
+| React | Accueil, administration, formulaires, conversation en mémoire, suivi des travaux et thème | Secrets persistants, authentification serveur, appel direct aux LLM |
 | Vite / Tailwind | Compilation TypeScript, CSS et assets | Service HTTP de production |
-| FastAPI | API, sessions, SQLite, chiffrement, appels LLM, fichiers et politiques HTTP | Construction à la volée du frontend |
+| FastAPI | API, sessions, SQLite, chiffrement, exécution des travaux et appels LLM, fichiers et politiques HTTP | Construction à la volée du frontend |
 | MkDocs Material | HTML documentaire, navigation, index de recherche | Processus permanent en production |
 | Docker Compose | Image, paramètres, redémarrage et réseau applicatif | Gestion du DNS |
 | Caddy | HTTPS, compression et reverse proxy | Logique métier |
@@ -46,7 +46,7 @@ L'évolution administrative a été explicitement approuvée par Thibault (« Je
 
 SQLite contient le compte unique (mot de passe haché), les sessions révocables, les compteurs de limitation et le fournisseur sélectionné avec sa clé chiffrée, ainsi que les fiches typées et leurs relations. Les médias binaires vivent à côté de la base, dans `media/`. Leur accès administratif passe par les API privées ; les fichiers publiables ont une route publique qui recontrôle leur visibilité et leurs usages à chaque requête. Les migrations de contenu sont versionnées et transactionnelles ; les sauvegardes associent base et fichiers avec un manifeste. Le volume Compose `admin_data` survit aux recréations ; seul `/app/data` est durable et inscriptible, la racine du conteneur reste en lecture seule. La clé de chiffrement vient de l'environnement serveur et doit être sauvegardée séparément de la base.
 
-Les messages ne sont pas enregistrés en base. React les garde en mémoire et transmet l'historique nécessaire au backend à chaque envoi ; FastAPI l'envoie au fournisseur choisi. La politique de conservation de ce fournisseur s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage` ; seule la préférence de thème y est conservée.
+La conversation courante reste en mémoire dans React. Pour un travail de création durable, SQLite conserve le brief, les faits nécessaires à la reprise et leur permission de lecture des notes privées, ainsi que les tâches, résultats et reçus ; il ne devient pas un historique général de conversation. Les raisonnements internes et les secrets fournisseur ne font pas partie de cet état. FastAPI transmet le contexte utile au fournisseur choisi, dont la politique de conservation s'applique. Aucun secret fournisseur ni cookie de session n'est placé dans `localStorage`.
 
 ## Langues des interfaces
 
@@ -87,7 +87,7 @@ backend/
 │   ├── api/content.py     contrats privés des contenus et médias
 │   ├── api/public.py      lecture publique et médias autorisés
 │   ├── content/public.py  projection publique, éligibilité et relations filtrées
-│   ├── assistant/         agents, graphe, outils de lecture, propositions et préférences
+│   ├── assistant/         agents, graphe, travaux durables, propositions et préférences
 │   └── content/           modèles métier, migrations, transactions, fichiers et sauvegardes
 └── tests/                 tests HTTP et démarrage
 frontend/
@@ -119,7 +119,7 @@ L'application n'utilise pas de routeur client supplémentaire. FastAPI distribue
 
 Thibault a explicitement approuvé la [conception des agents](assistant-design.md) (« J'accepte »), [accord consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679). LangChain et LangGraph s'exécutent dans FastAPI. Le domaine `assistant/` sépare contrats, modèles, outils de lecture, orchestration, propositions et préférences. `content/` reste responsable des validations et écritures métier. Les sous-agents préparent des données structurées ; seule l'application explicite d'une proposition autorise une transaction métier.
 
-Les préférences et propositions temporaires sont conservées dans la même base SQLite, avec migrations et sauvegardes existantes. Les API sont privées sous `/api/admin/assistant/*`, avec session et CSRF. React présente les questions, les différences et les réglages dans `/admin`. Le fournisseur reçoit le contexte utile à la demande ; la conversation reste en mémoire dans l'onglet. Aucun nouveau service, routeur, réseau ou mécanisme d'authentification n'est ajouté.
+Les préférences et propositions temporaires sont conservées dans la même base SQLite, avec migrations et sauvegardes existantes. Les API sont privées sous `/api/admin/assistant/*`, avec session et CSRF. React présente les questions, les différences et les réglages dans `/admin`. Le fournisseur reçoit le contexte utile à la demande ; la conversation reste en mémoire dans l'onglet. L'issue #22 étend ensuite ce fonctionnement avec les travaux durables décrits ci-dessous. Aucun nouveau service, routeur, réseau ou mécanisme d'authentification n'est ajouté.
 
 Une future route API doit être définie dans `api/`, enregistrée dans la fabrique et documentée avec son contrat HTTP. Une nouvelle page nécessite de décider explicitement son routage côté serveur et côté navigateur ; ne pas ajouter un repli global vers `index.html` pour contourner cette décision.
 
@@ -138,3 +138,17 @@ L’[accord explicite de l’issue #20](https://github.com/ThibaultLeveau/thibau
 Les routes FastAPI restent explicites, avec liens natifs React et sans bibliothèque de routage supplémentaire. Le code de l’URL prime sur le choix du visiteur puis sur le défaut du site. L’administration conserve sa propre langue. La recherche SQL utilise les résumés localisés et les catalogues d’interface sont chargés à la demande.
 
 `assistant/translation.py` prépare une traduction structurée sans outils de contexte, limitée aux textes autorisés. Il réutilise les adaptateurs, budgets, propositions, validations transactionnelles et protections existants. La publication ne déclenche jamais de génération. Les [langues](languages.md) détaillent les contrats, les états et le comportement des traductions périmées.
+
+## Grandes demandes et travaux durables — issue #22
+
+Thibault a répondu « Je suis d'accord » à la proposition de traitement par lots et de reprise, [accord explicite consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/22#issuecomment-6991171778). Il autorise l'extension de SQLite, les API privées de suivi, la conservation du brief et des faits utiles ainsi que l'exécution indépendante de la connexion HTTP.
+
+La migration `005.sql` passe le schéma de 4 à 5. Les travaux, apports de faits, tâches, sections, dépendances et lots vivent dans la base existante. Le responsable d'exécution appartient au cycle de vie de l'unique processus FastAPI. Il enregistre les transitions et reprend les étapes restantes depuis SQLite ; une requête HTTP sert à créer, consulter ou commander le travail. Le rechargement de la page n'est donc plus une annulation implicite du travail.
+
+Le coordinateur planifie progressivement, puis distribue les fiches et sections aux spécialistes en vagues limitées à trois appels simultanés. Les budgets bornent chaque étape, sans imposer de nombre maximal de fiches ou de lots pour l'ensemble du travail. Listes, lectures de lots et contexte fournisseur restent bornés ; les faits supplémentaires s'ajoutent par segments. Le traitement conserve les règles des quinze collections, le profil unique, les variantes FR/EN et les permissions sur les notes privées.
+
+Chaque lot reste une proposition : seule l'action explicite d'enregistrement déclenche les écritures de `content/`, atomiques et idempotentes pour ce lot. Le travail peut être partiellement enregistré, état visible dans le suivi. Les tâches conservent leurs identités et leur correspondance vers les fiches déjà enregistrées. Les références entre lots et leurs éventuels cycles restent des dépendances à résoudre avant de déclarer le travail terminé.
+
+Les travaux sont accessibles à l'administrateur unique après reconnexion, sans réactiver les anciennes sessions. Leur suppression explicite retire les données techniques de reprise et les reçus, sans supprimer les fiches déjà enregistrées. Ils ne subissent pas la purge des propositions temporaires de conversation. Sauvegardes, permissions du volume et politique de conservation couvrent donc aussi ces données privées. Voir le [contrat backend](backend.md#travaux-durables), l'[exploitation](operations.md#travaux-durables-et-conservation) et la [migration 4 vers 5](operations.md#migration-des-travaux-durables-schema-4-vers-5).
+
+Le service reste unique, sans file externe ni nouveau processus permanent. Plusieurs instances, comptes ou un changement de stockage demanderaient une nouvelle décision d'architecture. Les quotas fournisseur, les crédits et le stockage disponible restent des contraintes réelles.

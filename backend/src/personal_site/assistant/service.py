@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 
 from personal_site.admin.llm import ProviderError
 from personal_site.assistant.graph import build_graph
+from personal_site.assistant.jobs import JobManager
 from personal_site.assistant.models import RUN_SECONDS, Budget, ModelFactory
 from personal_site.assistant.registry import PRIVATE_FIELDS
 from personal_site.assistant.store import AssistantStore
@@ -26,9 +27,11 @@ class AssistantService:
     def __init__(self, content, models=None):
         self.store = AssistantStore(content)
         self.models = models or ModelFactory()
+        self.semaphore = asyncio.Semaphore(3)
+        self.jobs = JobManager(self)
 
     async def reply(self, turn, owner, config):
-        started, budget = time.monotonic(), Budget()
+        started, budget = time.monotonic(), Budget(semaphore=self.semaphore)
         context = Context(self.store.content, budget, turn.include_private_notes, turn.language)
         try:
             with tracing_context(enabled=False):
@@ -60,6 +63,18 @@ class AssistantService:
                             {"results": []}, {"recursion_limit": 24, "callbacks": []}
                         )
                         response = state["response"]
+                    plan = response.pop("job_plan", None)
+                    if plan:
+                        job = await self.jobs.create(turn, owner, config, plan, budget.calls)
+                        response.pop("proposal_payload")
+                        return {
+                            **response,
+                            "proposal": None,
+                            "job": job,
+                            "provider": config["provider"],
+                            "model": config["model"],
+                            "calls": budget.calls,
+                        }
                     payload = response.pop("proposal_payload")
                     proposal = (
                         await run_in_threadpool(self.store.create, owner, turn.thread_id, payload)
@@ -71,6 +86,7 @@ class AssistantService:
                     return {
                         **response,
                         "proposal": proposal,
+                        "job": None,
                         "provider": config["provider"],
                         "model": config["model"],
                         "calls": budget.calls,

@@ -48,7 +48,7 @@ Pour `/admin`, `App` charge `AdminPage` à la demande avec `React.lazy`, dans le
 | `styles/content.css` | Studio responsive, formulaires et états dans les deux thèmes |
 | `admin/LoginForm.tsx` | Connexion et état d'erreur |
 | `admin/SettingsForms.tsx` | Fournisseur, modèle, clé et modification du compte |
-| `admin/ChatPanel.tsx` | Conversation temporaire, envoi, attente, erreurs et limites |
+| `admin/ChatPanel.tsx` | Conversation temporaire, envoi, suivi des travaux, attente et erreurs |
 | `admin/api.ts` | Appels relatifs, cookie, CSRF et erreurs HTTP |
 | `styles/admin.css` | Palette administrative, menus, formulaires, chat et variantes mobiles |
 
@@ -111,6 +111,8 @@ Conserver une hiérarchie sémantique avec un seul titre principal, des liens r�
 ## Assistant et préférences de rédaction
 
 `ChatPanel` conserve en mémoire l'historique, un UUID de conversation, l'UUID du tour en cours et les médias joints. Il envoie uniquement des messages `user`/`assistant` à `/api/admin/assistant/turn`, attend au plus 250 secondes et affiche les questions regroupées ou la proposition. L'annulation appelle le serveur et attend sa confirmation. Les notes privées sont exclues par défaut ; le contrôle explicite s'applique au tour suivant.
+
+Une réponse peut fournir un travail durable à la place d'une proposition directe. Le suivi utilise les API privées de travaux et de lots paginés ; l'interface affiche la progression, questions, erreurs, lots à relire et reçus. **Travaux enregistrés** retrouve ces données après rechargement ou reconnexion, sans stocker le brief dans `localStorage`. Les apports de faits sont envoyés par segments ; l'interface ne reconstruit pas un historique complet à chaque étape. Pause et arrêt attendent la prise en compte serveur, tandis que l'enregistrement reste une action explicite par lot.
 
 Les composants de `admin/assistant/` isolent la relecture (`ProposalCard`), les médias (`Attachments`), les préférences (`PreferencesForm`) et leurs types. `ProposalCard` s'appuie sur le catalogue pour afficher libellés, options, listes et références ; le texte reste échappé. Il applique seulement l'identifiant et la révision serveur, affiche le reçu et ouvre les éditeurs. Une interruption réseau demande de vérifier le reçu avant de réessayer. Les propositions antérieures sont désactivées lorsqu'une demande les remplace.
 

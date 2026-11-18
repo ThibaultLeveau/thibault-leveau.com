@@ -13,8 +13,9 @@ import {
 import { Icon } from './Icon'
 import { ProposalCard } from './assistant/ProposalCard'
 import { Attachments } from './assistant/Attachments'
-import type { AssistantReply } from './assistant/types'
-import type { Catalog, Collection, Item } from './content/types'
+import { JobsPanel } from './assistant/JobsPanel'
+import type { AssistantJob, AssistantReply } from './assistant/types'
+import type { Catalog, Collection, Item, NavigationGuard } from './content/types'
 
 type ConversationMessage = ChatMessage & { reply?: AssistantReply }
 
@@ -25,6 +26,7 @@ export function ChatPanel({
   onSessionEnd,
   visible,
   onOpen,
+  guardRef,
 }: {
   settings: ProviderSettings
   session: Session
@@ -32,6 +34,7 @@ export function ChatPanel({
   onSettings: () => void
   onSessionEnd: (message: string) => void
   onOpen: (kind: Collection, id: number) => void
+  guardRef: NavigationGuard
 }) {
   const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [draft, setDraft] = useState('')
@@ -45,14 +48,25 @@ export function ChatPanel({
   const controller = useRef<AbortController | null>(null)
   const thread = useRef(crypto.randomUUID())
   const requestId = useRef('')
+  const retryRequest = useRef<{ fingerprint: string; id: string } | null>(null)
   const [includePrivate, setIncludePrivate] = useState(false)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [media, setMedia] = useState<Item[]>([])
   const [uploading, setUploading] = useState(false)
+  const [track, setTrack] = useState(false)
+  const [jobsOpen, setJobsOpen] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<AssistantJob | null>(null)
+  const [jobEditing, setJobEditing] = useState(false)
   const provider = settings.providers.find((item) => item.id === settings.provider)!
   const activeLanguage = language()
 
   useEffect(() => () => controller.current?.abort(), [])
+  useEffect(() => {
+    if (!visible || !jobEditing) return
+    const guard = () => setError(t('jobs.finishInput'))
+    guardRef.current = guard
+    return () => { if (guardRef.current === guard) guardRef.current = null }
+  }, [jobEditing, visible, guardRef])
   useEffect(() => {
     const abort = new AbortController()
     adminRequest<Catalog>('/content/catalog', { signal: abort.signal })
@@ -61,8 +75,8 @@ export function ChatPanel({
     return () => abort.abort()
   }, [activeLanguage])
   useEffect(() => {
-    if (visible) bottom.current?.scrollIntoView({ block: 'end', behavior: 'instant' })
-  }, [messages, pending, visible])
+    if (visible && !jobsOpen) bottom.current?.scrollIntoView({ block: 'end', behavior: 'instant' })
+  }, [messages, pending, visible, jobsOpen])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -86,9 +100,11 @@ export function ChatPanel({
     setDraft('')
     setPending(true)
     controller.current = new AbortController()
-    requestId.current = crypto.randomUUID()
+    const fingerprint = JSON.stringify([thread.current, next, code, includePrivate, media.map((m) => m.id), track])
+    requestId.current = retryRequest.current?.fingerprint === fingerprint ? retryRequest.current.id : crypto.randomUUID()
+    retryRequest.current = { fingerprint, id: requestId.current }
     try {
-      const reply = await adminRequest<AssistantReply>('/assistant/turn', {
+      const response = await adminRequest<AssistantReply | AssistantJob>(track ? '/assistant/jobs' : '/assistant/turn', {
         method: 'POST',
         csrf: session.csrf_token,
         body: {
@@ -104,6 +120,9 @@ export function ChatPanel({
           AbortSignal.timeout(250_000),
         ]),
       })
+      const reply: AssistantReply = track
+        ? { message: t('jobs.started'), questions: [], proposal: null, job: response as AssistantJob, provider: settings.provider, model: settings.model, calls: 0, delegations: 0 }
+        : response as AssistantReply
       const content = [reply.message, ...reply.questions.map((q) => q.question)].join(
         '\n',
       )
@@ -116,13 +135,19 @@ export function ChatPanel({
           source: `${reply.provider} · ${reply.model}`,
         },
       ])
+      if (reply.job) {
+        setSelectedJob(reply.job)
+        setJobsOpen(true)
+      }
+      retryRequest.current = null
     } catch (error) {
+      if (!(error instanceof ApiError && error.status === 0)) retryRequest.current = null
       if (error instanceof ApiError && error.status === 401)
         onSessionEnd(t('session.expired'))
       else {
         setMessages(messages)
         setDraft(text)
-        setError(errorMessage(error))
+        setError(error instanceof ApiError && error.status === 0 ? t('jobs.creationUncertain') : errorMessage(error))
       }
     } finally {
       setPending(false)
@@ -172,15 +197,26 @@ export function ChatPanel({
           <span className="model-name">/ {settings.model}</span>
         </span>
         <button
+          className="text-button jobs-toggle"
+          type="button"
+          aria-pressed={jobsOpen}
+          disabled={busy || jobEditing}
+          onClick={() => { setSelectedJob(null); setJobsOpen(!jobsOpen) }}
+        >
+          {t(jobsOpen ? 'chat.conversation' : 'jobs.title')}
+        </button>
+        <button
           className="text-button new-chat"
           type="button"
-          disabled={busy || uploading || !messages.length}
+          disabled={busy || uploading || jobEditing || !messages.length}
           onClick={() => {
             setMessages([])
             setDraft('')
             setError('')
             thread.current = crypto.randomUUID()
             setMedia([])
+            setJobsOpen(false)
+            setSelectedJob(null)
             input.current?.focus()
           }}
         >
@@ -189,7 +225,8 @@ export function ChatPanel({
         </button>
       </div>
       <div className="chat-scroll">
-        {messages.length === 0 ? (
+        {jobsOpen && error && <p className="form-error" role="alert">{error}</p>}
+        {jobsOpen ? <JobsPanel key={selectedJob?.id ?? 'list'} initialJob={selectedJob} session={session} catalog={catalog} onOpen={onOpen} onSessionEnd={onSessionEnd} onGuardChange={setJobEditing} /> : messages.length === 0 ? (
           <div className="chat-welcome">
             <span className="chat-emblem">
               <Icon name="sparkles" size={32} />
@@ -250,6 +287,7 @@ export function ChatPanel({
                     {message.source && <span>{message.source}</span>}
                   </span>
                   <p>{message.reply?.message ?? message.content}</p>
+                  {message.reply?.job && <button type="button" className="text-button" onClick={() => { setSelectedJob(message.reply!.job!); setJobsOpen(true) }}>{t('jobs.open')}</button>}
                   {message.reply && message.reply.questions.length > 0 && (
                     <div className="assistant-questions">
                       <strong>{t('chat.clarifications')}</strong>
@@ -327,7 +365,7 @@ export function ChatPanel({
         )}
         <div ref={bottom} />
       </div>
-      <div className="composer-area">
+      <div className="composer-area" hidden={jobsOpen}>
         {error && (
           <p className="form-error" role="alert">
             {error}
@@ -400,6 +438,11 @@ export function ChatPanel({
           <p id="private-notes-help">
             {t('chat.privateNotesHelp', { provider: provider.name })}
           </p>
+          <label className="assistant-private">
+            <input type="checkbox" checked={track} disabled={busy} aria-describedby="job-tracking-help" onChange={(event) => setTrack(event.target.checked)} />
+            {t('jobs.track')}
+          </label>
+          <p id="job-tracking-help">{t('jobs.trackHelp')}</p>
         </details>
       </div>
     </section>

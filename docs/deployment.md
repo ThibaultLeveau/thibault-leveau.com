@@ -166,7 +166,7 @@ Le tag `local` convient aux essais. Pour une version publiée, utiliser un tag d
 
 ## Livraison de l'assistant de contenus
 
-Cette version passe le schéma SQLite de 1 à 2. Avant de remplacer le service, suivre la [sauvegarde et la compatibilité de retour arrière](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image actuellement exécutée. Ne modifier ni Caddy, ni DNS, ni réseau pour cette évolution.
+Cette section décrit la livraison initiale de l'issue #12, qui passe le schéma SQLite de 1 à 2. Avant de remplacer le service, suivre la [sauvegarde et la compatibilité de retour arrière](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image alors exécutée. Ne modifier ni Caddy, ni DNS, ni réseau pour cette évolution.
 
 Après démarrage, vérifier le schéma, la conservation des comptes/contenus/médias, le chat et **Agents et rédaction** avec une session autorisée, puis les réponses HTTPS et le rendu bureau/mobile dans les deux thèmes. La CI et les parcours isolés prouvent les écritures ; les contrôles de production n'y créent pas de fiches de démonstration. Consigner le résultat, le commit et l'image réellement exécutée dans l'issue #12.
 
@@ -189,3 +189,11 @@ Après déploiement, vérifier le schéma et les données conservées, les codes
 L’issue #20 passe de SQLite 3 à 4 selon l’[accord explicite](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/20#issuecomment-6917635569). Appliquer la [procédure de migration](operations.md#migration-des-collections-bilingues-schema-3-vers-4) avec sauvegarde vérifiée et image précédente conservée. La version finale de `main`, validée par CI et revue, identifie l’image.
 
 Après remplacement du seul service `site`, vérifier l’image et le commit réellement exécutés, `healthy`, HTTPS, `/fr` et `/en`, la conservation des paramètres au changement de langue, `lang`/`Content-Language`/canonique/`hreflang`, les contenus publiés dans les deux langues et les 401 des API privées. Contrôler clavier, bureau/mobile et thèmes clair/sombre. Consigner le résultat de la traduction initiale, de la migration et du déploiement dans l’issue.
+
+## Livraison des travaux durables
+
+L'issue #22 passe le schéma SQLite de 4 à 5 selon l'[accord explicite](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/22#issuecomment-6991171778). Appliquer la [migration des travaux durables](operations.md#migration-des-travaux-durables-schema-4-vers-5) avec sauvegarde cohérente vérifiée, restauration isolée et image précédente conservée. Le tag de la nouvelle image identifie le commit de `main` validé par la CI et la revue. Aucun paramètre d'environnement, service, volume, réseau, proxy ou DNS supplémentaire n'est requis.
+
+Après remplacement du seul service `site`, vérifier l'image exacte et son tag, `healthy`, schéma 5, intégrité et conservation des contenus, variantes et médias. Contrôler HTTPS, les pages publiques et documentaires ainsi que le refus des API de travaux sans session. Avec une session autorisée, consulter **Travaux enregistrés**, les états existants et les réglages ; vérifier les parcours français/anglais, clair/sombre, bureau/mobile et clavier sans créer de données fictives.
+
+Les essais de génération, relecture/application, pause, arrêt et reprise après interruption sont réalisés en environnement isolé. Le compte rendu de l'issue doit distinguer ces résultats des contrôles de production et indiquer la sauvegarde, l'image précédente, le commit/image exécuté et l'URL. Une CI verte ou une migration réussie ne suffit pas à prouver que l'interface et le service déployés fonctionnent. En cas d'échec, appliquer le retour arrière compatible et documenter l'état réellement servi.

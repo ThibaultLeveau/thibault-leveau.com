@@ -45,7 +45,7 @@ La sidebar regroupe **Chat**, **Projets**, **Parcours** (expériences, formation
 
 Sur tablette, un rail et la commande **Menu** donnent accès à la navigation complète. Sous 600 pixels, le formulaire dispose de toute la largeur et Menu ouvre un panneau. Le contenu derrière ce panneau est inerte. `Échap` le ferme et rend le focus à une commande visible ; la navigation peut défiler indépendamment sur un écran bas.
 
-Le thème partage la préférence de l'accueil. Le lien « Voir le site » revient à l'accueil. La déconnexion révoque la session et efface la conversation. Une saisie de contenu non enregistrée demande d'abord de rester, d'enregistrer ou de l'abandonner.
+Le thème partage la préférence de l'accueil. Le lien « Voir le site » revient à l'accueil. La déconnexion révoque la session et efface la conversation de l'onglet ; les travaux enregistrés restent accessibles après reconnexion. Une saisie de contenu non enregistrée demande d'abord de rester, d'enregistrer ou de l'abandonner.
 
 ## Renseigner une fiche
 
@@ -85,7 +85,7 @@ Les formulaires manuels fonctionnent sans fournisseur LLM et ne lui transmettent
 
 Les modèles préremplis sont `gpt-6-luna`, `claude-sonnet-4-6` et `mistral-small-latest`. Les catalogues et droits évoluent : consulter les [modèles OpenAI](https://developers.openai.com/api/docs/models), [modèles Anthropic](https://platform.claude.com/docs/en/models/overview) ou [modèles Mistral](https://docs.mistral.ai/getting-started/models). Pour Anthropic, utiliser une clé limitée au workspace voulu : l'adaptateur n'envoie pas d'identifiant de workspace distinct.
 
-Après enregistrement, le champ se vide et indique qu'une clé existe. La clé est chiffrée en base et n'est jamais renvoyée par l'API. Laisser le champ vide conserve la clé du fournisseur actuel ; changer de fournisseur demande une nouvelle clé. **Retirer la clé** supprime la clé enregistrée et désactive l'envoi du chat. Un changement de fournisseur ou de modèle démarre une nouvelle conversation.
+Après enregistrement, le champ se vide et indique qu'une clé existe. La clé est chiffrée en base et n'est jamais renvoyée par l'API. Laisser le champ vide conserve la clé du fournisseur actuel ; changer de fournisseur demande une nouvelle clé. **Retirer la clé** supprime la clé enregistrée et désactive l'envoi du chat. Un changement de fournisseur ou de modèle démarre une nouvelle conversation. Un travail suivi conserve son fournisseur, son modèle et l'empreinte de sa clé d'origine ; changer l'un de ces réglages suspend ses nouveaux appels. Ses lots et reçus restent consultables, mais sa reprise demande les réglages initiaux.
 
 L'enregistrement vérifie le format des réglages, sans appel facturé. Le premier message vérifie réellement l'accès à la clé et au modèle. Les erreurs de quota, d'accès ou de délai sont affichées sans exposer la réponse brute du fournisseur.
 
@@ -96,37 +96,54 @@ Depuis **Chat**, décrire la fiche souhaitée ou la modification à apporter. Ex
 1. Envoyer avec la flèche ou `Entrée` (`Maj+Entrée` insère une ligne). Les suggestions remplissent le champ sans envoi automatique.
 2. Répondre dans la conversation aux questions de l'assistant : cible ambiguë, fait nécessaire manquant ou choix de référence. Les champs facultatifs peuvent rester vides. L'assistant prépare un brouillon et ne doit inventer ni chiffre, diplôme, citation, consentement ou licence.
 3. Ouvrir chaque fiche de la **proposition de contenu**. Comparer les valeurs actuelles et proposées, les listes, références, changements de statut et éléments à compléter. Les effets réciproques d'une association figurent aussi dans la relecture.
-4. Pour corriger, préciser la demande dans la conversation. La nouvelle proposition remplace l'ancienne. **Abandonner la proposition** empêche son application, sans supprimer les messages.
+4. Pour corriger une proposition de conversation, préciser la demande dans le chat. La nouvelle proposition remplace l'ancienne. **Abandonner la proposition** empêche son application, sans supprimer les messages. Pour un travail suivi, utiliser ses précisions et ses lots décrits ci-dessous.
 5. **Enregistrer la fiche / les fiches** applique le lot entier. Aucun contenu métier n'est enregistré avant cette action. Le résultat donne des liens vers les éditeurs. Les nouvelles fiches sont des brouillons ; le passage manuel à Prêt publie les fiches dont la visibilité est Public.
 
 Une fiche ou une référence modifiée depuis la proposition entraîne un conflit : demander une nouvelle proposition. Le lot est alors intégralement annulé. Un clic répété ne crée pas de doublon. Après une interruption réseau lors de l'application, **Vérifier l'enregistrement** relit le reçu serveur avant de réessayer.
 
 **Médias de la demande** permet de sélectionner une fiche de la médiathèque ou de téléverser un fichier réel. Le téléversement enregistre immédiatement ce média privé avec les contrôles habituels ; l'assistant ne reçoit que ses métadonnées. Décrire le contenu utile dans le message : il ne lit pas le PDF, n'analyse pas la vidéo et ne télécharge pas une URL. Les alternatives, légendes et transcriptions reposent sur les informations fournies.
 
-Les notes privées et notes d'autorisation sont exclues du contexte par défaut. Ouvrir **Options de la demande**, replié par défaut sous le chat, puis cocher **Autoriser l’IA à utiliser les notes privées des fiches** pour autoriser leur lecture ou leur modification par le fournisseur sélectionné. Une mention **Notes privées incluses** reste visible lorsque l’option est cochée, même si le volet est refermé. Ce choix reste actif pour les envois suivants tant que la case reste cochée. Le texte que vous saisissez vous-même dans le message est toujours envoyé au fournisseur. Les fiches utiles à la demande lui sont également transmises, sans leurs notes privées lorsque l’option est désactivée. Relire les propositions avant enregistrement. La conversation reste temporaire dans l’onglet ; une demande complexe peut nécessiter plusieurs appels au fournisseur.
+Les notes privées et notes d'autorisation sont exclues du contexte par défaut. Ouvrir **Options de la demande**, replié par défaut sous le chat, puis cocher **Autoriser l’IA à utiliser les notes privées des fiches** pour autoriser leur lecture ou leur modification par le fournisseur sélectionné. Une mention **Notes privées incluses** reste visible lorsque l’option est cochée, même si le volet est refermé. Ce choix reste actif pour les envois suivants tant que la case reste cochée. Le texte que vous saisissez vous-même dans le message est toujours envoyé au fournisseur. Les fiches utiles à la demande lui sont également transmises, sans leurs notes privées lorsque l’option est désactivée. Relire les propositions avant enregistrement. La conversation courante reste temporaire dans l’onglet ; un travail durable conserve le brief, les précisions et la permission choisie pour permettre sa reprise.
 
 **Annuler la génération** attend l'arrêt de l'exécution serveur. L'assistant n'enregistre aucune fiche pendant la génération. L'édition manuelle reste disponible même si le fournisseur est indisponible. Le chat affiche les textes sans interpréter le HTML et n'exécute ni code ni navigation web.
 
-| Limite | Valeur |
+| Limite par envoi ou étape | Valeur |
 | --- | --- |
 | Message utilisateur | 16 000 caractères |
-| Historique envoyé | 40 messages et 80 000 caractères au maximum ; corps HTTP de 256 Kio |
+| Historique du parcours direct | 40 messages et 80 000 caractères au maximum ; corps HTTP de 256 Kio |
 | Médias joints à une demande | 10 fiches de la médiathèque |
-| Lot planifié | 12 fiches ; les associations réciproques peuvent affecter d'autres fiches relues |
-| Génération | Une à la fois, jusqu'à 24 appels fournisseur et 240 secondes |
+| Page de planification | 12 fiches maximum, suivies d'autres pages si nécessaire ; les associations réciproques peuvent affecter d'autres fiches relues |
+| Étape de génération | Jusqu'à 24 appels fournisseur et 240 secondes ; trois appels simultanés maximum |
 | Fréquence | 10 tentatives de tour par minute |
-| Validité d'une proposition | Une heure, liée à la session |
-| Reçu d'application | Jusqu'à 24 heures, dans la limite globale de 50 propositions/reçus |
+| Proposition du parcours direct | Une heure, liée à la session |
+| Reçu du parcours direct | Jusqu'à 24 heures, dans la limite globale de 50 propositions/reçus ordinaires |
+| Travail suivi | Aucun plafond total de fiches, de lots ou d'apports ; données conservées jusqu'à suppression explicite du suivi |
 
-**Nouvelle conversation** efface les messages de l'onglet. Recharger, se déconnecter ou changer de modèle les efface aussi ; aucun historique n'est conservé en base. Préférences et fiches persistent. Les propositions temporaires expirées sont inapplicables, puis purgées lors d'une prochaine création ou de la révocation de leur session.
+**Nouvelle conversation** efface les messages de l'onglet. Recharger, se déconnecter ou changer de modèle les efface aussi. Préférences, fiches et travaux enregistrés persistent. Les propositions temporaires du parcours direct expirées sont inapplicables, puis purgées lors d'une prochaine création ou de la révocation de leur session. Cette purge ne supprime pas les lots et reçus d'un travail suivi.
 
-Chaque envoi transmet l'historique et les fiches pertinentes au fournisseur choisi. Une demande complexe mobilise plusieurs spécialistes et peut coûter plusieurs appels. OpenAI reçoit `store=false` ; les conditions de conservation et de facturation du fournisseur restent applicables. Aucune clé n'est exposée au navigateur et aucune trace LangSmith n'est envoyée.
+Un tour direct transmet l'historique et les fiches pertinentes au fournisseur choisi ; un travail suivi transmet les faits utiles à l'étape courante. Une demande complexe mobilise plusieurs spécialistes et peut coûter plusieurs appels. OpenAI reçoit `store=false` ; les conditions de conservation et de facturation du fournisseur restent applicables. Aucune clé n'est exposée au navigateur et aucune trace LangSmith n'est envoyée.
+
+### Demandes importantes et travaux enregistrés
+
+Décrire l'ensemble du résultat souhaité, par exemple « Prépare 100 compétences à partir de ces faits ». L'assistant organise automatiquement les demandes importantes en un travail suivi. **Suivre cette demande**, dans les options, permet également de démarrer avec ce suivi. Il prépare progressivement les fiches et délègue les sections aux spécialistes, avec trois appels simultanés maximum ; il continue en vagues tant que des éléments restent à traiter.
+
+Le suivi affiche **Votre demande**, l'état et les compteurs **Planifiées**, **Préparées** et **Enregistrées**. Le total peut être inconnu pendant la préparation du plan. **Préparées** inclut les fiches déjà enregistrées ; son écart avec **Enregistrées** désigne celles qui attendent encore leur application. Ouvrir chaque lot, relire ses différences, puis utiliser sa commande d'enregistrement. Le travail peut contenir à la fois des lots enregistrés et des lots restant à relire. Un lien vers une fiche déjà créée réutilise son identifiant. Les associations différées sont proposées après l'enregistrement de toutes les fiches : relire et enregistrer un lot d'associations permet de préparer le suivant. Le travail reste incomplet tant que ces associations ne sont pas résolues.
+
+Les questions et faits nouveaux se traitent dans **Précisions ou faits complémentaires**, puis **Ajouter et reprendre**. Pendant la préparation, mettre d'abord le travail en pause. Ajouter les informations longues par segments de 16 000 caractères maximum. Ces apports ne sont pas limités par les 40 messages d'une conversation directe. Ils deviennent des données privées du travail et peuvent être transmis au fournisseur selon leur utilité ; ne pas y recopier de clé ou de mot de passe. Une correction pendant la relecture, après une pause ou un échec, remplace les résultats non enregistrés ; elle ne réécrit pas les fiches déjà appliquées. Pour conserver simplement les résultats et poursuivre, utiliser **Reprendre** sans nouvel apport.
+
+**Mettre en pause** et **Arrêter le travail** attendent la confirmation du serveur. La pause conserve le travail pour **Reprendre** ; l'arrêt conserve les fiches déjà enregistrées et rend les lots restants inapplicables. Aucun de ces boutons ne supprime les fiches. En cas de quota, de panne ou de conflit, les étapes terminées restent disponibles ; corriger la cause puis reprendre lorsque le suivi le permet. Une génération ne doit pas être présentée comme arrêtée tant que le serveur ne l'a pas confirmé.
+
+Une coupure réseau ou un rechargement ne supprime pas le travail. Après reconnexion, ouvrir **Travaux enregistrés**, choisir le travail puis reprendre les éléments restants. Les listes de travaux et de lots sont paginées pour garder l'interface utilisable même après de nombreux lots. **Conversation** revient au chat. Après une coupure pendant l'enregistrement, relire le lot : son reçu durable permet de vérifier le résultat sans recréer les fiches.
+
+**Supprimer le suivi** retire le brief, les précisions, la progression, les résultats techniques et les reçus du travail. Mettre d'abord la préparation en pause ou l'arrêter pour accéder à cette commande, puis confirmer la suppression. Les fiches déjà enregistrées restent dans leurs collections. Cette suppression empêche la reprise et doit être volontaire ; aucun nettoyage automatique des 50 propositions ordinaires ne supprime un travail. Les sauvegardes privées déjà réalisées peuvent encore contenir une copie de ces données.
+
+L'absence de plafond total concerne le nombre de fiches et de lots d'un travail. Les règles des collections, le profil unique, la taille d'une fiche ou d'un fichier, l'espace disque, les crédits et quotas du fournisseur restent applicables. Les grandes demandes peuvent entraîner de nombreux appels facturables. Les traductions d'une fiche conservent leur parcours de comparaison avant remplacement.
 
 ## Personnaliser les agents et la rédaction
 
 Ouvrir **Réglages du site → Agents et rédaction**. Choisir le ton, la technicité, le niveau de détail, la personne narrative, la langue, le public visé et les consignes de rédaction. **Tous les contenus** définit le style global. Chaque famille peut hériter de ce style ou utiliser sa personnalisation : Profil, Parcours, Projets et expertise, Services, Rédaction et publications, Bibliothèque.
 
-Modifier une famille crée une personnalisation complète de son style. **Revenir au style global** retire cette personnalisation ; **Réinitialiser le style global** rétablit les valeurs initiales. Enregistrer pour que les prochains tours et leurs spécialistes utilisent les choix. La demande ponctuelle de style reste prioritaire ; les préférences ne peuvent pas modifier les droits des agents ou autoriser l'invention de faits.
+Modifier une famille crée une personnalisation complète de son style. **Revenir au style global** retire cette personnalisation ; **Réinitialiser le style global** rétablit les valeurs initiales. Enregistrer pour que les prochains tours et les nouveaux travaux utilisent les choix ; un travail déjà démarré garde ses préférences initiales pour conserver une rédaction cohérente. La demande ponctuelle de style reste prioritaire ; les préférences ne peuvent pas modifier les droits des agents ou autoriser l'invention de faits.
 
 La navigation avertit d'une saisie non enregistrée. Si un autre onglet a modifié les préférences, recharger leur version enregistrée puis reprendre les changements nécessaires. Aucun bouton ne force un écrasement concurrent.
 
