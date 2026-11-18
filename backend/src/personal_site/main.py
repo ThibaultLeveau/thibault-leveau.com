@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -30,11 +31,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     for logger_name in ("personal_site", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(logger_name).setLevel(settings.log_level.upper())
+
+    @asynccontextmanager
+    async def lifespan(app):
+        try:
+            yield
+        finally:
+            if app.state.assistant:
+                await app.state.assistant.jobs.close()
+
     app = FastAPI(
         title="Thibault Leveau",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
+        lifespan=lifespan,
     )
     app.state.settings = settings
     app.state.admin_store = AdminStore(settings) if settings.admin_enabled else None

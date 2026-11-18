@@ -185,6 +185,9 @@ def test_migration_from_populated_v1_preserves_contents_and_sessions(admin_clien
     record = create(c, "projects", title="Avant migration")
     store = c.app.state.admin_store
     with store.connect() as db:
+        from assistant_fakes import drop_job_schema
+
+        drop_job_schema(db)
         db.execute("DROP TABLE assistant_proposals")
         db.execute("DROP TABLE assistant_preferences")
         db.execute("DROP TABLE content_localized_values")

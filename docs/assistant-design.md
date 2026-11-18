@@ -1,6 +1,6 @@
 # Assistant de contenus et agents
 
-Cette conception répond à l'[issue #12](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12). **Thibault l'a explicitement approuvée (« J'accepte »), accord [consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679).** L'implémentation et sa livraison sont suivies dans la [PR #13](https://github.com/ThibaultLeveau/thibault-leveau.com/pull/13). Le [guide administratif](administration.md#utiliser-lassistant-de-contenus) décrit son utilisation.
+Cette conception répond à l'[issue #12](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12). **Thibault l'a explicitement approuvée (« J'accepte »), accord [consigné avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/12#issuecomment-6880648679).** Sa première livraison est suivie dans la [PR #13](https://github.com/ThibaultLeveau/thibault-leveau.com/pull/13). L'[issue #22](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/22) étend cette conception aux travaux durables sans plafond total de fiches, après la réponse « Je suis d'accord » de Thibault, [consignée avant implémentation](https://github.com/ThibaultLeveau/thibault-leveau.com/issues/22#issuecomment-6991171778). Le [guide administratif](administration.md#utiliser-lassistant-de-contenus) décrit son utilisation.
 
 ## Résultat attendu
 
@@ -61,6 +61,10 @@ L'accord exigé par `AGENTS.md` est consigné dans l'issue, les [décisions tech
 | `assistant/graph.py` et `assistant/agents/` | Orchestration, spécialistes, consolidation et traitement des précisions |
 | `assistant/proposals.py` | Construction, contrôle, différences, expiration et orchestration de l'application |
 | `assistant/store.py` | Persistance des préférences et propositions, sans dupliquer les écritures métier |
+| `assistant/jobs.py` | Cycle de vie des exécutions, commandes coordonnées, pause/reprise/arrêt et erreurs nettoyées |
+| `assistant/job_store.py` | Travaux, apports de faits, tâches/sections, lots et reçus durables en SQLite |
+| `assistant/job_steps.py` | Planification incrémentale, vagues de sous-agents, préparation des lots et associations différées |
+| `assistant/job_context.py` | Lecture paginée des faits et recherche des tâches, sous les budgets de contexte existants |
 | `content/` | Validation et transactions métier, étendues pour appliquer un lot atomique |
 | `frontend/src/admin/assistant/` | Conversation, questions, relecture des champs et préférences |
 
@@ -95,9 +99,38 @@ Plan typé avec fiches et champs concernés
 
 Le coordinateur sélectionne les domaines utiles : identité/profil, parcours, expertise/référentiels, offres ou rédaction/publications. LangGraph peut lancer des travailleurs distincts pour les sections identifiées. Chaque travailleur reçoit un périmètre de champs et un contexte limités ; il retourne des données structurées ou des questions au coordinateur, sans écrire dans la base. Cette isolation s'appuie sur le principe des [sous-agents LangChain](https://docs.langchain.com/oss/python/langchain/multi-agent/subagents).
 
-La consolidation traite explicitement les désaccords sur un même champ, les doublons et les relations. Le coordinateur regroupe les questions pour éviter que plusieurs spécialistes redemandent la même information. L'échec d'une branche ne doit pas produire une proposition présentée comme complète. Des limites sur le nombre de tâches, d'appels, d'outils, de tentatives, de travailleurs simultanés et sur la durée totale interdisent une récursion sans fin. Une réparation de sortie invalide reste bornée.
+La consolidation traite explicitement les désaccords sur un même champ, les doublons et les relations. Le coordinateur regroupe les questions pour éviter que plusieurs spécialistes redemandent la même information. L'échec d'une branche ne doit pas produire une proposition présentée comme complète. Les limites d'appels, d'outils, de tentatives, de travailleurs simultanés et de durée s'appliquent à chaque étape. Une réparation de sortie invalide reste bornée ; la suite d'une demande importante passe par le travail durable décrit ci-dessous.
 
-La conversation demeure en mémoire dans l'onglet. Les messages envoyés par le navigateur ne peuvent pas se faire passer pour des instructions système, des résultats d'outils ou une preuve d'enregistrement. Le contexte métier est relu côté serveur. Les documents et champs consultés sont des données, jamais une autorisation d'élargir les outils ou les droits.
+La conversation courante demeure en mémoire dans l'onglet. Le travail durable conserve le brief et les faits utiles à sa reprise, avec leur permission sur les notes privées, sans devenir un historique général de chat. Les messages envoyés par le navigateur ne peuvent pas se faire passer pour des instructions système, des résultats d'outils ou une preuve d'enregistrement. Le contexte métier est relu côté serveur. Les documents et champs consultés sont des données, jamais une autorisation d'élargir les outils ou les droits.
+
+## Travaux durables et progression
+
+Une demande dont le plan doit continuer sur une autre page ou dont les sections dépassent le budget du parcours direct devient un travail durable. L'interface permet aussi de demander ce suivi dès l'envoi. Le coordinateur émet une page de tâches et un curseur de continuation ; les pages suivantes sont demandées au fur et à mesure. Les tâches possèdent des identités stables, indépendantes de l'onglet et de la session à l'origine du travail.
+
+```text
+Brief et faits utiles persistés
+          │
+          ▼
+Page de tâches → Sections ciblées → Vagues de sous-agents
+          ▲                              │
+          │                              ▼
+   Page suivante                 Résultats persistés
+          │                              │
+          └────────────── Lot à relire ◄──┘
+                               │
+                       Enregistrement explicite
+                               │
+                               ▼
+               Reçu durable et références résolues
+```
+
+Le responsable d'exécution de FastAPI réserve les étapes et conserve leurs transitions. Une coupure HTTP ou un rechargement ne détruit ni le travail ni ses lots ; l'interface les retrouve par les API paginées. Une révocation de session conserve les travaux du compte mais interdit d'utiliser l'ancien jeton. Un redémarrage rend les étapes interrompues reprenables. La reprise ne réapplique jamais un lot enregistré.
+
+Les compteurs distinguent tâches planifiées, préparées et enregistrées, ainsi que les lots en attente de relecture. Le total peut rester inconnu pendant la planification. Un travail n'est terminé que lorsque toutes ses tâches et dépendances sont résolues et ses lots appliqués. Une pause, une question, un quota fournisseur ou un conflit préserve les étapes déjà terminées ; la reprise est explicite lorsqu'une intervention est nécessaire. Le nombre de lots n'est pas limité par la purge des propositions ordinaires.
+
+Les apports supplémentaires sont des segments bornés. Le contexte commun contient le brief initial, le dernier apport et le curseur de planification ; les outils en lecture seule donnent accès aux autres faits par pages de quatre segments et aux tâches par pages de huit. Chaque étape récupère ainsi le contexte utile sans renvoyer l'historique complet du travail ni un tableau de taille croissante au fournisseur. Cette organisation permet de poursuivre après plus de 40 interactions ou 50 lots. Elle ne supprime pas les limites d'une fiche, d'un fichier, du disque ou du fournisseur.
+
+Le travail conserve ses préférences de rédaction, sa langue et son autorisation de notes privées initiales. Avant chaque nouvel appel, le serveur vérifie la session et l'empreinte du fournisseur, du modèle et de la clé ; un changement suspend les appels. La reprise exige les réglages initiaux et une session valide, qui remplace l'ancienne session d'exécution. Ce contrôle ne déchiffre ni ne transmet une ancienne clé conservée dans le travail : celui-ci n'en possède pas.
 
 ## Propositions et écriture fiable
 
@@ -109,7 +142,13 @@ Avant toute écriture, contrôler toutes les versions concernées sous verrou tr
 
 Une nouvelle fiche est créée en brouillon. Une édition conserve son statut sauf décision explicitement présentée ; une fiche prête devenue incomplète demande le passage en brouillon dans la proposition. Les archives restent soumises à la restauration existante. Les différences de visibilité, de consentement, de listes et de notes privées doivent être aussi visibles que les modifications textuelles. La suppression définitive autonome n'est pas un outil de rédaction.
 
-La répétition d'une même application retourne le résultat enregistré et ne recrée pas les fiches. Une proposition expirée, annulée, obsolète ou appartenant à une session révoquée ne peut pas être appliquée. Si une connexion est interrompue après l'enregistrement, le client doit pouvoir vérifier le résultat sans générer à nouveau du contenu. La conservation des propositions et reçus est bornée et documentée ; aucun historique de messages ni raisonnement interne n'est archivé.
+La répétition d'une même application retourne le résultat enregistré et ne recrée pas les fiches. Une proposition expirée, annulée ou obsolète ne peut pas être appliquée. Les propositions ordinaires sont liées à leur session ; les lots durables sont accessibles au compte après reconnexion, avec un nouveau jeton valide. Si une connexion est interrompue après l'enregistrement, le client peut vérifier le résultat sans générer à nouveau du contenu. Les reçus durables ne partagent ni l'expiration ni la purge des propositions de conversation ; ils restent jusqu'à suppression explicite du travail. Aucun raisonnement interne n'est archivé.
+
+### Références entre lots
+
+Une tâche déjà appliquée est référencée par l'identifiant réel de sa fiche. Une référence vers une tâche encore à préparer reste une dépendance explicite ; elle ne peut pas être remplacée silencieusement par une liste vide. Les références locales au lot conservent leur contrôle transactionnel existant.
+
+Les cycles qui traversent plusieurs lots demandent deux temps : préparer et faire relire les brouillons, puis préparer les associations après application de toutes les tâches de contenu. Un seul lot d'associations reste en attente à la fois ; son enregistrement permet la préparation du suivant. Chaque application est explicite et atomique pour son lot ; il n'y a pas de transaction globale qui annulerait automatiquement des lots déjà enregistrés. Les versions des fiches sont relues avant les associations différées. Un conflit interrompt leur application et laisse visible le travail restant.
 
 ## Personnalisation de la rédaction
 
@@ -123,15 +162,15 @@ Le chat conserve une composition sobre. Il montre soit une réponse, soit des qu
 
 Les nouvelles vues réutilisent les variables du [design system](design-system.md), la garde de saisie, les composants de formulaire et le thème existants. Les annonces de traitement et d'erreur, la navigation au clavier et le retour du focus doivent fonctionner sur bureau, mobile et à 320 pixels. Les détails de proposition se replient sans cacher les informations nécessaires à la décision. Une annulation ne doit pas être affichée comme réussie tant que l'exécution côté serveur reste active.
 
-Les routes sont privées sous `/api/admin/assistant/` : tour conversationnel, lecture/application/abandon d'une proposition et lecture/écriture des préférences. Leur contrat documente authentification, origine/CSRF, limites de corps, erreurs, conflits, expiration et idempotence dans le [guide backend](backend.md). Les délais du navigateur et du backend doivent couvrir le budget total du graphe, en conservant une limite explicite. Aucun retour SPA générique ni nouvelle route de page n'est nécessaire.
+Les routes sont privées sous `/api/admin/assistant/` : tour conversationnel, propositions, préférences et travaux. Les listes de travaux et de lots sont paginées ; les commandes permettent apport de faits, pause, reprise, arrêt et suppression. Leur contrat documente authentification, origine/CSRF, limites de corps, erreurs, conflits, expiration et idempotence dans le [guide backend](backend.md). Le parcours direct attend son résultat dans la requête ; le suivi durable consulte une exécution qui continue côté serveur. Aucun retour SPA générique ni nouvelle route de page n'est nécessaire.
 
 ## Migration et exploitation
 
-`content/migrations/002.sql` ajoute les tables de préférences et propositions, sans modifier la migration livrée `001.sql`. Les nouvelles tables résident dans `admin.sqlite3` et sont incluses dans l'export de base existant. Vérifier l'initialisation depuis une base contenant compte, sessions, fournisseur, fiches et médias ; tester aussi sauvegarde, vérification et restauration avec le nouveau schéma.
+`content/migrations/002.sql` a ajouté les tables de préférences et propositions ; `005.sql` ajoute les travaux durables sans modifier les migrations livrées. Ces tables résident dans `admin.sqlite3` et sont incluses dans l'export de base existant. Vérifier la migration depuis une base de schéma 4 contenant compte, sessions, fournisseur, fiches et médias ; tester aussi sauvegarde, vérification et restauration avec le schéma 5.
 
 L'image actuelle refuse une version de schéma future. Un retour arrière ne peut donc pas être annoncé compatible au seul motif que la migration est additive : il faut vérifier la compatibilité réelle ou restaurer la sauvegarde cohérente antérieure avec son image, en tenant compte des écritures effectuées depuis. Les procédures finales préciseront ce choix avant déploiement.
 
-Les journaux techniques décrivent identifiant de requête, étape, durée, compte d'appels et catégorie d'erreur, sans messages, propositions brutes, clés ni raisonnement interne. Aucun export de traces vers LangSmith ou un autre service n'est activé. Une panne fournisseur ne doit pas empêcher l'édition manuelle du studio.
+Les journaux techniques décrivent identifiant de requête, étape, durée, compte d'appels et catégorie d'erreur, sans messages, propositions brutes, clés ni raisonnement interne. Aucun export de traces vers LangSmith ou un autre service n'est activé. Une panne fournisseur ne doit pas empêcher l'édition manuelle du studio. La suppression volontaire d'un travail retire son brief, ses apports, résultats techniques et reçus ; elle préserve les fiches enregistrées. Les copies déjà incluses dans les sauvegardes privées suivent leur propre cycle de conservation.
 
 ## Vérifications et livraison
 
@@ -139,6 +178,7 @@ Les validations couvrent le comportement complet :
 
 - Contrats et registre : couvrir les 15 modèles, tous les champs et sous-champs, les valeurs exactes, les références et la préservation des données non ciblées.
 - Graphes : chemins simple et délégué, clarification puis reprise, cohérence des spécialistes, sorties invalides, tentative d'injection, budgets, erreurs et annulation.
+- Travaux : 13 puis 100 fiches, plus de 16 sections, plus de 50 lots et 40 interactions ; concurrence réellement bornée, pagination, dépendances entre lots, cycles, absence d'écriture automatique, reprise après coupure/rechargement/reconnexion/redémarrage et idempotence durable.
 - HTTP et stockage : authentification/CSRF, génération sans mutation métier, application atomique, idempotence, versions concurrentes, expiration, révocation, doublons, références cycliques, médias et confidentialité.
 - Préférences : persistance, validation, héritage, réinitialisation et effet observé dans les entrées de tous les spécialistes.
 - Navigateur : projet avec nouveaux référentiels, profil délégué et précisions, service avec tarifs/FAQ, article et média, relecture/édition/application et ouverture des fiches enregistrées ; bureau/mobile, thèmes, contraste, focus et 320 pixels.
@@ -148,9 +188,9 @@ Les modèles simulés donnent des tests reproductibles sans dépense API ; ils n
 
 ## Limites et extension du code
 
-Le coordinateur produit au plus 12 tâches (une par fiche). Au-delà de huit champs sur une fiche, le graphe répartit ses champs par section du catalogue ; sinon un spécialiste suffit. Au plus 16 travailleurs sont admis, trois actifs simultanément. Une branche reçoit uniquement ses champs actuels, le plan et les messages nécessaires, et utilise les préférences de sa famille. Les questions sont regroupées avant toute proposition ; aucune branche partielle n'est appliquée seule.
+Le coordinateur produit des pages de 12 tâches maximum (une par fiche), puis poursuit le travail tant que le plan a une suite. Au-delà de huit champs sur une fiche, le graphe répartit ses champs par section du catalogue ; sinon un spécialiste suffit. Une demande dépassant le parcours direct passe au travail durable : les travailleurs continuent par vagues, avec trois appels simultanés maximum, sans plafond global de 16 travailleurs. Une branche reçoit uniquement ses champs et faits utiles et utilise les préférences de sa famille. Les questions sont regroupées avant la proposition du lot concerné.
 
-Le tour est limité à 24 appels fournisseur réels, 48 lectures/outils comptabilisés, 250 000 caractères de contexte lu, 400 000 caractères d'entrée d'agent, 1,6 Mo par requête fournisseur, 2 Mio par réponse HTTP et 240 secondes au total. Chaque agent a une limite de récursion de 10 étapes ; les reprises de sortie structurée sont comprises dans le budget partagé. Les SDK n'effectuent aucune relance réseau automatique. Le modèle reçoit un maximum de 12 000 tokens de sortie par appel. Ces plafonds sont des limites de coût et de charge, pas une promesse de temps de réponse.
+Le budget d'une étape est limité à 24 appels fournisseur réels, 48 lectures/outils comptabilisés, 250 000 caractères de contexte lu, 400 000 caractères d'entrée d'agent, 1,6 Mo par requête fournisseur, 2 Mio par réponse HTTP et 240 secondes. Chaque agent a une limite de récursion de 10 étapes ; les reprises de sortie structurée sont comprises dans le budget partagé de l'étape. Les SDK n'effectuent aucune relance réseau automatique. Le modèle reçoit un maximum de 12 000 tokens de sortie par appel. Pour le parcours direct, l'étape correspond au tour ; dans un travail durable, chaque page de planification et chaque section spécialisée ont leur propre budget. Le sémaphore de trois appels est partagé entre les travaux et les tours de l'assistant. Un lot conserve une taille maximale de 2 Mio ; si nécessaire, la préparation réduit son nombre de fiches, sans réduire le nombre total demandé. Ces plafonds bornent coût et charge par étape, sans promettre une durée totale ni des crédits fournisseur illimités.
 
 OpenAI passe par **Responses** (`store=false`, sans identifiant de conversation distante) : les modèles GPT-6 peuvent ainsi utiliser le raisonnement et les outils, conformément au [contrat de GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna). Les éléments de raisonnement chiffrés nécessaires aux appels suivants restent seulement en mémoire pendant l'exécution de l'agent. Anthropic et Mistral passent par leurs adaptateurs LangChain officiels. Le client HTTP injecté à Anthropic utilise `httpx2`, exigé par sa version de SDK verrouillée ; le point d'injection est couvert par les tests natifs. Les destinations restent fermées et aucun outil web fournisseur n'est activé.
 

@@ -79,9 +79,20 @@ class ContentStore:
                 data[name] = [{n: r[n] for n in child.model_fields} for r in items]
         # SQLite booleans are integers; the typed model normalizes the wire format.
         data = MODELS[kind].model_validate(data).model_dump()
-        media_natures = {
-            r["id"]: r["nature"] for r in db.execute("SELECT id, nature FROM media_assets")
-        }
+        media_ids = {item["id"] for item in data["media"]}
+        media_natures = (
+            {
+                record["id"]: record["nature"]
+                for record in db.execute(
+                    "SELECT id,nature FROM media_assets WHERE id IN ("
+                    + ",".join("?" for _ in media_ids)
+                    + ")",
+                    tuple(media_ids),
+                )
+            }
+            if media_ids
+            else {}
+        )
         file = (
             db.execute(
                 "SELECT original_name, mime, size, sha256, width, height FROM "

@@ -6,6 +6,14 @@ import httpx
 import httpx2
 
 
+def drop_job_schema(db):
+    """Reconstruct an actual pre-v5 schema in migration fixtures."""
+    for name in ("batches", "dependencies", "sections", "tasks", "inputs"):
+        db.execute(f"DROP TABLE assistant_job_{name}")
+    db.execute("DROP TABLE assistant_jobs")
+    db.execute("DELETE FROM content_migrations WHERE version=5")
+
+
 def request_data(body):
     messages = body.get("messages", body.get("input", []))
     value = next(m["content"] for m in messages if m.get("role") == "user")

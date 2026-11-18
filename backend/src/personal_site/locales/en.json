@@ -363,5 +363,20 @@
   "errors.translationShared": "The shared facts or structure changed. Reload the entry; edit shared information in the original version.",
   "errors.translationSource": "Save an up-to-date version before translating it.",
   "errors.translationIncomplete": "The translation is incomplete. No changes have been saved.",
-  "assistant.translationReview": "The translation is ready for review. Check the texts before saving."
+  "assistant.translationReview": "The translation is ready for review. Check the texts before saving.",
+  "jobs.missing": "Job not found.",
+  "jobs.interrupted": "Processing was interrupted. Resume to continue the remaining steps.",
+  "jobs.planStalled": "The plan does not identify the remaining work. Add details to continue.",
+  "jobs.notRunning": "The job is paused or stopped.",
+  "jobs.providerChanged": "The provider, model or key has changed. Restore this job’s original provider settings to resume.",
+  "jobs.finished": "This job is completed or stopped.",
+  "jobs.pauseFirst": "Pause the job before adding details.",
+  "jobs.batchCancelled": "This batch was discarded. Add a correction or resume to prepare it again.",
+  "jobs.translationDirect": "Use the entry’s translation action to translate its text.",
+  "jobs.emptyTask": "An entry has no proposed changes. Add the required facts.",
+  "jobs.referenceKind": "A job reference targets another collection. Clarify the intended link.",
+  "jobs.deferredField": "The relationship field “{field}” will be proposed separately after its target entries are saved.",
+  "jobs.missingDependency": "Some links reference entries missing from the plan or from another collection. Clarify the targets to complete the job.",
+  "jobs.sessionExpired": "The starting session expired or was revoked. Sign in again and resume the job.",
+  "jobs.validationFailed": "A step needs correction or a new review after entries changed. Saved batches are retained; add details to retry the affected items."
 }

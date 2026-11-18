@@ -99,7 +99,7 @@ Le socle fournit une route de santé, un contrôle Docker, des journaux et un sc
 
 ## Sauvegardes et nettoyage
 
-Les sources et fichiers de verrouillage sont conservés dans Git. Préserver aussi la configuration Caddy, ses données TLS selon les procédures de la plateforme, les images récentes et les comptes rendus. Avec l'administration, sauvegarder le volume `admin_data` et `SITE_SECRET_KEY` séparément. Une copie de SQLite seule ne permet pas de retrouver la clé API. Les messages du chat ne sont pas stockés dans cette base.
+Les sources et fichiers de verrouillage sont conservés dans Git. Préserver aussi la configuration Caddy, ses données TLS selon les procédures de la plateforme, les images récentes et les comptes rendus. Avec l'administration, sauvegarder le volume `admin_data` et `SITE_SECRET_KEY` séparément. Une copie de SQLite seule ne permet pas de retrouver la clé API. La conversation générale du chat n'est pas archivée ; le brief et les faits utiles des travaux durables sont conservés en base et font partie des sauvegardes privées.
 
 Le volume réel se nomme normalement `thibault-personal-site_admin_data`. Vérifier les montages du conteneur si le nom du projet Compose a été modifié. Ne pas exécuter `docker compose down -v` : cette option supprime les données persistantes.
 
@@ -179,11 +179,27 @@ La commande `verify` exige la version de schéma de son image : utiliser l'ancie
 
 ### Exploiter l'assistant
 
-Les journaux `assistant_turn` indiquent identifiant, appels, lectures/outils et durée. `assistant_failure` indique uniquement la catégorie d'exception. Ne pas activer de journal des corps des SDK ou de traçage externe : les générations peuvent contenir des données de fiches privées. Les prompts système, historiques et éléments internes de raisonnement ne sont pas stockés dans SQLite.
+Les journaux `assistant_turn` indiquent identifiant, appels, lectures/outils et durée. `assistant_failure` indique uniquement la catégorie d'exception. Ne pas activer de journal des corps des SDK ou de traçage externe : les générations peuvent contenir des données de fiches privées. Les prompts système, historiques généraux de conversation et éléments internes de raisonnement ne sont pas stockés dans SQLite. Le stockage du brief et des faits d'un travail durable répond à la politique ci-dessous.
 
-Le stockage est borné à 50 propositions/reçus de 2 Mio maximum chacun. Une proposition expirée est toujours refusée ; le nettoyage physique intervient à la prochaine création, ou à la suppression de sa session. Les propositions et reçus sont inclus dans les exports privés. Les préférences globales et familiales sont durables. Aucun processus de maintenance supplémentaire n'est requis.
+Le stockage des propositions ordinaires est borné à 50 propositions/reçus de 2 Mio maximum chacun. Une proposition expirée est toujours refusée ; le nettoyage physique intervient à la prochaine création, ou à la suppression de sa session. Les propositions et reçus sont inclus dans les exports privés. Les travaux ont leurs propres tables et ne sont pas soumis à cette purge. Les préférences globales et familiales sont durables. Aucun processus de maintenance supplémentaire n'est requis.
 
-Après déploiement, vérifier le schéma courant (4 depuis l’issue #20), les préférences authentifiées, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+Après déploiement, vérifier le schéma courant (5 depuis l'issue #22), les préférences et travaux authentifiés, les protections 401/CSRF, le rendu du chat et des réglages en clair/sombre et sur mobile. Les parcours d'écriture complets sont réalisés en environnement isolé ; ne pas ajouter de données factices en production pour valider l'interface. Une erreur fournisseur ne doit pas bloquer les éditeurs manuels.
+
+### Travaux durables et conservation
+
+Le processus FastAPI unique pilote les travaux. Il n'y a ni service de file d'attente supplémentaire, ni tâche cron, ni nouveau volume. Un navigateur fermé ou une coupure HTTP ne supprime pas l'exécution déjà lancée ; le suivi se retrouve via **Travaux enregistrés**. La progression, les questions, lots et reçus sont relus depuis SQLite.
+
+Si l'arrêt d'une demande intervient pendant son enregistrement ou son transfert vers un travail durable, la confirmation attend la mise en pause du travail créé. Cela couvre aussi l'option **Suivre cette demande**. Consulter le travail ou réessayer la même demande ne le relance pas ; utiliser **Reprendre** pour continuer.
+
+Avant un arrêt planifié, utiliser la pause du travail lorsque l'administrateur en prépare un. Un redémarrage transforme les états `queued`/`running` en `paused` et remet les sections interrompues en attente, sans lancer d'appel facturable. Se reconnecter puis consulter le travail et reprendre explicitement ce qui reste à faire ; les sections terminées et les applications enregistrées sont conservées. Une expiration/révocation de session suspend les appels suivants ; la reprise réattache la nouvelle session. Un quota ou un échec fournisseur conserve les résultats terminés et ne déclenche pas une série infinie de tentatives.
+
+Le fournisseur, le modèle et l'empreinte de la clé sont figés à la création du travail. Leur contrôle avant chaque appel suspend le travail si les réglages ont changé ; `/resume` et un nouvel apport répondent alors 409 jusqu'au rétablissement des réglages initiaux. Les reçus et lots restent accessibles. Ne pas restaurer une clé compromise pour contourner ce refus : arrêter le travail concerné et conserver ses fiches déjà enregistrées. Les préférences et l'autorisation de notes privées sont également celles choisies à la création du travail.
+
+Les tables de travaux contiennent le brief, les apports de faits, la permission d'inclure les notes privées, la progression, les tâches et sections, dépendances, propositions et reçus d'application. Il s'agit de données privées, accessibles uniquement après authentification du compte unique. Elles ne contiennent pas de clé fournisseur ni de raisonnement interne. Les informations saisies dans un brief ou un apport sont susceptibles d'être envoyées au fournisseur ; les notes privées de fiches ne sont incluses que sur accord enregistré pour ce travail.
+
+La conservation dure jusqu'à l'action volontaire **Supprimer le suivi**. Aucun âge, nombre de lots ou nettoyage des propositions ordinaires ne détruit silencieusement un travail actif. La suppression retire ses données techniques et ses reçus, tout en conservant les fiches déjà enregistrées. L'interface propose cette commande après pause ou arrêt ; l'API peut également arrêter un travail actif et attend la fin de ses exécutions avant de supprimer ses données. Ne pas supprimer directement des lignes SQLite pour gérer un travail. Les sauvegardes précédentes conservent éventuellement une copie ; leur suppression relève du cycle de conservation des sauvegardes privées.
+
+Surveiller l'espace disponible pour SQLite, les médias et les sauvegardes. L'absence de plafond total de fiches ne rend pas le disque illimité ; `SITE_MEDIA_QUOTA_BYTES` ne couvre que les fichiers de la médiathèque. Une base volumineuse augmente aussi la durée d'export. Conserver seulement les suivis encore utiles via l'action prévue, sans effacer les volumes.
 
 ## Migration des langues : schéma 2 vers 3
 
@@ -238,3 +254,15 @@ Avant remplacement, conserver l’image de schéma 3, exporter et vérifier base
 Vérifier après démarrage le schéma 4, l’intégrité SQLite, les comptes, contenus et fichiers conservés. Contrôler `/fr`, `/en`, leurs API de lecture, métadonnées et sélecteur. Une traduction initiale de contenu publié doit être relue et appliquée par le domaine versionné ; vérifier la source juste avant l’application, puis la visibilité dans les deux langues. Ne pas créer de données fictives en production.
 
 **Retour au schéma 3 : restaurer la sauvegarde préalable avec l’image précédente.** L’ancienne image refuse la version 4. Conserver d’abord un export de l’état courant avec la nouvelle image, arrêter seulement `site`, restaurer dans une destination neuve et suivre le remplacement contrôlé du volume décrit plus haut. Une restauration révoque les sessions et ne contient pas les écritures postérieures ; conserver ces écritures pour réconciliation. Ne jamais supprimer une ligne de migration pour contourner cette protection.
+
+## Migration des travaux durables : schéma 4 vers 5
+
+L'issue #22 ajoute les travaux, apports, tâches, sections, dépendances et lots avec `005.sql`. La migration transactionnelle conserve le compte, les sessions, la clé chiffrée, les quinze collections, médias, réglages de langues et variantes éditoriales. Les migrations 1 à 4 restent immuables.
+
+Avant remplacement, conserver le tag et l'identifiant de **l'image de schéma 4** réellement exécutée. Construire la nouvelle image depuis `main` propre et validé. Arrêter uniquement `site` pour l'export cohérent base/médias avec l'image précédente, vérifier cet export et une restauration isolée avec cette même image. Protéger la sauvegarde et conserver la clé Fernet séparément. La nouvelle commande de vérification exige le schéma 5 ; elle ne remplace pas la vérification préalable de la sauvegarde 4.
+
+Après démarrage de la nouvelle image, lire les versions de `content_migrations` (1 à 5), l'intégrité et les nombres de contenus/médias/variantes sans afficher de texte privé. Vérifier l'image/tag exécutés, `healthy`, les réponses HTTPS, la documentation et le refus 401 des API privées. Avec une session autorisée, consulter les travaux et leurs pages de lots, les préférences, les fiches et médias existants. Contrôler le chat et le suivi en français/anglais, bureau/mobile, clair/sombre et clavier. Les essais d'interruption, reprise et application se déroulent sur stockage isolé ; ne pas créer de contenu fictif en production.
+
+**Retour au schéma 4 : restaurer la sauvegarde préalable avec l'image précédente.** L'ancienne image refuse le schéma 5 même si les tables sont additives. Exporter d'abord l'état courant avec l'image 5, arrêter seulement `site`, restaurer le couple base/médias 4 dans une destination neuve et suivre le remplacement contrôlé décrit plus haut. Les travaux créés après migration et les écritures postérieures à la sauvegarde ne sont pas dans cet état restauré ; conserver leur export pour réconciliation. Ne pas enlever une ligne de `content_migrations` pour forcer le démarrage.
+
+Une restauration de schéma 5 révoque les sessions et leurs propositions ordinaires. Elle conserve les travaux durables, les lots et les reçus dans la copie restaurée ; leurs prochaines commandes exigent une nouvelle connexion. Vérifier une reprise et une relecture de reçu sur l'instance isolée avant toute bascule de données.

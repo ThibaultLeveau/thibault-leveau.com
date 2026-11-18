@@ -233,6 +233,9 @@ def test_schema_three_upgrade_and_backup_preserve_variants(admin_client, admin_s
     original = create(c, "skills", title="Avant migration", private_notes="Conservé")
     account = c.app.state.admin_store.account()
     with c.app.state.admin_store.connect() as db:
+        from assistant_fakes import drop_job_schema
+
+        drop_job_schema(db)
         db.execute("DROP TABLE content_localized_values")
         db.execute("DROP TABLE content_localizations")
         db.execute("DELETE FROM content_migrations WHERE version=4")
@@ -243,7 +246,9 @@ def test_schema_three_upgrade_and_backup_preserve_variants(admin_client, admin_s
     saved = save_variant(c, variant(c, original), title="Before migration").json()
     archive = tmp_path / "archive"
     export(admin_settings.admin_db_path, archive, "abc1234")
-    assert verify(archive)["schema_version"] == 4
+    from personal_site.content.migrate import SCHEMA_VERSION
+
+    assert verify(archive)["schema_version"] == SCHEMA_VERSION
     destination = tmp_path / "restored"
     restore(archive, destination)
     restored = create_app(

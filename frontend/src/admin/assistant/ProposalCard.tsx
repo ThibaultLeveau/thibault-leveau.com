@@ -89,12 +89,14 @@ export function ProposalCard({
   onOpen,
   onSessionEnd,
   onBusy,
+  help,
 }: {
   proposal: Proposal
   session: Session
   catalog: Catalog | null
   disabled: boolean
   onBusy?: (value: boolean) => void
+  help?: string
   onChanged: (value: Proposal) => void | Promise<void>
   onOpen: (kind: Collection, id: number) => void
   onSessionEnd: (message: string) => void
@@ -169,7 +171,7 @@ export function ProposalCard({
                 : t('status.pending')}
         </span>
       </div>
-      <p className="muted">{t('proposal.help')}</p>
+      <p className="muted">{help ?? t('proposal.help')}</p>
       {proposal.items.map((item) => (
         <details
           key={item.key}

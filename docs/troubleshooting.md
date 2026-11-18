@@ -121,7 +121,7 @@ L'accueil doit porter `Cache-Control: no-cache`. Une image reconstruite avec le 
 | Réglages perdus après recréation | Vérifier le montage `admin_data:/app/data`, le projet Compose et le chemin de base ; ne pas créer une nouvelle base pour masquer le problème |
 | SQLite en lecture seule ou permission refusée | Le volume doit être inscriptible par `10001:10001`, répertoire `0700`, base `0600` ; conserver la racine en lecture seule |
 
-Le mot de passe oublié se récupère avec la [commande locale](operations.md#recuperer-le-compte-administrateur). Une clé fournisseur ne peut pas être relue depuis l'interface : le champ vide après enregistrement est normal. Les conversations disparaissent au rechargement ; seuls le compte et les réglages sont durables.
+Le mot de passe oublié se récupère avec la [commande locale](operations.md#recuperer-le-compte-administrateur). Une clé fournisseur ne peut pas être relue depuis l'interface : le champ vide après enregistrement est normal. La conversation de l'onglet disparaît au rechargement ; les fiches, réglages et travaux enregistrés restent en base. Ouvrir **Travaux enregistrés** après reconnexion pour retrouver une demande suivie.
 
 ### Vérifier la connexion sortante
 
@@ -157,11 +157,29 @@ Vérifier que le port 8765 est libre. Si une cible externe est volontairement ut
 | --- | --- |
 | Questions au lieu d'une fiche | Préciser la cible, les faits manquants ou demander de conserver un brouillon incomplet. Aucun contenu n'est enregistré pendant la génération. |
 | Modèle incompatible avec les outils | Vérifier l'accès au modèle et ses capacités d'outils structurés dans Fournisseur IA. OpenAI utilise Responses pour conserver les outils avec raisonnement ; ne pas forcer Chat Completions sur GPT-6. |
-| Limite de budget ou délai | Réduire le nombre de fiches/champs ou ouvrir une nouvelle conversation. Le tour est borné à 24 appels et 240 secondes. |
-| Une génération est déjà en cours | Attendre ou utiliser Annuler la génération dans l'onglet concerné. L'annulation attend l'arrêt serveur ; un redémarrage n'est pas le premier recours. |
+| Limite de budget ou délai | Une étape est bornée à 24 appels et 240 secondes. Consulter l'état et les questions du travail, apporter les précisions utiles puis reprendre après correction de la cause. Le volume total demandé n'impose pas de réduire le nombre de fiches ; les étapes suivantes ont leur propre budget. |
+| Une génération est déjà en cours | Consulter Travaux enregistrés, ou utiliser Annuler la génération pour le tour direct concerné. Pause et arrêt attendent la confirmation serveur ; un redémarrage n'est pas le premier recours. |
 | Proposition périmée, abandonnée ou expirée | Demander une nouvelle proposition. Le serveur refuse les écritures sur une version obsolète et ne permet aucun écrasement forcé. |
 | Connexion perdue pendant l'enregistrement | Utiliser Vérifier l'enregistrement. Une application répétée de la même proposition est idempotente. Vérifier les fiches dans leurs éditeurs si la session a expiré. |
 | Notes privées absentes | Activer explicitement leur inclusion pour la demande concernée. Les notes d'autorisation suivent la même règle. |
 | Le contenu d'un fichier n'est pas compris | Fournir sa description/transcription dans le message. Seules les métadonnées du média sont transmises, pas le binaire. |
 | Préférences modifiées dans un autre onglet | Recharger leur version enregistrée, puis reprendre les modifications souhaitées. |
-| Ancienne image refusée après déploiement | Suivre le [retour au schéma 1](operations.md#migration-de-lassistant-schema-1-vers-2) avec l'image et la sauvegarde correspondantes. |
+| Ancienne image refusée après déploiement | Identifier les deux schémas et suivre le retour arrière avec l'image et la sauvegarde correspondantes. Pour les travaux durables, le [retour au schéma 4](operations.md#migration-des-travaux-durables-schema-4-vers-5) exige une restauration. |
+
+### Travaux, interruption et reprise
+
+| Symptôme | Contrôle et résolution |
+| --- | --- |
+| Le suivi n'apparaît plus après rechargement | Ouvrir Travaux enregistrés et parcourir ses pages. Le chat temporaire n'est pas le stockage du travail. Si la liste est vide, vérifier le volume et le compte avant de recréer la demande. |
+| Réseau coupé pendant la préparation | Recharger l'état du même travail. Une coupure HTTP n'est pas une commande d'arrêt ; ne pas créer un second travail pour remplacer une exécution dont l'état n'a pas été vérifié. |
+| Session expirée ou compte modifié | Se reconnecter, relire le travail, puis reprendre si nécessaire. Le travail persiste ; l'ancien cookie et son CSRF ne redeviennent pas valides. |
+| Travail interrompu par redémarrage | Consulter son état reprenable puis utiliser Reprendre. Les étapes terminées et reçus sont persistés ; seules les étapes restantes doivent être exécutées. |
+| Fournisseur, modèle ou clé changé | Le travail conserve l'empreinte de sa configuration d'origine ; les nouveaux appels sont suspendus et la reprise répond 409 tant qu'elle diffère. Rétablir les réglages initiaux seulement s'ils restent valides. Si l'ancienne clé a été compromise ou révoquée, conserver les reçus/fiches et arrêter ce travail. |
+| Quota atteint ou fournisseur indisponible | Corriger le crédit, l'accès ou la connectivité, puis reprendre explicitement. Les lots terminés restent conservés ; une boucle automatique sans fin n'est pas une solution. |
+| Fiches préparées mais pas enregistrées | Ouvrir les pages de lots, relire et enregistrer chaque proposition. La génération ne modifie jamais les collections à elle seule. |
+| Toutes les fiches semblent créées mais le travail reste incomplet | Vérifier les lots d'associations et les questions : une dépendance future ou cyclique peut nécessiter une relecture supplémentaire. Ne pas marquer le travail terminé en ignorant un lien. |
+| Conflit lors d'un lot | Une cible ou référence a changé depuis sa préparation. Le lot concerné n'est pas partiellement appliqué. Relire la fiche et apporter la correction au travail ; les lots déjà enregistrés restent conservés. |
+| Pause ou arrêt encore en attente | Attendre la réponse serveur puis relire le même travail. L'interface ne doit pas annoncer un arrêt réussi uniquement parce que sa connexion a été interrompue. |
+| Données privées encore présentes après effacement du chat | Le brief et les faits d'un travail ont leur propre conservation. Supprimer le suivi retire ces données techniques, sans supprimer les fiches enregistrées ; les anciennes sauvegardes privées gardent éventuellement une copie. |
+
+Lors du diagnostic, consigner seulement identifiant de travail, état, compteurs, heure et catégorie d'erreur. Ne pas copier de brief, notes privées, clé ou réponse fournisseur brute dans les journaux, captures publiques ou issues. Les [contrats](backend.md#travaux-durables) et la [politique de conservation](operations.md#travaux-durables-et-conservation) décrivent les limites applicables.

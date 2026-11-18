@@ -104,6 +104,20 @@ class Plan(Model):
     message: str = Field(min_length=1, max_length=3000)
     questions: list[Question] = Field(default_factory=list, max_length=8)
     tasks: list[Task] = Field(default_factory=list, max_length=12)
+    has_more: bool = False
+    continuation: str = Field(default="", max_length=4000)
+    total_tasks: int | None = Field(default=None, ge=1)
+
+
+class JobInput(Model):
+    message: str = Field(min_length=1, max_length=16000)
+    request_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        if not self.message.strip():
+            raise ValueError(tr("errors.nonemptyMessages"))
+        return self
 
 
 class Operation(Model):
