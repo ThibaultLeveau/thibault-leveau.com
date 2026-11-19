@@ -144,9 +144,11 @@ export async function assistantWorkflow(page: Page, info: TestInfo) {
     'Je suis Alex, Ingénieur à Paris. Je conçois des API Python fiables. Je parle français couramment, pratique la photographie et serai disponible en décembre. Prépare une accroche et le titre SEO avec ces faits.',
   )
   proposal = page.getByRole('region', { name: 'Proposition de contenu' }).last()
+  await expect(page.getByRole('heading', { name: 'Votre demande', exact: true })).toBeVisible()
   await expect(proposal).toContainText('Titre professionnel')
   await proposal.getByRole('button', { name: 'Enregistrer la fiche' }).click()
   await expect(proposal.getByRole('status')).toContainText('enregistrées')
+  await page.locator('.jobs-toggle').click()
   await page.getByRole('button', { name: 'Nouvelle conversation' }).click()
   await send(
     page,

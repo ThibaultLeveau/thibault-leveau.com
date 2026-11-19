@@ -329,7 +329,7 @@
   "errors.generationFailed": "La génération n'a pas abouti. Vérifiez le modèle, sa compatibilité avec les outils et réessayez.",
   "errors.planFields": "Le plan contient des champs inconnus ou répétés.",
   "errors.privateNotesDisabled": "Activez le partage des notes privées pour demander leur modification.",
-  "errors.callBudget": "La demande atteint la limite d'appels. Traitez moins de fiches à la fois.",
+  "errors.callBudget": "La limite d'appels de cette étape est atteinte.",
   "errors.contextScope": "Le contexte est trop large. Précisez les fiches ou les champs concernés.",
   "errors.providerDestination": "Destination du fournisseur refusée.",
   "errors.contextSize": "Le contexte est trop volumineux. Ciblez moins de champs.",

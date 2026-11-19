@@ -1,6 +1,9 @@
 """Création paginée déterministe pour le serveur navigateur dédié aux travaux."""
 
-from assistant_fakes import ScriptedProvider
+import json
+
+from assistant_budget_fakes import ExperienceProvider
+from assistant_fakes import ScriptedProvider, request_data
 
 TOTAL = 13
 
@@ -40,4 +43,13 @@ def draft(data):
 
 
 def provider():
-    return ScriptedProvider(plan, {f"bulk_{number}": draft for number in range(1, TOTAL + 1)})
+    bulk = ScriptedProvider(plan, {f"bulk_{number}": draft for number in range(1, TOTAL + 1)})
+    experience = ExperienceProvider()
+
+    def dispatch(request):
+        data = request_data(json.loads(request.content))
+        if "Banque de démonstration" in data["messages"][0]["content"]:
+            return experience(request)
+        return bulk(request)
+
+    return dispatch

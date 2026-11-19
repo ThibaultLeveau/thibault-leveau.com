@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from personal_site.assistant.agents import invoke
 from personal_site.assistant.contracts import Operation, Plan, Question
+from personal_site.assistant.models import AGENT_RECURSION_LIMIT, MAX_CALLS
 from personal_site.assistant.prompts import PLANNER, SPECIALIST, policy
 from personal_site.assistant.proposals import prepare
 from personal_site.assistant.registry import FAMILIES, PRIVATE_FIELDS, output_model
@@ -119,7 +120,10 @@ def build_graph(model, context, preferences, turn, previous):
                         "plan": [t.model_dump() for t in plan.tasks],
                     }
                 )
-        if len(workers) > 16:
+        # Reserve the full agent bound, not just its final structured response. Reads
+        # and output repairs also call the model. Handoff before starting any worker
+        # preserves the plan and avoids discarding drafts at the shared 24-call limit.
+        if context.budget.calls + len(workers) * AGENT_RECURSION_LIMIT > MAX_CALLS:
             return {"plan": plan, "workers": [], "durable": True}
         return {"plan": plan, "workers": workers}
 

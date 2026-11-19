@@ -19,7 +19,6 @@ def scenario(data):
                     "body": "J’ai animé un atelier Python.",
                     "nature": "personal",
                     "start_date": "2025",
-                    "end_date": "2025",
                     "role": "Animateur",
                     "actions": [{"text": "Préparer les exercices"}],
                     "skills": [{"id": "@skill", "context": "Concevoir une API"}],
