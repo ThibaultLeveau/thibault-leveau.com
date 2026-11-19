@@ -10,6 +10,8 @@
 
 **Conséquence.** La migration 4 → 5 ajoute un stockage technique privé du brief et des faits utiles, distinct de l'historique général de conversation. Sa conservation dure jusqu'à suppression explicite du travail, avec inclusion dans les sauvegardes privées. Les raisonnements internes et clés fournisseur n'y sont pas archivés. L'administrateur relit et enregistre explicitement chaque lot, atomique et idempotent ; un travail peut être partiellement enregistré. Les quotas fournisseur, coûts d'appels, limites par fiche et capacité du disque restent applicables. Une sauvegarde vérifiée de schéma 4 est nécessaire pour revenir à l'image précédente. Aucun service, mécanisme d'authentification, proxy ou réseau supplémentaire n'est ajouté.
 
+**Correction du 19 novembre 2026.** La reproduction d’une expérience avec organisation et dix technologies a atteint 24 appels malgré un plan de douze tâches et seize sections. Le seuil de sections est remplacé par une réservation des appels maximaux de chaque spécialiste, tenant compte du coût déjà consommé par le coordinateur. Le plan est transféré avant rédaction aux travaux existants ; aucun nouveau stockage, contrat, service ou changement de schéma n’est nécessaire.
+
 Cette décision étend celle des agents de contenus de l'issue #12. Les propositions ordinaires du chat et les traductions conservent leur parcours direct et leur durée de validité ; les travaux ont leur propre conservation et leurs reçus durables.
 
 ## 2026-11 — Variantes éditoriales et URL publiques bilingues

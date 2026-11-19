@@ -329,7 +329,7 @@
   "errors.generationFailed": "Generation did not complete. Check the model and its tool compatibility, then try again.",
   "errors.planFields": "The plan contains unknown or duplicate fields.",
   "errors.privateNotesDisabled": "Enable private note sharing to request changes to them.",
-  "errors.callBudget": "This request has reached the call limit. Work on fewer entries at a time.",
+  "errors.callBudget": "This step has reached its call limit.",
   "errors.contextScope": "The context is too broad. Specify the relevant entries or fields.",
   "errors.providerDestination": "Provider destination rejected.",
   "errors.contextSize": "The context is too large. Target fewer fields.",

@@ -22,6 +22,8 @@ from personal_site.i18n import tr
 ENDPOINTS = {**TEXT_ENDPOINTS, "openai": "https://api.openai.com/v1/responses"}
 
 MAX_CALLS = 24
+# One agent graph step can invoke the model at most once, including output repairs.
+AGENT_RECURSION_LIMIT = 10
 MAX_INPUT = 400000
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 RUN_SECONDS = 240

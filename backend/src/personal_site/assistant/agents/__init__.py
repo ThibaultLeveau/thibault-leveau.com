@@ -7,7 +7,7 @@ from langchain.agents.structured_output import ToolStrategy
 from langchain_core.messages import HumanMessage
 
 from personal_site.admin.llm import ProviderError
-from personal_site.assistant.models import MAX_INPUT
+from personal_site.assistant.models import AGENT_RECURSION_LIMIT, MAX_INPUT
 from personal_site.i18n import tr
 
 
@@ -27,7 +27,7 @@ async def invoke(model, schema, system, data, context, *, tools=None):
     async with context.budget.semaphore:
         result = await agent.ainvoke(
             {"messages": [HumanMessage(content=encoded)]},
-            {"recursion_limit": 10, "callbacks": []},
+            {"recursion_limit": AGENT_RECURSION_LIMIT, "callbacks": []},
         )
     if "structured_response" not in result:
         raise ProviderError(tr("errors.modelTools"))

@@ -93,6 +93,8 @@ Conserver les scénarios des demandes simples et traductions : leur réussite es
 
 `test_assistant_jobs_content.py` vérifie les lectures d'outils et médias attachés avec ou sans accord pour les notes privées, ainsi que l'édition anglaise sans écraser la source française. `test_assistant_jobs_concurrency.py` combine plusieurs travaux et un tour direct pour vérifier la limite globale de trois appels simultanés. Il contrôle aussi le rejeu d'un ancien abandon et l'annulation des créations `/turn` et `/jobs` avant ou après leur commit, sans relance implicite. Les fichiers `test_assistant_jobs_resilience.py` et `test_assistant_jobs_dependencies.py` couvrent les interruptions, les quotas, les conflits, les cycles entre pages et les corrections de liens après création.
 
+`test_assistant_call_budget.py` reproduit une expérience avec organisation et dix technologies : 12 tâches sur une seule page, chaque agent effectuant une vraie lecture d’outil avant sa sortie structurée. Il vérifie le transfert avant rédaction, plus de 24 appels répartis entre étapes, le plan non répété, l’absence d’écriture implicite, les reçus rejouables et les dix liens après application. Deux scénarios vérifient la frontière de réservation selon les appels déjà consommés par le coordinateur. Le parcours navigateur des travaux traverse également ce cas avec les véritables API et une base isolée.
+
 Commande ciblée : `uv run --frozen pytest backend/tests/test_assistant_jobs*.py`. Ces tests ne touchent ni volume ni identifiant de production. Les résultats datés de leur exécution et les éventuelles vérifications impossibles sont consignés dans l'issue et la pull request, séparément de cette description de couverture.
 
 ## Tests navigateur

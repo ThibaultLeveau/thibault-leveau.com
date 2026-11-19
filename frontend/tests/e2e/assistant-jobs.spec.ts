@@ -288,14 +288,14 @@ async function openJob(page: Page, language: Language, message: string) {
   await expect(page.getByRole('heading', { name: labels.request, exact: true })).toBeVisible()
 }
 
-async function inspectLayout(page: Page, info: TestInfo, language: Language) {
+async function inspectLayout(page: Page, info: TestInfo, language: Language, focusLabel: string = words[language].resume) {
   for (const theme of ['light', 'dark']) {
     await page.evaluate((value) => document.documentElement.setAttribute('data-theme', value), theme)
     for (const width of [1440, 320]) {
       await page.setViewportSize({ width, height: 1000 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       expect(await page.locator('.admin-main').evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
-      const target = page.getByRole('button', { name: words[language].resume, exact: true })
+      const target = page.getByRole('button', { name: focusLabel, exact: true })
       await target.focus()
       await page.keyboard.press('Tab')
       await page.keyboard.press('Shift+Tab')
@@ -532,6 +532,7 @@ test('travail durable : suivi explicite et réessai de création avec la même i
 })
 
 test.describe('travail durable sur base isolée', () => {
+  test.describe.configure({ mode: 'default' })
   test.use({ baseURL: 'http://127.0.0.1:8769' })
 
   test('13 fiches via React, FastAPI, SQLite et les vrais sous-agents, rechargement et relecture', async ({ page }, info) => {
@@ -599,4 +600,68 @@ test.describe('travail durable sur base isolée', () => {
     expect(finalJob.pending_batches).toBe(0)
     expect(errors).toEqual([])
   })
+
+  test('une expérience et dix technologies dépassent 24 appels sans perdre la demande', async ({ page }, info) => {
+    test.setTimeout(120_000)
+    test.skip(info.project.name !== 'desktop', 'Une seule écriture sur la base isolée ; rendu mobile contrôlé dans ce parcours.')
+    await page.goto('/admin')
+    await page.getByLabel(words.fr.username, { exact: true }).fill('playwright-admin')
+    await page.getByLabel(words.fr.password, { exact: true }).fill('playwright-only-password')
+    await page.getByRole('button', { name: words.fr.signIn, exact: true }).click()
+    await expect(page.locator('.admin-shell')).toBeVisible()
+    const session = await (await page.request.get('/api/admin/session')).json()
+    expect((await page.request.put('/api/admin/provider', {
+      headers: { Origin: 'http://127.0.0.1:8769', 'X-CSRF-Token': session.csrf_token },
+      data: { provider: 'openai', model: 'gpt-6-luna', api_key: 'isolated-jobs-provider-key' },
+    })).ok()).toBe(true)
+    await page.reload()
+    await page.getByLabel(words.fr.message, { exact: true }).fill(
+      'Créer une expérience Ingénieur software PHP chez Banque de démonstration, de septembre 2016 à septembre 2019. ' +
+      'Équipe de 11 développeurs en Kanban, plus de 60 applications internes, API REST et pipelines CI/CD. ' +
+      'Technologies : PHP, CakePHP, JavaScript, AngularJS, Bootstrap, MySQL, RHEL 7, Elasticsearch, GitLab, GitLab CI.',
+    )
+    await page.getByRole('button', { name: words.fr.send, exact: true }).click()
+    const response = page.waitForResponse((answer) => answer.url().endsWith('/assistant/turn') && answer.request().method() === 'POST')
+    await page.getByRole('dialog').getByRole('button', { name: 'Français', exact: true }).click()
+    const answer = await response
+    expect(answer.ok()).toBe(true)
+    const result = await answer.json()
+    expect(result.calls).toBe(2)
+    expect(result.delegations).toBe(0)
+    expect(result.proposal).toBeNull()
+    const ident = (result.job as Job).id
+    const readJob = async () => (await (await page.request.get(`/api/admin/assistant/jobs/${ident}`)).json()) as Job
+    await expect.poll(async () => (await readJob()).status).toBe('review')
+    const ready = await readJob()
+    expect(ready.planned).toBe(12)
+    expect(ready.prepared).toBe(12)
+    expect(ready.calls).toBeGreaterThan(24)
+    expect((await (await page.request.get('/api/admin/content/experiences')).json()).total).toBe(0)
+    await inspectLayout(page, info, 'fr', 'Actualiser')
+    await page.reload()
+    await openJob(page, 'fr', ready.message)
+    for (let index = 0; index < 12; index += 1) {
+      const card = page.getByRole('region', { name: words.fr.proposal }).first()
+      const save = card.getByRole('button', { name: /^Enregistrer (la fiche|les fiches)$/ })
+      await expect(save).toBeEnabled()
+      const receipt = page.waitForResponse((response) => response.url().endsWith('/apply') && response.request().method() === 'POST')
+      await save.click()
+      expect((await receipt).ok()).toBe(true)
+      await expect(card.getByRole('status')).toContainText(words.fr.saved)
+      await expect.poll(async () => (await readJob()).status).not.toBe('running')
+      if ((await readJob()).status === 'completed') break
+      const next = page.getByRole('button', { name: words.fr.nextBatches, exact: true })
+      await expect(next).toBeEnabled()
+      await next.click()
+    }
+    expect((await readJob()).status).toBe('completed')
+    const list = await (await page.request.get('/api/admin/content/experiences')).json()
+    expect(list.total).toBe(1)
+    const saved = await (await page.request.get(`/api/admin/content/experiences/${list.items[0].id}`)).json()
+    expect(saved.status).toBe('draft')
+    expect(saved.entry).toMatchObject({ start_date: '2016-09', end_date: '2019-09', team: '11 développeurs en Kanban.' })
+    expect(saved.entry.technologies).toHaveLength(10)
+    expect((await (await page.request.get('/api/admin/content/technologies')).json()).total).toBe(10)
+  })
+
 })

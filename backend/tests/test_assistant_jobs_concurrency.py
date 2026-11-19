@@ -18,6 +18,7 @@ from test_assistant_jobs import BulkProvider, configure, request_payload
 def test_multiple_jobs_and_classic_turn_share_three_provider_slots(admin_client):
     c = admin_client
     bulk = BulkProvider(3, delay=0.01)
+    classic = BulkProvider(2, delay=0.01)
 
     async def run():
         release = asyncio.Event()
@@ -41,7 +42,7 @@ def test_multiple_jobs_and_classic_turn_share_three_provider_slots(admin_client)
                 saturated.set()
             try:
                 await release.wait()
-                return await bulk(request)
+                return await (classic if source == "turn" else bulk)(request)
             finally:
                 active[source] -= 1
 
@@ -84,7 +85,7 @@ def test_multiple_jobs_and_classic_turn_share_three_provider_slots(admin_client)
                 assert response.status_code == 200, response.text
                 reply = response.json()
                 assert reply["job"] is None
-                assert len(reply["proposal"]["items"]) == 3
+                assert len(reply["proposal"]["items"]) == 2
 
                 async with asyncio.timeout(30):
                     for ident in jobs:
@@ -102,8 +103,8 @@ def test_multiple_jobs_and_classic_turn_share_three_provider_slots(admin_client)
 
                 assert peak == 3
                 assert active.total() == 0
-                assert sources == Counter({"turn": 4, **dict.fromkeys(jobs, 4)})
-                assert bulk.calls == 16
+                assert sources == Counter({"turn": 3, **dict.fromkeys(jobs, 4)})
+                assert classic.calls == 3 and bulk.calls == 12
                 assert (await ac.get("/api/admin/content/skills")).json()["total"] == 0
             finally:
                 release.set()

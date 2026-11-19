@@ -278,6 +278,8 @@ def test_expiration_cancellation_and_client_cannot_supply_arbitrary_changes(admi
 
 
 def test_real_langchain_graph_clarifies_then_delegates_profile_and_applies(admin_client):
+    from test_assistant_jobs import batches, wait_job
+
     c = admin_client
     fields = [
         "title",
@@ -336,9 +338,13 @@ def test_real_langchain_graph_clarifies_then_delegates_profile_and_applies(admin
     ]
     response = turn(c, messages=history, thread=thread)
     assert response.status_code == 200, response.text
-    assert response.json()["delegations"] >= 3
+    job = response.json()["job"]
+    assert job and response.json()["proposal"] is None
+    ready = wait_job(c, job["id"])
+    assert ready["status"] == "review"
+    assert ready["delegations"] >= 3
     assert c.get("/api/admin/content/profiles").json()["total"] == 0
-    result = apply(c, response.json()["proposal"])
+    result = apply(c, batches(c, job["id"])[0])
     assert result.status_code == 200, result.text
     assert len(provider.requests) >= 5
     assert API_KEY not in response.text
